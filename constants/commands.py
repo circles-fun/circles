@@ -886,7 +886,7 @@ async def reload(p: Player, c: Messageable, msg: Sequence[str]) -> str:
 if glob.config.advanced:
     __py_namespace = globals() | {
         mod: __import__(mod) for mod in (
-        'asyncio', 'dis', 'os', 'sys', 'struct', 'discord',
+        'asyncio', 'dis', 'os', 'sys', 'struct',
         'cmyui',  'datetime', 'time', 'inspect', 'math',
         'importlib'
     )}
