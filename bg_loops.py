@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 __all__ = ('donor_expiry', 'disconnect_ghosts',
            'replay_detections', 'reroll_bot_status')
 
+
 async def donor_expiry() -> None:
     """Add new donation ranks & enqueue tasks to remove current ones."""
     # TODO: this system can get quite a bit better; rather than just
@@ -43,7 +44,8 @@ async def donor_expiry() -> None:
         )
 
         if p.online:
-            p.enqueue(packets.notification('Your supporter status has expired.'))
+            p.enqueue(packets.notification(
+                'Your supporter status has expired.'))
 
         log(f"{p}'s supporter status has expired.", Ansi.LMAGENTA)
 
@@ -54,7 +56,7 @@ async def donor_expiry() -> None:
         'SELECT id, donor_end FROM users '
         'WHERE donor_end <= UNIX_TIMESTAMP() + (60 * 60 * 24 * 7 * 4) '
         #'WHERE donor_end < DATE_ADD(NOW(), INTERVAL 30 DAY) '
-        'AND priv & 48' # 48 = Supporter | Premium
+        'AND priv & 48'  # 48 = Supporter | Premium
     )
 
     loop = asyncio.get_running_loop()
@@ -62,7 +64,9 @@ async def donor_expiry() -> None:
     async for donation in glob.db.iterall(query, _dict=False):
         loop.create_task(rm_donor(*donation))
 
-PING_TIMEOUT = 300000 // 1000 # defined by osu!
+PING_TIMEOUT = 300000 // 1000  # defined by osu!
+
+
 async def disconnect_ghosts() -> None:
     """Actively disconnect users above the
        disconnection time threshold on the osu! server."""
@@ -79,6 +83,8 @@ async def disconnect_ghosts() -> None:
 
 # This function is currently pretty tiny and useless, but
 # will just continue to expand as more ideas come to mind.
+
+
 async def analyze_score(score: 'Score') -> None:
     """Analyze a single score."""
     player = score.player
@@ -104,22 +110,24 @@ async def analyze_score(score: 'Score') -> None:
         press_times = get_press_times(frames)
         config = glob.config.surveillance['hitobj_low_presstimes']
 
-        cond = lambda pt: (sum(pt) / len(pt) < config['value']
-                           and len(pt) > config['min_presses'])
+        def cond(pt): return (sum(pt) / len(pt) < config['value']
+                              and len(pt) > config['min_presses'])
 
-        if any(map(cond, press_times.values())):
 REPLAYS_PATH = Path.cwd() / '.data/osr'
+
+
 async def replay_detections() -> None:
     """Actively run a background thread throughout circles's
        lifespan; it will pull replays determined as sketch
        from a queue indefinitely."""
-    glob.sketchy_queue = asyncio.Queue() # cursed type hint fix
+    glob.sketchy_queue = asyncio.Queue()  # cursed type hint fix
     queue: asyncio.Queue['Score'] = glob.sketchy_queue
 
     loop = asyncio.get_running_loop()
 
     while score := await queue.get():
         loop.create_task(analyze_score(score))
+
 
 async def reroll_bot_status(interval: int) -> None:
     """Reroll the bot's status, every `interval`."""
