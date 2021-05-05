@@ -1,19 +1,19 @@
 # -*- coding: utf-8 -*-
 
 """ server settings """
-# the domain you'd like circles to be hosted on.
+# the domain you'd like gulag to be hosted on.
 # XXX: don't include the 'http(s)' prefix, it will be
-#      handled automatically situationally by circles.
+#      handled automatically situationally by gulag.
 domain = 'cmyui.codes' # cmyui.codes
 
 # the address which the server runs on.
 # the server supports both inet4 and unix sockets.
 # for inet sockets, set to (addr: str, port: int),
 # for unix sockets, set to the path of the socket.
-server_addr = '/tmp/circles.sock'
+server_addr = '/tmp/gulag.sock'
 
 # the max amount of concurrent
-# connections circles will hold.
+# connections gulag will hold.
 max_conns = 16
 
 # displays additional information in the

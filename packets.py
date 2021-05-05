@@ -1042,7 +1042,7 @@ def userSilenced(pid: int) -> bytes:
         (pid, osuTypes.i32)
     )
 
-""" not sure why 95 & 96 exist? unused in circles """
+""" not sure why 95 & 96 exist? unused in gulag """
 
 # packet id: 95
 @cache

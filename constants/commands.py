@@ -180,7 +180,7 @@ async def recent(p: Player, c: Messageable, msg: Sequence[str]) -> str:
         rank = s.rank if s.status == SubmissionStatus.BEST else 'NA'
         l.append(f'PASS {{{s.pp:.2f}pp #{rank}}}')
     else:
-        # XXX: prior to v3.2.0, circles didn't parse total_length from
+        # XXX: prior to v3.2.0, gulag didn't parse total_length from
         # the osu!api, and thus this can do some zerodivision moments.
         # this can probably be removed in the future, or better yet
         # replaced with a better system to fix the maps.
@@ -894,7 +894,7 @@ if glob.config.advanced:
     @command(Privileges.Dangerous)
     async def py(p: Player, c: Messageable, msg: Sequence[str]) -> str:
         """Allow for (async) access to the python interpreter."""
-        # This can be very good for getting used to circles's API; just look
+        # This can be very good for getting used to gulag's API; just look
         # around the codebase and find things to play with in your server.
         # Ex: !py return (await glob.players.get(name='cmyui')).status.action
         if not msg:
@@ -1226,7 +1226,7 @@ async def mp_condition(p: Player, m: 'Match', msg: Sequence[str]) -> str:
 
     if cond == 'pp':
         # special case - pp can't actually be used as an ingame
-        # win condition, but circles allows it to be passed into
+        # win condition, but gulag allows it to be passed into
         # this command during a scrims to use pp as a win cond.
         if not m.is_scrimming:
             return 'PP is only useful as a win condition during scrims.'
@@ -1673,7 +1673,7 @@ async def pool_info(p: Player, c: Messageable, msg: Sequence[str]) -> str:
     return '\n'.join(l)
 
 """ Clan managment commands
-# The commands below are for managing circles
+# The commands below are for managing gulag
 # clans, for users, clan staff, and server staff.
 """
 
@@ -1850,7 +1850,7 @@ async def clan_list(p: Player, c: Messageable, msg: Sequence[str]) -> str:
     if offset >= (total_clans := len(glob.clans)):
         return 'No clans found.'
 
-    msg = [f'circles clans listing ({total_clans} total).']
+    msg = [f'gulag clans listing ({total_clans} total).']
 
     for idx, clan in enumerate(glob.clans, offset):
         msg.append(f'{idx + 1}. {clan!r}')

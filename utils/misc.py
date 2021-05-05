@@ -23,7 +23,7 @@ def point_of_interest():
        they could pls submit their stacktrace to cmyui <3."""
 
     # TODO: fix this, circular import thing
-    #ver_str = f'Running circles v{glob.version!r} | cmyui_pkg v{cmyui.__version__}'
+    #ver_str = f'Running gulag v{glob.version!r} | cmyui_pkg v{cmyui.__version__}'
     #printc(ver_str, Ansi.LBLUE)
 
     for fi in inspect.stack()[1:]:
@@ -40,7 +40,7 @@ def point_of_interest():
 
     msg_str = '\n'.join((
         "Hey! If you're seeing this, osu! just did something pretty strange,",
-        "and the circles devs have left a breakpoint here. We'd really appreciate ",
+        "and the gulag devs have left a breakpoint here. We'd really appreciate ",
         "if you could screenshot the data above, and send it to cmyui, either via ",
         "Discord (cmyui#0425), or by email (cmyuiosu@gmail.com). Thanks! 😳😳😳"
     ))

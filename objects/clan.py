@@ -23,7 +23,7 @@ class ClanPrivileges(IntEnum):
     Owner = 3
 
 class Clan:
-    """A class to represent a single circles clan."""
+    """A class to represent a single gulag clan."""
     __slots__ = ('id', 'name', 'tag', 'created_at',
                  'owner', 'members')
 
