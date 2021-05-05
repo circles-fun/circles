@@ -87,8 +87,6 @@ disallowed_passwords = {
     'password', 'minilamp'
 }
 
-<<<<<<< HEAD
-=======
 # gulag provides connectivity to
 # discord via a few simple webhooks.
 # simply add urls to start receiving.
@@ -120,7 +118,6 @@ surveillance = {
     },
 }
 
->>>>>>> parent of a964ade (gulag => circles)
 # the max duration to
 # cache a beatmap for.
 # recommended: ~1 hour.
