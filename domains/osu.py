@@ -197,7 +197,7 @@ async def osuGetBeatmapInfo(p: 'Player', conn: Connection) -> Optional[bytes]:
             # no map found
             continue
 
-        # convert from circles -> osu!api status
+        # convert from gulag -> osu!api status
         res['status'] = to_osuapi_status(res['status'])
 
         # try to get the user's grades on the map osu!
@@ -380,7 +380,7 @@ async def osuSearchSetHandler(p: 'Player', conn: Connection) -> Optional[bytes]:
     # Since we only need set-specific data, we can basically
     # just do same same query with either bid or bsid.
     if 's' in conn.args:
-        # circles chat menu: if the argument is negative,
+        # gulag chat menu: if the argument is negative,
         # check if it's in the players menu options.
         if conn.args['s'][0] == '-':
             opt_id = int(conn.args['s'])
@@ -519,11 +519,11 @@ async def osuSubmitModularSelector(conn: Connection) -> Optional[bytes]:
     """ Score submission checks completed; submit the score. """
 
     if glob.datadog:
-        glob.datadog.increment('circles.submitted_scores')
+        glob.datadog.increment('gulag.submitted_scores')
 
     if s.status == SubmissionStatus.BEST:
         if glob.datadog:
-            glob.datadog.increment('circles.submitted_scores_best')
+            glob.datadog.increment('gulag.submitted_scores_best')
 
         if s.rank == 1 and not s.player.restricted:
             # this is the new #1, post the play to #announce.
@@ -951,7 +951,7 @@ async def getScores(p: 'Player', conn: Connection) -> Optional[bytes]:
 
     # we have found a beatmap for the request.
     if glob.datadog:
-        glob.datadog.increment('circles.leaderboards_served')
+        glob.datadog.increment('gulag.leaderboards_served')
 
     if bmap.status < RankedStatus.Ranked:
         # only show leaderboards for ranked,
@@ -1291,7 +1291,7 @@ async def api_check_online(conn: Connection) -> Optional[bytes]:
         # no such player online
         return JSON({'online': False})
 
-    # varkaria wants set_id for circles-web
+    # varkaria wants set_id for gulag-web
     if p.status.map_md5:
         bmap = await Beatmap.from_md5(p.status.map_md5)
     else:
@@ -1632,7 +1632,7 @@ async def register_account(conn: Connection) -> Optional[bytes]:
             )
 
         if glob.datadog:
-            glob.datadog.increment('circles.registrations')
+            glob.datadog.increment('gulag.registrations')
 
         log(f'<{name} ({user_id})> has registered!', Ansi.LGREEN)
 

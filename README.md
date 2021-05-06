@@ -3,22 +3,22 @@
 Table of Contents
 ==================
 - [Table of Contents](#table-of-contents)
-  - [What is circles?](#what-is-circles)
+  - [What is gulag?](#what-is-gulag)
   - [Currently supported player commands](#currently-supported-player-commands)
   - [Requirements](#requirements)
   - [Setup](#setup)
   - [Directory Structure](#directory-structure)
 
-What is circles?
+What is gulag?
 ------
 
-circles is my take on the abstraction of an osu! server; I use native async/await
+gulag is my take on the abstraction of an osu! server; I use native async/await
 syntax, and have written the server from the ground up from sockets using my
 [python package](https://github.com/cmyui/cmyui_pkg)'s web server implementation.
 This relatively low-level design allows for flexibility, cleanliness, and efficiency
 not seen in other codebases - all while maintaining the simplicity of Python.
 
-A primary goal of circles is to keep our codebase a developer-friendly API, so
+A primary goal of gulag is to keep our codebase a developer-friendly API, so
 that programming remains about the logic and ideas, rather than the code itself.
 
 I'm mainly writing this as it's by-far the subject I'm currently the most
@@ -29,11 +29,11 @@ The server has come [a long way](https://cdn.discordapp.com/attachments/61640009
 and is in quite a usable state. We most likely handle every packet/handler
 supported by any competing server implementation, and feature a very large
 api and [commandset](#currently-supported-player-commands) for both developers
-and players alike, with many unique features only available with circles.
+and players alike, with many unique features only available with gulag.
 
-circles's database structure is built from the ground up using no specific
+gulag's database structure is built from the ground up using no specific
 references; this makes it incompatible with common stacks like Ripple's.
-[circles-web](https://github.com/Yo-ru/circles-web) is a project being developed
+[gulag-web](https://github.com/Yo-ru/gulag-web) is a project being developed
 primarily by the community members of our [Discord](https://discord.gg/ShEQgUx)
 who are interested in the project; they aim to atleast create a fully
 functional frontend, while the location of the API remains undecided.
@@ -42,7 +42,7 @@ great progress is starting to be made; I'd recommend checking it out!
 
 Currently supported player commands
 ------
-circles's commandset has been growing quite nicely.
+gulag's commandset has been growing quite nicely.
 
 ```
 Generic
@@ -140,7 +140,7 @@ Notes:
 
 - Ubuntu 20.04 is known to have issues with nginx and osu for unknown reasons?
 - I will not be able to help you out with creating a custom certificate of your own.
-- If you have any difficulties setting up circles, feel free to join the Discord server at the top of the README, we now have a bit of a community!
+- If you have any difficulties setting up gulag, feel free to join the Discord server at the top of the README, we now have a bit of a community!
 
 ```sh
 # Install python3.9 (requires ppa).
@@ -154,8 +154,8 @@ python3.9 get-pip.py && rm get-pip.py
 # Install our database, reverse-proxy, and build tools.
 sudo apt install mysql-server nginx build-essential
 
-# Clone circles from github.
-git clone https://github.com/circles-fun/circles && cd circles
+# Clone gulag from github.
+git clone https://github.com/circles-fun/circles && cd gulag
 
 # Init & update submodules.
 git submodule init && git submodule update
@@ -163,22 +163,22 @@ git submodule init && git submodule update
 # Build oppai-ng's binary.
 cd oppai-ng && ./build && cd ..
 
-# Install circles's requirements.
+# Install gulag's requirements.
 python3.9 -m pip install -r ext/requirements.txt
 
-# Import circles's database structure.
+# Import gulag's database structure.
 # NOTE: create an empty database before doing this.
 # This will also insert basic osu! channels & the bot.
 mysql -u your_sql_username -p your_db_name < ext/db.sql
 
-# Add circles's nginx config to your nginx/sites-enabled.
-# NOTE: default unix socket location is `/tmp/circles.sock`,
+# Add gulag's nginx config to your nginx/sites-enabled.
+# NOTE: default unix socket location is `/tmp/gulag.sock`,
 # and you will have to change the certificate paths in
 # the nginx config file to your own certificate paths.
-sudo ln ext/nginx.conf /etc/nginx/sites-enabled/circles.conf
+sudo ln ext/nginx.conf /etc/nginx/sites-enabled/gulag.conf
 sudo nginx -s reload
 
-# Configure circles.
+# Configure gulag.
 cp ext/config.sample.py config.py
 nano config.py
 
@@ -190,7 +190,7 @@ Directory Structure
 ------
     .
     ├── constants  # Code for representing gamemodes, mods, privileges, and other constants.
-    ├── ext        # External files from circles's primary operation.
+    ├── ext        # External files from gulag's primary operation.
     ├── objects    # Code for representing players, scores, maps, and more.
     ├── utils      # Utility functions used throughout the codebase for general purposes.
     └── domains    # The route-continaing domains accessible to the public web.

@@ -339,7 +339,7 @@ class Score:
         return res['c'] + 1 if res else 1
 
     # could be staticmethod?
-    # we'll see after some usage of circles
+    # we'll see after some usage of gulag
     # whether it's beneficial or not.
     async def calc_diff(self) -> tuple[float, float]:
         """Calculate PP and star rating for our score."""
