@@ -139,7 +139,7 @@ async def analyze_score(score: 'Score') -> None:
 
 REPLAYS_PATH = Path.cwd() / '.data/osr'
 async def replay_detections() -> None:
-    """Actively run a background thread throughout circles's
+    """Actively run a background thread throughout gulag's
        lifespan; it will pull replays determined as sketch
        from a queue indefinitely."""
     glob.sketchy_queue = asyncio.Queue() # cursed type hint fix

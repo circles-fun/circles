@@ -49,9 +49,9 @@ async def bancho_http_handler(conn: Connection) -> bytes:
     packets = glob.bancho_packets['all']
 
     return b'<!DOCTYPE html>' + '<br>'.join((
-        f'Running circles v{glob.version}',
+        f'Running gulag v{glob.version}',
         f'Players online: {len(glob.players) - 1}',
-        '<a href="https://github.com/circles-osu/circles">Source code</a>',
+        '<a href="https://github.com/cmyui/gulag">Source code</a>',
         '',
         f'<b>Packets handled ({len(packets)})</b>',
         '<br>'.join([f'{p.name} ({p.value})' for p in packets])
@@ -499,7 +499,7 @@ async def login(origin: bytes, ip: str) -> tuple[bytes, str]:
         user_info['priv'] |= Privileges.Verified
 
         # if this is the first user to create an account,
-        # grant them all circles privileges.
+        # grant them all gulag privileges.
         if user_info['id'] == 3:
             user_info['priv'] |= (
                 Privileges.Nominator | Privileges.Mod |
@@ -555,7 +555,7 @@ async def login(origin: bytes, ip: str) -> tuple[bytes, str]:
         p.bancho_priv | ClientPrivileges.Supporter
     )
 
-    data += packets.notification('Welcome back to the circles!\n'
+    data += packets.notification('Welcome back to the gulag!\n'
                                 f'Current build: v{glob.version}')
 
     # send all channel info.
@@ -685,10 +685,10 @@ async def login(origin: bytes, ip: str) -> tuple[bytes, str]:
 
     if glob.datadog:
         if not p.restricted:
-            glob.datadog.increment('circles.online_players')
+            glob.datadog.increment('gulag.online_players')
 
         time_taken = time.time() - login_time
-        glob.datadog.histogram('circles.login_time', time_taken)
+        glob.datadog.histogram('gulag.login_time', time_taken)
 
     p._queue.clear() # TODO: this is pretty suboptimal
 
