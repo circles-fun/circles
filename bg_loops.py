@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from cmyui.osu import ReplayFrame
+from cmyui.discord import Webhook
+from cmyui.discord import Embed
 from cmyui import log, Ansi
 
 import packets
@@ -108,6 +110,33 @@ async def analyze_score(score: 'Score') -> None:
                            and len(pt) > config['min_presses'])
 
         if any(map(cond, press_times.values())):
+            # at least one of the keys is under the
+            # minimum, log this occurence to Discord.
+            webhook_url = glob.config.webhooks['surveillance']
+            webhook = Webhook(url=webhook_url)
+
+            embed = Embed(
+                title = f'[{score.mode!r}] Abnormally low presstimes detected'
+            )
+
+            embed.set_author(
+                url = player.url,
+                name = player.name,
+                icon_url = player.avatar_url
+            )
+
+            embed.set_thumbnail(url=glob.config.webhooks['thumbnail'])
+
+            for key, pt in press_times.items():
+                embed.add_field(
+                    name = f'Key: {key.name}',
+                    value = f'{sum(pt) / len(pt):.2f}ms' if pt else 'N/A',
+                    inline = True
+                )
+
+            webhook.add_embed(embed)
+            await webhook.post(glob.http)
+
 REPLAYS_PATH = Path.cwd() / '.data/osr'
 async def replay_detections() -> None:
     """Actively run a background thread throughout circles's
