@@ -178,7 +178,7 @@ if __name__ == '__main__':
         glob.datadog.start(flush_interval=15)
 
         # wipe any previous stats from the page.
-        glob.datadog.gauge('gulag.online_players', 0)
+        glob.datadog.gauge('circles.online_players', 0)
     else:
         glob.datadog = None
 

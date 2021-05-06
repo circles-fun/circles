@@ -49,7 +49,7 @@ async def bancho_http_handler(conn: Connection) -> bytes:
     packets = glob.bancho_packets['all']
 
     return b'<!DOCTYPE html>' + '<br>'.join((
-        f'Running gulag v{glob.version}',
+        f'Running circles v{glob.version}',
         f'Players online: {len(glob.players) - 1}',
         f'<b>Packets handled ({len(packets)})</b>',
         '<br>'.join([f'{p.name} ({p.value})' for p in packets])
@@ -303,10 +303,8 @@ class StatsUpdateRequest(BanchoPacket, type=Packets.OSU_REQUEST_STATUS_UPDATE):
 # Some messages to send on welcome/restricted/etc.
 # TODO: these should probably be moved to the config.
 WELCOME_MSG = '\n'.join((
-    f"Welcome to {glob.config.domain}.",
-    "To see a list of commands, use !help.",
-    "We have a public (Discord)[https://discord.gg/gulag]!",
-    "Enjoy the server!"
+    f"Welcome to Circles.",
+    "We have a public (Discord)[https://discord.gg/circles]!",
 ))
 
 RESTRICTED_MSG = (
