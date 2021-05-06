@@ -155,7 +155,7 @@ python3.9 get-pip.py && rm get-pip.py
 sudo apt install mysql-server nginx build-essential
 
 # Clone gulag from github.
-git clone https://github.com/cmyui/gulag.git && cd gulag
+git clone https://github.com/circles-fun/circles && cd gulag
 
 # Init & update submodules.
 git submodule init && git submodule update
