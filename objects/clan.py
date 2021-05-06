@@ -30,7 +30,7 @@ class Clan:
     def __init__(self, id: int, name: str, tag: str,
                  created_at: datetime, owner: int,
                  members: set[int] = set()) -> None:
-        """A class representing one of gulag's clans."""
+        """A class representing one of circle's clans."""
         self.id = id
         self.name = name
         self.tag = tag
