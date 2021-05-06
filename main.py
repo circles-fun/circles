@@ -128,6 +128,8 @@ async def before_serving() -> None:
     # if the surveillance webhook has a value, run
     # automatic (still very primitive) detections on
     # replays deemed by the server's configurable values.
+    if glob.config.webhooks['surveillance']:
+        loop.create_task(bg_loops.replay_detections())
 
     # reroll the bot's random status every `interval` sec.
     loop.create_task(bg_loops.reroll_bot_status(interval=300))
