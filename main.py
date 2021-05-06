@@ -32,7 +32,7 @@ from utils.updater import Updater
 
 __all__ = ()
 
-# current version of gulag
+# current version of circles
 # NOTE: this is used internally for the updater, it may be
 # worth reading through it's code before playing with it.
 glob.version = cmyui.Version(3, 2, 2)
@@ -133,7 +133,7 @@ async def before_serving() -> None:
     loop.create_task(bg_loops.reroll_bot_status(interval=300))
 
 if __name__ == '__main__':
-    # set cwd to /gulag.
+    # set cwd to /circles.
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
     # create /.data and its subdirectories.
@@ -154,7 +154,7 @@ if __name__ == '__main__':
         glob.oppai_built = True
 
     # create a server object, which serves as a map of domains.
-    app = cmyui.Server(name=f'gulag v{glob.version}',
+    app = cmyui.Server(name=f'circles v{glob.version}',
                        gzip=4, verbose=glob.config.debug)
 
     # add our endpoint's domains to the server;
@@ -178,7 +178,7 @@ if __name__ == '__main__':
         glob.datadog.start(flush_interval=15)
 
         # wipe any previous stats from the page.
-        glob.datadog.gauge('gulag.online_players', 0)
+        glob.datadog.gauge('circles.online_players', 0)
     else:
         glob.datadog = None
 
