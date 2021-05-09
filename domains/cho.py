@@ -598,7 +598,7 @@ async def login(body: bytes, ip: str) -> tuple[bytes, str]:
         p.bancho_priv | ClientPrivileges.Supporter
     )
 
-    data += packets.notification('Welcome back to the Circles private server!')
+    data += packets.notification('Welcome back to Circles!')
 
     # send all channel info.
     for c in glob.channels:
