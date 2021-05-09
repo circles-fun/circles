@@ -30,19 +30,20 @@ __all__ = (
     'Score'
 )
 
+
 @unique
 @pymysql_encode(escape_enum)
 class Rank(IntEnum):
     XH = 0
     SH = 1
-    X  = 2
-    S  = 3
-    A  = 4
-    B  = 5
-    C  = 6
-    D  = 7
-    F  = 8
-    N  = 9
+    X = 2
+    S = 3
+    A = 4
+    B = 5
+    C = 6
+    D = 7
+    F = 8
+    N = 9
 
     def __str__(self) -> str:
         return {
@@ -56,6 +57,7 @@ class Rank(IntEnum):
             self.D: 'D',
             self.F: 'F'
         }[self.value]
+
 
 @unique
 @pymysql_encode(escape_enum)
@@ -71,6 +73,7 @@ class SubmissionStatus(IntEnum):
             self.SUBMITTED: 'Submitted',
             self.BEST: 'Best'
         }[self.value]
+
 
 class Score:
     """\
@@ -180,7 +183,7 @@ class Score:
         # TODO: perhaps abstract these differently
         # since they're mode dependant? feels weird..
         self.n300: Optional[int] = None
-        self.n100: Optional[int] = None # n150 for taiko
+        self.n100: Optional[int] = None  # n150 for taiko
         self.n50: Optional[int] = None
         self.nmiss: Optional[int] = None
         self.ngeki: Optional[int] = None
@@ -264,7 +267,7 @@ class Score:
         if len(map_md5 := data[0]) != 32:
             return
 
-        pname = data[1].rstrip() # why does osu! make me rstrip lol
+        pname = data[1].rstrip()  # why does osu! make me rstrip lol
 
         # get the map & player for the score.
         s.bmap = await Beatmap.from_md5(map_md5)
@@ -291,12 +294,12 @@ class Score:
          s.score, s.max_combo) = map(int, data[3:11])
 
         s.perfect = data[11] == 'True'
-        _grade = data[12] # letter grade
+        _grade = data[12]  # letter grade
         s.mods = Mods(int(data[13]))
         s.passed = data[14] == 'True'
         s.mode = GameMode.from_params(int(data[15]), s.mods)
         s.play_time = datetime.now()
-        s.client_flags = data[17].count(' ') # TODO: use osu!ver? (osuver\s+)
+        s.client_flags = data[17].count(' ')  # TODO: use osu!ver? (osuver\s+)
 
         s.grade = _grade if s.passed else 'F'
 
@@ -313,7 +316,7 @@ class Score:
         else:
             s.pp = s.sr = 0.0
             s.status = SubmissionStatus.SUBMITTED if s.passed \
-                  else SubmissionStatus.FAILED
+                else SubmissionStatus.FAILED
 
         return s
 
@@ -401,7 +404,7 @@ class Score:
         """Calculate the accuracy of our score."""
         mode_vn = self.mode.as_vanilla
 
-        if mode_vn == 0: # osu!
+        if mode_vn == 0:  # osu!
             total = sum((self.n300, self.n100, self.n50, self.nmiss))
 
             if total == 0:
@@ -414,7 +417,7 @@ class Score:
                 self.n300 * 300.0
             )) / (total * 300.0)
 
-        elif mode_vn == 1: # osu!taiko
+        elif mode_vn == 1:  # osu!taiko
             total = sum((self.n300, self.n100, self.nmiss))
 
             if total == 0:

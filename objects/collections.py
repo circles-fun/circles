@@ -31,6 +31,7 @@ __all__ = (
     'ClanList'
 )
 
+
 class ChannelList(list):
     """The currently active chat channels on the server."""
 
@@ -79,6 +80,7 @@ class ChannelList(list):
         if glob.config.debug:
             log(f'{c} removed from channels list.')
 
+
 class MatchList(list):
     """The currently active multiplayer matches on the server."""
 
@@ -125,6 +127,7 @@ class MatchList(list):
 
         if glob.config.debug:
             log(f'{m} removed from matches list.')
+
 
 class PlayerList(list):
     """The currently active players on the server."""
@@ -185,7 +188,8 @@ class PlayerList(list):
 
                 return attr, val
         else:
-            raise ValueError('Missing attribute in kwargs! (must provide token/id/name)')
+            raise ValueError(
+                'Missing attribute in kwargs! (must provide token/id/name)')
 
     def get(self, **kwargs) -> Optional[Player]:
         """Get a player by token, id, or name from cache."""
@@ -232,7 +236,7 @@ class PlayerList(list):
                         sql: bool = False) -> Optional[Player]:
         """Return a player with a given name & pw_md5, from cache or sql."""
         if not (p := self.get(name=name)):
-            if not sql: # not to fetch from sql.
+            if not sql:  # not to fetch from sql.
                 return
 
             if not (p := await self.get_sql(name=name)):
@@ -260,6 +264,7 @@ class PlayerList(list):
 
         if glob.config.debug:
             log(f'{p} removed from global player list.')
+
 
 class MapPoolList(list):
     """The currently active mappools on the server."""
@@ -302,6 +307,7 @@ class MapPoolList(list):
         if glob.config.debug:
             log(f'{mp} removed from mappools list.')
 
+
 class ClanList(list):
     """The currently active clans on the server."""
 
@@ -329,7 +335,8 @@ class ClanList(list):
             if val := kwargs.pop(attr, None):
                 break
         else:
-            raise ValueError('must provide valid kwarg (name, tag, id) to get()')
+            raise ValueError(
+                'must provide valid kwarg (name, tag, id) to get()')
 
         for c in self:
             if getattr(c, attr) == val:

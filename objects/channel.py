@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 
 __all__ = 'Channel',
 
+
 class Channel:
     """An osu! chat channel.
 
@@ -36,7 +37,7 @@ class Channel:
                  write_priv: Privileges = Privileges.Normal,
                  auto_join: bool = True,
                  instance: bool = False) -> None:
-        self._name = name # 'real' name ('#{multi/spec}_{id}')
+        self._name = name  # 'real' name ('#{multi/spec}_{id}')
         self.topic = topic
         self.read_priv = read_priv
         self.write_priv = write_priv
@@ -69,12 +70,12 @@ class Channel:
         """Enqueue `msg` to all connected clients from `sender`."""
         self.enqueue(
             packets.sendMessage(
-                client = sender.name,
-                msg = msg,
-                target = self.name,
-                client_id = sender.id
+                client=sender.name,
+                msg=msg,
+                target=self.name,
+                client_id=sender.id
             ),
-            immune = () if to_self else (sender.id,)
+            immune=() if to_self else (sender.id,)
         )
 
     def send_bot(self, msg: str) -> None:
@@ -83,10 +84,10 @@ class Channel:
 
         self.enqueue(
             packets.sendMessage(
-                client = bot.name,
-                msg = msg,
-                target = self.name,
-                client_id = bot.id
+                client=bot.name,
+                msg=msg,
+                target=self.name,
+                client_id=bot.id
             )
         )
 

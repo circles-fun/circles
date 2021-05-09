@@ -18,6 +18,7 @@ __all__ = (
     'make_safe_name'
 )
 
+
 def point_of_interest():
     """Leave a pseudo-breakpoint somewhere to ask the user if
        they could pls submit their stacktrace to cmyui <3."""
@@ -48,8 +49,10 @@ def point_of_interest():
     printc(msg_str, Ansi.LRED)
     input('To close this menu & unfreeze, simply hit the enter key.')
 
+
 useful_keys = (Keys.M1, Keys.M2,
                Keys.K1, Keys.K2)
+
 
 def get_press_times(frames: Sequence[ReplayFrame]) -> dict[Keys, float]:
     """A very basic function to press times of an osu! replay.
@@ -81,9 +84,11 @@ def get_press_times(frames: Sequence[ReplayFrame]) -> dict[Keys, float]:
     # return all keys with presses
     return {k: v for k, v in press_times.items() if v}
 
+
 def make_safe_name(name: str) -> str:
     """Return a name safe for usage in sql."""
     return name.lower().replace(' ', '_')
+
 
 def pymysql_encode(conv: Callable):
     """Decorator to allow for adding to pymysql's encoders."""
@@ -92,5 +97,6 @@ def pymysql_encode(conv: Callable):
         return cls
     return wrapper
 
-def escape_enum(val, mapping=None) -> str: # used for ^
+
+def escape_enum(val, mapping=None) -> str:  # used for ^
     return str(int(val))

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import config # imported for indirect use
+import config  # imported for indirect use
 
 if __import__('typing').TYPE_CHECKING:
     from asyncio import Queue
@@ -30,7 +30,7 @@ channels: 'ChannelList'
 matches: 'MatchList'
 clans: 'ClanList'
 pools: 'MapPoolList'
-achievements: dict[int, list['Achievement']] # per vn gamemode
+achievements: dict[int, list['Achievement']]  # per vn gamemode
 
 bancho_packets: dict['Packets', 'BanchoPacket']
 db: 'AsyncSQLPool'
@@ -49,10 +49,10 @@ oppai_built: bool
 cache = {
     # algorithms like brypt these are intentionally designed to be
     # slow; we'll cache the results to speed up subsequent logins.
-    'bcrypt': {}, # {bcrypt: md5, ...}
+    'bcrypt': {},  # {bcrypt: md5, ...}
     # we'll cache results for osu! client update requests since they
     # are relatively frequently and won't change very frequently.
-    'update': { # default timeout is 1h, set on request.
+    'update': {  # default timeout is 1h, set on request.
         'cuttingedge': {'check': None, 'path': None, 'timeout': 0},
         'stable40': {'check': None, 'path': None, 'timeout': 0},
         'beta40': {'check': None, 'path': None, 'timeout': 0},
@@ -60,8 +60,8 @@ cache = {
     },
     # cache all beatmap data calculated while online. this way,
     # the most requested maps will inevitably always end up cached.
-    'beatmap': {}, # {md5: {timeout, map}, ...}
+    'beatmap': {},  # {md5: {timeout, map}, ...}
     # cache all beatmaps which we failed to get from the osuapi,
     # so that we do not have to perform this request multiple times.
-    'unsubmitted': set() # {md5, ...}
+    'unsubmitted': set()  # {md5, ...}
 }

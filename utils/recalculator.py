@@ -14,8 +14,10 @@ __all__ = ('PPCalculator',)
 
 BEATMAPS_PATH = Path.cwd() / '.data/osu'
 
+
 class PPCalculator:
     """Asynchronously wraps the process of calculating difficulty in osu!."""
+
     def __init__(self, map_id: int, **kwargs) -> None:
         # NOTE: this constructor should not be called
         # unless you are CERTAIN the map is on disk
@@ -74,10 +76,14 @@ class PPCalculator:
         # use subprocess to do the calculations (yikes).
         cmd = [f'./oppai-ng/oppai {self.file}']
 
-        if self.mods:  cmd.append(f'+{self.mods!r}')
-        if self.combo: cmd.append(f'{self.combo}x')
-        if self.nmiss: cmd.append(f'{self.nmiss}xM')
-        if self.acc:   cmd.append(f'{self.acc:.4f}%')
+        if self.mods:
+            cmd.append(f'+{self.mods!r}')
+        if self.combo:
+            cmd.append(f'{self.combo}x')
+        if self.nmiss:
+            cmd.append(f'{self.nmiss}xM')
+        if self.acc:
+            cmd.append(f'{self.acc:.4f}%')
 
         if self.mode_vn:
             if self.mode_vn not in (0, 1):
@@ -101,11 +107,11 @@ class PPCalculator:
             ' '.join(cmd), stdout=pipe, stderr=pipe
         )
 
-        stdout, _ = await proc.communicate() # stderr not needed
+        stdout, _ = await proc.communicate()  # stderr not needed
         output = orjson.loads(stdout.decode())
 
         if 'code' not in output or output['code'] != 200:
             log(f"oppai-ng: {output['errstr']}", Ansi.LRED)
 
-        await proc.wait() # wait for exit
+        await proc.wait()  # wait for exit
         return output['pp'], output['stars']

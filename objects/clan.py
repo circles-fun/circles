@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 
 __all__ = ('Clan', 'ClanPrivileges')
 
+
 @unique
 @pymysql_encode(escape_enum)
 class ClanPrivileges(IntEnum):
@@ -21,6 +22,7 @@ class ClanPrivileges(IntEnum):
     Member = 1
     Officer = 2
     Owner = 3
+
 
 class Clan:
     """A class to represent a single gulag clan."""
@@ -36,8 +38,8 @@ class Clan:
         self.tag = tag
         self.created_at = created_at
 
-        self.owner = owner # userid
-        self.members = members # userids
+        self.owner = owner  # userid
+        self.members = members  # userids
 
     async def add_member(self, p: 'Player') -> None:
         """Add a given player to the clan's members."""

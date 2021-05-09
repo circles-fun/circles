@@ -35,19 +35,20 @@ gm_sql = (
     'ap_std'
 )
 
+
 @unique
 @pymysql_encode(escape_enum)
 class GameMode(IntEnum):
-    vn_std   = 0
+    vn_std = 0
     vn_taiko = 1
     vn_catch = 2
     vn_mania = 3
 
-    rx_std   = 4
+    rx_std = 4
     rx_taiko = 5
     rx_catch = 6
 
-    ap_std   = 7
+    ap_std = 7
 
     @classmethod
     def from_params(cls, mode_vn: int, mods: Mods):
@@ -58,7 +59,7 @@ class GameMode(IntEnum):
         elif mods & Mods.AUTOPILOT:
             mode += 7
 
-        if mode > 7: # don't apply mods if invalid
+        if mode > 7:  # don't apply mods if invalid
             return cls(mode_vn)
 
         return cls(mode)

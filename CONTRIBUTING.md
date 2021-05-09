@@ -1,8 +1,8 @@
-# Contributing to gulag
+# Contributing to circles
 
 :+1::tada: Thanks for taking the time to contribute! :tada::+1:
 
-The following is a set of guidelines for contributing to gulag. These are mostly guidelines, not rules. Use your best judgement, and feel free to propose changes to this file in a pull request!
+The following is a set of guidelines for contributing to circles. These are mostly guidelines, not rules. Use your best judgement, and feel free to propose changes to this file in a pull request!
 
 #### Table of Contents
 
@@ -21,13 +21,13 @@ The following is a set of guidelines for contributing to gulag. These are mostly
 
 ## Code of Conduct
 
-This project and everyone participating in it must follow the [gulag Code of Conduct](CODE_OF_CONDUCT.md). By participating you are expected to uphold this code.
+This project and everyone participating in it must follow the [circles Code of Conduct](CODE_OF_CONDUCT.md). By participating you are expected to uphold this code.
 
 ## How Can I Contribute?
 
 ### Reporting Bugs
 
-This section guides you through submitting a bug report for gulag. Following these guidelines help maintainers and the community understand your report :pencil:, reproduce the bug :computer:, and find related reports :mag_right:.
+This section guides you through submitting a bug report for circles. Following these guidelines help maintainers and the community understand your report :pencil:, reproduce the bug :computer:, and find related reports :mag_right:.
 
 Before creating bug reports, please perform a [cursory search](https://github.com/search?l=&p=2&q=is%3Aissue+repo%3Acmyui%2Fgulag) to see if the problem has already been reported. If it has **and the issue is still open**, add a comment to the existing issue instead of creating a new one. When creating a bug report please [use as many details as possible](#how-do-i-submit-a-good-bug-report).
 
@@ -78,18 +78,18 @@ Explain the problem and include additional details to help maintainers reproduce
 
 Provide more context by answering these questions:
 
-* **Did the problem start happening recently** (e.g. after updating to a new version of gulag) or was this always the problem?
+* **Did the problem start happening recently** (e.g. after updating to a new version of circles) or was this always the problem?
 * **Can you reliably reproduce the issue?** If not, provide details about how often the problem happens and under what conditions it normally happens.
 
 
 Include details about your configuration and environment:
 
-* **Which version of gulag are you using?** You can get the exact version when you first start gulag by running `python3.9 main.py`.
+* **Which version of circles are you using?** You can get the exact version when you first start circles by running `python3.9 main.py`.
 * **What's the name and version of the OS you're using?**
 
 ### Suggesting Ideas
 
-This section guides you through submitting an idea for gulag, including completely new features and minor improvements to existing functionality. Follow these guidelines to help maintainers and the community understand your suggestion :pencil: and find related suggestions :mag_right:.
+This section guides you through submitting an idea for circles, including completely new features and minor improvements to existing functionality. Follow these guidelines to help maintainers and the community understand your suggestion :pencil: and find related suggestions :mag_right:.
 
 Before suggesting any ideas, please perform a [cursory search](https://github.com/search?l=&p=2&q=is%3Aissue+repo%3Acmyui%2Fgulag) to see if your idea has already been suggested. You may find out you don't need to create one. When suggesting an idea, please [include as many details as possible](#how-do-i-submit-a-good-idea).
 
@@ -119,22 +119,22 @@ Explain the idea and include additional details to help maintainers understand y
 * **Provide specific examples to demonstrate the steps.** Include copy/pasteable snippits which you use in those examples, as [markdown code blocks](https://help.github.com/articles/markdown-basics/#multiple-lines).
 * **Describe the current behavior** and **explain which behavior you expected to see instead** and why.
 * **Include screenshots and animated GIFs** which show you following the described steps and clearly demonstrate the problem.
-* **Explain why this idea would be useful** to most gulag users.
-* **Specify which version of gulag you're using.** You can get the exact version when you first start gulag by running `python3.9 main.py`.
+* **Explain why this idea would be useful** to most circles users.
+* **Specify which version of circles you're using.** You can get the exact version when you first start circles by running `python3.9 main.py`.
 * **Specify the name and version of the OS you're using.**
 
 ### Your First Contribution
 
-Unsure of where to begin contributing to gulag? You can start by looking through the [good first issue](https://github.com/cmyui/gulag/labels/good%20first%20issue) issues. These issues usually only require a few lines of code, and a test or two.
+Unsure of where to begin contributing to circles? You can start by looking through the [good first issue](https://github.com/cmyui/circles/labels/good%20first%20issue) issues. These issues usually only require a few lines of code, and a test or two.
 
 ### Pull Requests
 
 The process described here has several goals:
 
-- Maintain gulag's quality.
+- Maintain circles's quality.
 - Fix problems that are important to users.
 - Engage the community in working towards the best possible bancho protocol.
-- Enable a sustainable system for gulag's maintainers to review contributions.
+- Enable a sustainable system for circles's maintainers to review contributions.
 
 Please make sure to follow the [Style Guides](#style-guides) to have your contribution considered by maintainers.
 

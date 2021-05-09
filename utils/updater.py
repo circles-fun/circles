@@ -24,20 +24,21 @@ __all__ = ('Updater',)
 
 SQL_UPDATES_FILE = Path.cwd() / 'ext/updates.sql'
 
+
 class Updater:
     def __init__(self, version: Version) -> None:
         self.version = version
 
     async def run(self) -> None:
         """Prepare, and run the updater."""
-        prev_ver = await self.get_prev_version()# or self.version
+        prev_ver = await self.get_prev_version()  # or self.version
 
         if not prev_ver:
             # first time running the server.
             # might add other code here eventually..
             prev_ver = self.version
 
-        await self._update_cmyui() # pip install -U cmyui
+        await self._update_cmyui()  # pip install -U cmyui
         await self._update_sql(prev_ver)
 
     @staticmethod
@@ -46,7 +47,7 @@ class Updater:
         res = await glob.db.fetch(
             'SELECT ver_major, ver_minor, ver_micro '
             'FROM startups ORDER BY datetime DESC LIMIT 1',
-            _dict=False # get tuple
+            _dict=False  # get tuple
         )
 
         if res:
@@ -84,8 +85,8 @@ class Updater:
         if module_ver < latest_ver:
             # package is not up to date; update it.
             log(f'Updating cmyui_pkg (v{module_ver!r} -> '
-                                    f'v{latest_ver!r}).', Ansi.LMAGENTA)
-            pip_main(['install', '-Uq', 'cmyui']) # Update quiet
+                f'v{latest_ver!r}).', Ansi.LMAGENTA)
+            pip_main(['install', '-Uq', 'cmyui'])  # Update quiet
 
     async def _update_sql(self, prev_version: Version) -> None:
         """Apply any structural changes to the database since the last startup."""
@@ -100,7 +101,6 @@ class Updater:
         q_lines = []
 
         current_ver = None
-
 
         for line in content.splitlines():
             if not line:
@@ -132,7 +132,7 @@ class Updater:
             return
 
         log(f'Updating sql (v{prev_version!r} -> '
-                          f'v{self.version!r}).', Ansi.LMAGENTA)
+            f'v{self.version!r}).', Ansi.LMAGENTA)
 
         sql_lock = asyncio.Lock()
 
