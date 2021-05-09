@@ -125,7 +125,7 @@ Explain the idea and include additional details to help maintainers understand y
 
 ### Your First Contribution
 
-Unsure of where to begin contributing to circles? You can start by looking through the [good first issue](https://github.com/cmyui/circles/labels/good%20first%20issue) issues. These issues usually only require a few lines of code, and a test or two.
+Unsure of where to begin contributing to circles? You can start by looking through the [good first issue](https://github.com/circles-fun/circles/labels/good%20first%20issue) issues. These issues usually only require a few lines of code, and a test or two.
 
 ### Pull Requests
 

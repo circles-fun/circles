@@ -40,12 +40,7 @@ class Updater:
             prev_ver = self.version
 
             printc('\n'.join([
-                'Welcome to gulag!',
-                'If you have any issues with the server,',
-                'feel free to join our public Discord :)',
-                '',
-                'https://discord.gg/ShEQgUx',
-                'Enjoy the server!'
+                'Welcome to circles!',
             ]), Ansi.LCYAN)
             input('> Press enter to continue')
 
