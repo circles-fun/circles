@@ -5,6 +5,7 @@ from collections import defaultdict
 from datetime import datetime
 from enum import IntEnum
 from enum import unique
+from typing import Optional
 
 from cmyui import Ansi
 from cmyui import log
@@ -17,6 +18,8 @@ from utils.misc import pymysql_encode
 from utils.recalculator import PPCalculator
 
 __all__ = ('RankedStatus', 'Beatmap')
+
+BASE_DOMAIN = glob.config.domain
 
 # for some ungodly reason, different values are used to
 # represent different ranked statuses all throughout osu!
@@ -38,71 +41,82 @@ class RankedStatus(IntEnum):
     Loved = 5
 
     def __str__(self) -> str:
-        return {
-            self.NotSubmitted: 'Unsubmitted',
-            self.Pending: 'Unranked',
-            self.UpdateAvailable: 'Outdated',
-            self.Ranked: 'Ranked',
-            self.Approved: 'Approved',
-            self.Qualified: 'Qualified',
-            self.Loved: 'Loved'
-        }[self.value]
+        return gulagstatus2str_dict[self.value]
 
     @property
-    def osu_api(self):
+    def osu_api(self) -> int:
         """Convert the value to osu!api status."""
         # XXX: only the ones that exist are mapped.
-        return {
-            self.Pending: 0,
-            self.Ranked: 1,
-            self.Approved: 2,
-            self.Qualified: 3,
-            self.Loved: 4
-        }[self.value]
+        return gulag2osuapistatus_dict[self.value]
 
-    @classmethod
-    def from_osuapi(cls, osuapi_status: int):
+    @staticmethod
+    def from_osuapi(osuapi_status: int) -> 'RankedStatus':
         """Convert from osu!api status."""
-        return cls(
-            defaultdict(lambda: cls.UpdateAvailable, {
-                -2: cls.Pending, # graveyard
-                -1: cls.Pending, # wip
-                 0: cls.Pending,
-                 1: cls.Ranked,
-                 2: cls.Approved,
-                 3: cls.Qualified,
-                 4: cls.Loved
-            })[osuapi_status]
-        )
+        return osu2gulagstatus_dict[osuapi_status]
 
-    @classmethod
-    def from_osudirect(cls, osudirect_status: int):
+    @staticmethod
+    def from_osudirect(osudirect_status: int) -> 'RankedStatus':
         """Convert from osu!direct status."""
-        return cls(
-            defaultdict(lambda: cls.UpdateAvailable, {
-                0: cls.Ranked,
-                2: cls.Pending,
-                3: cls.Qualified,
-                #4: all ranked statuses lol
-                5: cls.Pending, # graveyard
-                7: cls.Ranked, # played before
-                8: cls.Loved
-            })[osudirect_status]
-        )
+        return direct2gulagstatus_dict[osudirect_status]
 
-    @classmethod
-    def from_str(cls, status_str: str):
-        """Convert from string value."""
-        return cls( # could perhaps have `'unranked': cls.Pending`?
-            defaultdict(lambda: cls.UpdateAvailable, {
-                'pending': cls.Pending,
-                'ranked': cls.Ranked,
-                'approved': cls.Approved,
-                'qualified': cls.Qualified,
-                'loved': cls.Loved
-            })[status_str]
-        )
+    @staticmethod
+    def from_str(status_str: str) -> 'RankedStatus':
+        """Convert from string value.""" # could perhaps have `'unranked': cls.Pending`?
+        return str2gulagstatus_dict[status_str]
 
+osu2gulagstatus_dict = defaultdict(
+    lambda: RankedStatus.UpdateAvailable, {
+        -2: RankedStatus.Pending, # graveyard
+        -1: RankedStatus.Pending, # wip
+        0:  RankedStatus.Pending,
+        1:  RankedStatus.Ranked,
+        2:  RankedStatus.Approved,
+        3:  RankedStatus.Qualified,
+        4:  RankedStatus.Loved
+    }
+)
+
+direct2gulagstatus_dict = defaultdict(
+    lambda: RankedStatus.UpdateAvailable, {
+        0: RankedStatus.Ranked,
+        2: RankedStatus.Pending,
+        3: RankedStatus.Qualified,
+        #4: all ranked statuses lol
+        5: RankedStatus.Pending, # graveyard
+        7: RankedStatus.Ranked, # played before
+        8: RankedStatus.Loved
+    }
+)
+
+gulag2osuapistatus_dict = {
+    RankedStatus.Pending: 0,
+    RankedStatus.Ranked: 1,
+    RankedStatus.Approved: 2,
+    RankedStatus.Qualified: 3,
+    RankedStatus.Loved: 4
+}
+
+str2gulagstatus_dict = defaultdict(
+    lambda: RankedStatus.UpdateAvailable, {
+        'pending': RankedStatus.Pending,
+        'ranked': RankedStatus.Ranked,
+        'approved': RankedStatus.Approved,
+        'qualified': RankedStatus.Qualified,
+        'loved': RankedStatus.Loved
+    }
+)
+
+gulagstatus2str_dict = {
+    RankedStatus.NotSubmitted: 'Unsubmitted',
+    RankedStatus.Pending: 'Unranked',
+    RankedStatus.UpdateAvailable: 'Outdated',
+    RankedStatus.Ranked: 'Ranked',
+    RankedStatus.Approved: 'Approved',
+    RankedStatus.Qualified: 'Qualified',
+    RankedStatus.Loved: 'Loved'
+}
+
+...
 #@dataclass
 #class BeatmapInfoRequest:
 #    filenames: Sequence[str]
@@ -142,7 +156,7 @@ class Beatmap:
                  'mode', 'bpm', 'cs', 'od', 'ar', 'hp',
                  'diff', 'pp_cache')
 
-    def __init__(self, **kwargs):
+    def __init__(self, **kwargs) -> None:
         self.md5 = kwargs.get('md5', '')
         self.id = kwargs.get('id', 0)
         self.set_id = kwargs.get('set_id', 0)
@@ -170,7 +184,7 @@ class Beatmap:
         self.hp = kwargs.get('hp', 0.0)
 
         self.diff = kwargs.get('diff', 0.00)
-        self.pp_cache = {} # {mods: (acc: pp, ...), ...}
+        self.pp_cache = {0: {}, 1: {}, 2: {}, 3: {}} # {mode_vn: {mods: (acc/score: pp, ...), ...}}
 
     @property
     def filename(self) -> str:
@@ -183,14 +197,14 @@ class Beatmap:
         return f'{self.artist} - {self.title} [{self.version}]'
 
     @property
-    def url(self):
+    def url(self) -> str:
         """The osu! beatmap url for `self`."""
-        return f'https://osu.ppy.sh/b/{self.id}'
+        return f'https://osu.{BASE_DOMAIN}/beatmapsets/{self.set_id}#{self.id}'
 
     @property
-    def set_url(self) -> str:
+    def set_url(self) -> str: # same as above, just no beatmap id
         """The osu! beatmap set url for `self`."""
-        return f'https://osu.ppy.sh/s/{self.set_id}'
+        return f'https://osu.{BASE_DOMAIN}/beatmapsets/{self.set_id}'
 
     @property
     def embed(self) -> str:
@@ -204,7 +218,7 @@ class Beatmap:
                                RankedStatus.Approved)
 
     @classmethod
-    async def from_bid(cls, bid: int) -> 'Beatmap':
+    async def from_bid(cls, bid: int) -> 'Optional[Beatmap]':
         """Create a `Beatmap` from sql using a beatmap id."""
         # TODO: perhaps some better caching solution that allows
         # for maps to be retrieved from the cache by id OR md5?
@@ -230,22 +244,21 @@ class Beatmap:
         # I think i'll have md5 most times lol.
 
     @classmethod
-    async def from_bid_sql(cls, bid: int):
+    async def from_bid_sql(cls, bid: int) -> Optional['Beatmap']:
         """Fetch & return a map object from sql by id."""
         if res := await glob.db.fetch(
             'SELECT md5, set_id, '
             'artist, title, version, creator, '
             'last_update, total_length, max_combo, '
-            'status, frozen, plays, passes, '
-            'mode, bpm, cs, od, ar, hp, '
-            'diff '
+            'status, frozen, plays, passes, mode, '
+            'bpm, cs, od, ar, hp, diff '
             'FROM maps WHERE id = %s',
             [bid]
         ):
             return cls(**res, id=bid)
 
     @classmethod
-    async def from_md5(cls, md5: str):
+    async def from_md5(cls, md5: str) -> Optional['Beatmap']:
         """Create a `Beatmap` from cache, sql or osu!api using it's md5."""
         # check if the map is in the cache.
         if cached := cls.from_md5_cache(md5):
@@ -280,7 +293,7 @@ class Beatmap:
         return m
 
     @staticmethod
-    def from_md5_cache(md5: str):
+    def from_md5_cache(md5: str) -> 'Beatmap':
         """Fetch & return a map object from cache by md5."""
         if md5 in glob.cache['beatmap']:
             # check if our cached result is within timeout.
@@ -294,7 +307,7 @@ class Beatmap:
             del glob.cache['beatmap'][md5]
 
     @classmethod
-    async def from_md5_sql(cls, md5: str):
+    async def from_md5_sql(cls, md5: str) -> Optional['Beatmap']:
         """Fetch & return a map object from sql by md5."""
         if res := await glob.db.fetch(
             'SELECT id, set_id, '
@@ -309,7 +322,7 @@ class Beatmap:
             return cls(**res, md5=md5)
 
     @classmethod
-    async def from_md5_osuapi(cls, md5: str):
+    async def from_md5_osuapi(cls, md5: str) -> Optional['Beatmap']:
         """Fetch & return a map object from osu!api by md5."""
         url = 'https://old.ppy.sh/api/get_beatmaps'
         params = {'k': glob.config.osu_api_key, 'h': md5}
@@ -338,7 +351,9 @@ class Beatmap:
         m.last_update = datetime.strptime(
             bmap['last_update'], '%Y-%m-%d %H:%M:%S')
         m.total_length = int(bmap['total_length'])
-        m.max_combo = int(bmap['max_combo'])
+
+        if bmap['max_combo'] is not None:
+            m.max_combo = int(bmap['max_combo'])
 
         m.status = RankedStatus.from_osuapi(int(bmap['approved']))
 
@@ -378,7 +393,9 @@ class Beatmap:
             # New map, just save to sql.
             await m.save_to_sql()
 
-        log(f'Retrieved {m.full} from the osu!api.', Ansi.LGREEN)
+        if glob.app.debug:
+            log(f'Retrieved {m.full} from the osu!api.', Ansi.LMAGENTA)
+
         return m
 
     @classmethod
@@ -462,7 +479,7 @@ class Beatmap:
             m.last_update = bmap['last_update']
             m.total_length = int(bmap['total_length'])
 
-            if bmap['max_combo'] is not None: # ??? osu api
+            if bmap['max_combo'] is not None:
                 m.max_combo = int(bmap['max_combo'])
 
             m.status = bmap['approved']
@@ -486,22 +503,33 @@ class Beatmap:
 
             await m.save_to_sql()
 
-            log(f'Retrieved {m.full} from the osu!api.', Ansi.LGREEN)
+            if glob.app.debug:
+                log(f'Retrieved {m.full} from the osu!api.', Ansi.LMAGENTA)
 
     async def cache_pp(self, mods: Mods) -> None:
         """Cache some common acc pp values for specified mods."""
-        self.pp_cache[mods] = [0.0, 0.0, 0.0, 0.0, 0.0]
+        mode_vn = self.mode.as_vanilla
+        self.pp_cache[mode_vn][mods] = [0.0, 0.0, 0.0, 0.0, 0.0]
 
-        ppcalc = await PPCalculator.from_id(
-            map_id=self.id, mods=mods,
-            mode_vn=self.mode.as_vanilla
-        )
+        ppcalc = await PPCalculator.from_map(self, mods=mods, mode_vn=mode_vn)
 
-        for idx, acc in enumerate((90, 95, 98, 99, 100)):
-            ppcalc.acc = acc
+        if not ppcalc:
+            return
 
-            pp, _ = await ppcalc.perform() # don't need sr
-            self.pp_cache[mods][idx] = pp
+        if mode_vn in (0, 1): # std/taiko, use acc
+            for idx, acc in enumerate(glob.config.pp_cached_accs):
+                ppcalc.pp_attrs['acc'] = acc
+
+                pp, _ = await ppcalc.perform() # don't need sr
+                self.pp_cache[mode_vn][mods][idx] = pp
+        elif mode_vn == 2:
+            return # unsupported gm
+        elif mode_vn == 3: # mania, use score
+            for idx, score in enumerate(glob.config.pp_cached_scores):
+                ppcalc.pp_attrs['score'] = score
+
+                pp, _ = await ppcalc.perform()
+                self.pp_cache[mode_vn][mods][idx] = pp
 
     async def save_to_sql(self) -> None:
         """Save the the object into sql."""
