@@ -4,35 +4,36 @@
 # in a lot of these classes; needs refactor.
 
 import asyncio
-from typing import Any
-from typing import Optional
 from typing import Iterator
-from typing import TYPE_CHECKING
+from typing import Optional
+from typing import Sequence
 from typing import Union
 
 from cmyui import log
+from cmyui import Ansi
 
 from constants.privileges import Privileges
 from objects import glob
+from objects.clan import Clan
 from objects.clan import ClanPrivileges
+from objects.channel import Channel
+from objects.match import MapPool
+from objects.match import Match
 from objects.player import Player
 from utils.misc import make_safe_name
 
-if TYPE_CHECKING:
-    from objects.channel import Channel
-    from objects.match import Match, MapPool
-    from objects.clan import Clan
-
 __all__ = (
-    'ChannelList',
-    'MatchList',
-    'PlayerList',
-    'MapPoolList',
-    'ClanList'
+    'Channels',
+    'Matches',
+    'Players',
+    'Mappools',
+    'Clans'
 )
 
+# TODO: decorator for these collections which automatically
+# adds debugging to their append/remove/insert/extend methods.
 
-class ChannelList(list):
+class Channels(list):
     """The currently active chat channels on the server."""
 
     def __iter__(self) -> Iterator['Channel']:
@@ -52,7 +53,7 @@ class ChannelList(list):
         if isinstance(index, str):
             return self.get(index)
         else:
-            return self[index]
+            return super().__getitem__(index)
 
     def __repr__(self) -> str:
         # XXX: we use the "real" name, aka
@@ -70,23 +71,36 @@ class ChannelList(list):
         """Append `c` to the list."""
         super().append(c)
 
-        if glob.config.debug:
+        if glob.app.debug:
             log(f'{c} added to channels list.')
 
     def remove(self, c: 'Channel') -> None:
         """Remove `c` from the list."""
         super().remove(c)
 
-        if glob.config.debug:
+        if glob.app.debug:
             log(f'{c} removed from channels list.')
 
+    @classmethod
+    async def prepare(cls) -> 'Channels':
+        """Fetch data from sql & return; preparing to run the server."""
+        log('Fetching channels from sql', Ansi.LCYAN)
+        return cls(
+            Channel(
+                name = row['name'],
+                topic = row['topic'],
+                read_priv = Privileges(row['read_priv']),
+                write_priv = Privileges(row['write_priv']),
+                auto_join = row['auto_join'] == 1
+            ) for row in await glob.db.fetchall('SELECT * FROM channels')
+        )
 
-class MatchList(list):
+class Matches(list):
     """The currently active multiplayer matches on the server."""
 
     def __init__(self) -> None:
         super().__init__()
-        self.extend([None] * 32)
+        self.extend([None] * 64)
 
     def __iter__(self) -> Iterator['Match']:
         return super().__iter__()
@@ -102,15 +116,12 @@ class MatchList(list):
 
     def append(self, m: 'Match') -> bool:
         """Append `m` to the list."""
-        if m in self:
-            breakpoint()
-
         if (free := self.get_free()) is not None:
             # set the id of the match to the free slot.
             m.id = free
             self[free] = m
 
-            if glob.config.debug:
+            if glob.app.debug:
                 log(f'{m} added to matches list.')
 
             return True
@@ -125,11 +136,10 @@ class MatchList(list):
                 self[i] = None
                 break
 
-        if glob.config.debug:
+        if glob.app.debug:
             log(f'{m} removed from matches list.')
 
-
-class PlayerList(list):
+class Players(list):
     """The currently active players on the server."""
     __slots__ = ('_lock',)
 
@@ -171,25 +181,24 @@ class PlayerList(list):
         """Return a set of the current unrestricted players."""
         return {p for p in self if p.priv & Privileges.Normal}
 
-    def enqueue(self, data: bytes, immune: list[Player] = []) -> None:
+    def enqueue(self, data: bytes, immune: Sequence[Player] = []) -> None:
         """Enqueue `data` to all players, except for those in `immune`."""
         for p in self:
             if p not in immune:
                 p.enqueue(data)
 
     @staticmethod
-    def _parse_attr(kwargs: dict[str, Any]) -> Optional[tuple[str, Any]]:
+    def _parse_attr(kwargs: dict[str, object]) -> Optional[tuple[str, object]]:
         """Get first matched attr & val from input kwargs. Used in get() methods."""
         for attr in ('token', 'id', 'name'):
-            if val := kwargs.pop(attr, None):
+            if (val := kwargs.pop(attr, None)) is not None:
                 if attr == 'name':
                     attr = 'safe_name'
                     val = make_safe_name(val)
 
                 return attr, val
         else:
-            raise ValueError(
-                'Missing attribute in kwargs! (must provide token/id/name)')
+            raise ValueError('Missing attribute in kwargs! (must provide token/id/name)')
 
     def get(self, **kwargs) -> Optional[Player]:
         """Get a player by token, id, or name from cache."""
@@ -206,7 +215,7 @@ class PlayerList(list):
         # try to get from sql.
         res = await glob.db.fetch(
             'SELECT id, name, priv, pw_bcrypt, '
-            'silence_end, clan_id, clan_priv '
+            'silence_end, clan_id, clan_priv, api_key '
             f'FROM users WHERE {attr} = %s',
             [val]
         )
@@ -236,7 +245,7 @@ class PlayerList(list):
                         sql: bool = False) -> Optional[Player]:
         """Return a player with a given name & pw_md5, from cache or sql."""
         if not (p := self.get(name=name)):
-            if not sql:  # not to fetch from sql.
+            if not sql: # not to fetch from sql.
                 return
 
             if not (p := await self.get_sql(name=name)):
@@ -249,24 +258,28 @@ class PlayerList(list):
     def append(self, p: Player) -> None:
         """Append `p` to the list."""
         if p in self:
-            if glob.config.debug:
+            if glob.app.debug:
                 log(f'{p} double-added to global player list?')
             return
 
         super().append(p)
 
-        if glob.config.debug:
+        if glob.app.debug:
             log(f'{p} added to global player list.')
 
     def remove(self, p: Player) -> None:
         """Remove `p` from the list."""
+        if p not in self:
+            if glob.app.debug:
+                log(f'{p} removed from player list when not online?')
+            return
+
         super().remove(p)
 
-        if glob.config.debug:
+        if glob.app.debug:
             log(f'{p} removed from global player list.')
 
-
-class MapPoolList(list):
+class MapPools(list):
     """The currently active mappools on the server."""
 
     def __iter__(self) -> Iterator['MapPool']:
@@ -297,18 +310,30 @@ class MapPoolList(list):
         """Append `mp` to the list."""
         super().append(mp)
 
-        if glob.config.debug:
+        if glob.app.debug:
             log(f'{mp} added to mappools list.')
 
     def remove(self, mp: 'MapPool') -> None:
         """Remove `mp` from the list."""
         super().remove(mp)
 
-        if glob.config.debug:
+        if glob.app.debug:
             log(f'{mp} removed from mappools list.')
 
+    @classmethod
+    async def prepare(cls) -> 'MapPools':
+        """Fetch data from sql & return; preparing to run the server."""
+        log('Fetching mappools from sql', Ansi.LCYAN)
+        return cls([
+            MapPool(
+                id = row['id'],
+                name = row['name'],
+                created_at = row['created_at'],
+                created_by = await glob.players.get_ensure(id=row['created_by'])
+            ) for row in await glob.db.fetchall('SELECT * FROM tourney_pools')
+        ])
 
-class ClanList(list):
+class Clans(list):
     """The currently active clans on the server."""
 
     def __iter__(self) -> Iterator['Clan']:
@@ -335,8 +360,7 @@ class ClanList(list):
             if val := kwargs.pop(attr, None):
                 break
         else:
-            raise ValueError(
-                'must provide valid kwarg (name, tag, id) to get()')
+            raise ValueError('must provide valid kwarg (name, tag, id) to get()')
 
         for c in self:
             if getattr(c, attr) == val:
@@ -346,12 +370,24 @@ class ClanList(list):
         """Append `c` to the list."""
         super().append(c)
 
-        if glob.config.debug:
+        if glob.app.debug:
             log(f'{c} added to clans list.')
 
     def remove(self, c: 'Clan') -> None:
         """Remove `m` from the list."""
         super().remove(c)
 
-        if glob.config.debug:
+        if glob.app.debug:
             log(f'{c} removed from clans list.')
+
+    @classmethod
+    async def prepare(cls) -> 'Clans':
+        """Fetch data from sql & return; preparing to run the server."""
+        log('Fetching clans from sql', Ansi.LCYAN)
+        res = await glob.db.fetchall('SELECT * FROM clans')
+        obj = cls([Clan(**row) for row in res])
+
+        for clan in obj:
+            await clan.members_from_sql()
+
+        return obj

@@ -7,6 +7,8 @@
 
 import asyncio
 import re
+import os
+import signal
 from datetime import datetime as dt
 from importlib.metadata import version as pkg_version
 from pathlib import Path
@@ -15,6 +17,7 @@ from typing import Optional
 import aiomysql
 from cmyui import Ansi
 from cmyui import log
+from cmyui import printc
 from cmyui import Version
 from pip._internal.cli.main import main as pip_main
 
@@ -24,22 +27,30 @@ __all__ = ('Updater',)
 
 SQL_UPDATES_FILE = Path.cwd() / 'ext/updates.sql'
 
-
 class Updater:
     def __init__(self, version: Version) -> None:
         self.version = version
 
     async def run(self) -> None:
         """Prepare, and run the updater."""
-        prev_ver = await self.get_prev_version()  # or self.version
+        prev_ver = await self.get_prev_version()
 
         if not prev_ver:
             # first time running the server.
-            # might add other code here eventually..
             prev_ver = self.version
 
-        await self._update_cmyui()  # pip install -U cmyui
-        await self._update_sql(prev_ver)
+            printc('\n'.join([
+                'Welcome to gulag!',
+                'If you have any issues with the server,',
+                'feel free to join our public Discord :)',
+                '',
+                'https://discord.gg/ShEQgUx',
+                'Enjoy the server!'
+            ]), Ansi.LCYAN)
+            input('> Press enter to continue')
+
+        await self._update_cmyui() # pip install -U cmyui
+        await self._update_sql(prev_ver) # run updates.sql
 
     @staticmethod
     async def get_prev_version() -> Optional[Version]:
@@ -47,20 +58,20 @@ class Updater:
         res = await glob.db.fetch(
             'SELECT ver_major, ver_minor, ver_micro '
             'FROM startups ORDER BY datetime DESC LIMIT 1',
-            _dict=False  # get tuple
+            _dict=False # get tuple
         )
 
         if res:
             return Version(*map(int, res))
 
-    async def log_startup(self):
+    async def log_startup(self) -> None:
         """Log this startup to sql for future use."""
         ver = self.version
         await glob.db.execute(
             'INSERT INTO startups '
             '(ver_major, ver_minor, ver_micro, datetime) '
-            'VALUES (%s, %s, %s, %s)',
-            [ver.major, ver.minor, ver.micro, dt.now()]
+            'VALUES (%s, %s, %s, NOW())',
+            [ver.major, ver.minor, ver.micro]
         )
 
     async def _get_latest_cmyui(self) -> Version:
@@ -85,11 +96,11 @@ class Updater:
         if module_ver < latest_ver:
             # package is not up to date; update it.
             log(f'Updating cmyui_pkg (v{module_ver!r} -> '
-                f'v{latest_ver!r}).', Ansi.LMAGENTA)
-            pip_main(['install', '-Uq', 'cmyui'])  # Update quiet
+                                    f'v{latest_ver!r}).', Ansi.LMAGENTA)
+            pip_main(['install', '-Uq', 'cmyui']) # Update quiet
 
     async def _update_sql(self, prev_version: Version) -> None:
-        """Apply any structural changes to the database since the last startup."""
+        """Apply any structural changes to sql since the last startup."""
         if self.version == prev_version:
             # already up to date.
             return
@@ -132,7 +143,7 @@ class Updater:
             return
 
         log(f'Updating sql (v{prev_version!r} -> '
-            f'v{self.version!r}).', Ansi.LMAGENTA)
+                          f'v{self.version!r}).', Ansi.LMAGENTA)
 
         sql_lock = asyncio.Lock()
 
@@ -145,14 +156,15 @@ class Updater:
                     # if anything goes wrong while writing a query,
                     # most likely something is very wrong.
                     log(f'Failed: {query}', Ansi.GRAY)
-                    log("SQL failed to update - unless you've been modifying sql and "
-                        "know what caused this, please please contact cmyui#0425.", Ansi.LRED)
+                    log(
+                        "SQL failed to update - unless you've been modifying "
+                        "sql and know what caused this, please please contact "
+                        "cmyui#0425.", Ansi.LRED
+                    )
 
                     input('Press enter to exit')
 
-                    loop = asyncio.get_running_loop()
-                    loop.stop()
-                    loop.close()
-                    exit(1)
+                    await glob.app.after_serving()
+                    raise KeyboardInterrupt
 
     # TODO _update_config?

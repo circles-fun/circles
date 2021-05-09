@@ -7,9 +7,12 @@ from typing import Optional
 from cmyui import Connection
 from cmyui import Domain
 
+from objects import glob
+
 """ ava: avatar server (for both ingame & external) """
 
-domain = Domain('a.ppy.sh')
+BASE_DOMAIN = glob.config.domain
+domain = Domain({f'a.{BASE_DOMAIN}', 'a.ppy.sh'})
 
 AVATARS_PATH = Path.cwd() / '.data/avatars'
 DEFAULT_AVATAR = AVATARS_PATH / 'default.jpg'
@@ -38,5 +41,5 @@ async def get_avatar(conn: Connection) -> Optional[bytes]:
         path = DEFAULT_AVATAR
 
     ext = 'png' if path.suffix == '.png' else 'jpeg'
-    conn.add_resp_header(f'Content-Type: image/{ext}')
+    conn.resp_headers['Content-Type'] = f'image/{ext}'
     return path.read_bytes()
