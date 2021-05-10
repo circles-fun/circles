@@ -1,5 +1,3 @@
-[![Discord](https://discordapp.com/api/guilds/748687781605408908/widget.png?style=shield)](https://discord.gg/ShEQgUx)
-
 Installation Guide
 -------------
 important notes:
