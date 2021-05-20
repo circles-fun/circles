@@ -9,14 +9,14 @@ from typing import Optional
 from typing import Sequence
 from typing import Union
 
-from cmyui import log
 from cmyui import Ansi
+from cmyui import log
 
 from constants.privileges import Privileges
 from objects import glob
+from objects.channel import Channel
 from objects.clan import Clan
 from objects.clan import ClanPrivileges
-from objects.channel import Channel
 from objects.match import MapPool
 from objects.match import Match
 from objects.player import Player
@@ -29,6 +29,7 @@ __all__ = (
     'Mappools',
     'Clans'
 )
+
 
 # TODO: decorator for these collections which automatically
 # adds debugging to their append/remove/insert/extend methods.
@@ -87,13 +88,14 @@ class Channels(list):
         log('Fetching channels from sql', Ansi.LCYAN)
         return cls(
             Channel(
-                name = row['name'],
-                topic = row['topic'],
-                read_priv = Privileges(row['read_priv']),
-                write_priv = Privileges(row['write_priv']),
-                auto_join = row['auto_join'] == 1
+                name=row['name'],
+                topic=row['topic'],
+                read_priv=Privileges(row['read_priv']),
+                write_priv=Privileges(row['write_priv']),
+                auto_join=row['auto_join'] == 1
             ) for row in await glob.db.fetchall('SELECT * FROM channels')
         )
+
 
 class Matches(list):
     """The currently active multiplayer matches on the server."""
@@ -138,6 +140,7 @@ class Matches(list):
 
         if glob.app.debug:
             log(f'{m} removed from matches list.')
+
 
 class Players(list):
     """The currently active players on the server."""
@@ -245,7 +248,7 @@ class Players(list):
                         sql: bool = False) -> Optional[Player]:
         """Return a player with a given name & pw_md5, from cache or sql."""
         if not (p := self.get(name=name)):
-            if not sql: # not to fetch from sql.
+            if not sql:  # not to fetch from sql.
                 return
 
             if not (p := await self.get_sql(name=name)):
@@ -278,6 +281,7 @@ class Players(list):
 
         if glob.app.debug:
             log(f'{p} removed from global player list.')
+
 
 class MapPools(list):
     """The currently active mappools on the server."""
@@ -326,12 +330,13 @@ class MapPools(list):
         log('Fetching mappools from sql', Ansi.LCYAN)
         return cls([
             MapPool(
-                id = row['id'],
-                name = row['name'],
-                created_at = row['created_at'],
-                created_by = await glob.players.get_ensure(id=row['created_by'])
+                id=row['id'],
+                name=row['name'],
+                created_at=row['created_at'],
+                created_by=await glob.players.get_ensure(id=row['created_by'])
             ) for row in await glob.db.fetchall('SELECT * FROM tourney_pools')
         ])
+
 
 class Clans(list):
     """The currently active clans on the server."""

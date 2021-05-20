@@ -24,6 +24,7 @@ try:
 except ModuleNotFoundError as exc:
     if exc.name == 'config':
         import shutil
+
         shutil.copy('ext/config.sample.py', 'config.py')
         sys.exit('\x1b[0;92mA config file has been generated, '
                  'please configure it to your needs.\x1b[0m')
@@ -35,7 +36,7 @@ from pathlib import Path
 import aiohttp
 import cmyui
 import datadog
-import orjson # go zoom
+import orjson  # go zoom
 import geoip2.database
 import subprocess
 from cmyui import Ansi
@@ -63,6 +64,7 @@ glob.version = cmyui.Version(3, 3, 2)
 OPPAI_PATH = Path.cwd() / 'oppai-ng'
 GEOLOC_DB_FILE = Path.cwd() / 'ext/GeoLite2-City.mmdb'
 
+
 async def fetch_bot_name() -> str:
     """Fetch the bot's name from the database, if available."""
     res = await glob.db.fetch(
@@ -76,6 +78,7 @@ async def fetch_bot_name() -> str:
         return 'BanchoBot'
 
     return res[0]
+
 
 async def setup_collections() -> None:
     """Setup & cache many global collections."""
@@ -92,7 +95,7 @@ async def setup_collections() -> None:
     glob.bot = Player(
         id=1, name=await fetch_bot_name(), priv=Privileges.Normal,
         login_time=float(0x7fffffff), bot_client=True
-    ) # never auto-dc the bot ^
+    )  # never auto-dc the bot ^
     glob.players.append(glob.bot)
 
     # global achievements (sorted by vn gamemodes)
@@ -116,10 +119,11 @@ async def setup_collections() -> None:
         )
     }
 
+
 async def before_serving() -> None:
     """Called before the server begins serving connections."""
     # retrieve a client session to use for http connections.
-    glob.http = aiohttp.ClientSession(json_serialize=orjson.dumps) # type: ignore
+    glob.http = aiohttp.ClientSession(json_serialize=orjson.dumps)  # type: ignore
 
     # retrieve a pool of connections to use for mysql interaction.
     glob.db = cmyui.AsyncSQLPool()
@@ -163,6 +167,7 @@ async def before_serving() -> None:
     for coro in new_coros:
         glob.app.add_pending_task(coro)
 
+
 async def after_serving() -> None:
     """Called after the server stops serving connections."""
     if hasattr(glob, 'http'):
@@ -175,14 +180,15 @@ async def after_serving() -> None:
         glob.geoloc_db.close()
 
     if hasattr(glob, 'datadog') and glob.datadog is not None:
-        glob.datadog.stop() # stop thread
-        glob.datadog.flush() # flush any leftover
+        glob.datadog.stop()  # stop thread
+        glob.datadog.flush()  # flush any leftover
+
 
 def detect_mysqld_running() -> bool:
     """Detect whether theres a mysql server running locally."""
     for path in (
-        '/var/run/mysqld/mysqld.pid',
-        '/var/run/mariadb/mariadb.pid'
+            '/var/run/mysqld/mysqld.pid',
+            '/var/run/mariadb/mariadb.pid'
     ):
         if os.path.exists(path):
             # path found
@@ -190,6 +196,7 @@ def detect_mysqld_running() -> bool:
     else:
         # not found, try pgrep
         return os.system('pgrep mysqld') == 0
+
 
 def ensure_platform() -> None:
     """Ensure we're running on an appropriate platform for gulag."""
@@ -204,17 +211,19 @@ def ensure_platform() -> None:
         sys.exit('gulag uses many modern python features, '
                  'and the minimum python version is 3.9.')
 
+
 def ensure_services() -> None:
     """Ensure all required services are running in the background."""
     # make sure nginx & mysqld are running.
     if (
-        glob.config.mysql['host'] in ('localhost', '127.0.0.1') and
-        not detect_mysqld_running()
+            glob.config.mysql['host'] in ('localhost', '127.0.0.1') and
+            not detect_mysqld_running()
     ):
         sys.exit('Please start your mysqld server.')
 
     if not os.path.exists('/var/run/nginx.pid'):
         sys.exit('Please start your nginx server.')
+
 
 def main() -> None:
     """Attempt to start up gulag."""
@@ -280,10 +289,10 @@ def main() -> None:
 
     # add our endpoint's domains to the server;
     # each may potentially hold many individual endpoints.
-    from domains.cho import domain as cho_domain # c[e4-6]?.ppy.sh
-    from domains.osu import domain as osu_domain # osu.ppy.sh
-    from domains.ava import domain as ava_domain # a.ppy.sh
-    from domains.map import domain as map_domain # b.ppy.sh
+    from domains.cho import domain as cho_domain  # c[e4-6]?.ppy.sh
+    from domains.osu import domain as osu_domain  # osu.ppy.sh
+    from domains.ava import domain as ava_domain  # a.ppy.sh
+    from domains.map import domain as map_domain  # b.ppy.sh
     app.add_domains({cho_domain, osu_domain,
                      ava_domain, map_domain})
 
@@ -311,5 +320,6 @@ def main() -> None:
     # NOTE: eventually the event loop creation will likely be
     # moved into the gulag codebase for increased flexibility.
     app.run(glob.config.server_addr, handle_restart=True)
+
 
 main()

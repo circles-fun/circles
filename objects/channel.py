@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
 __all__ = 'Channel',
 
+
 class Channel:
     """An osu! chat channel.
 
@@ -37,7 +38,7 @@ class Channel:
                  write_priv: Privileges = Privileges.Normal,
                  auto_join: bool = True,
                  instance: bool = False) -> None:
-        self._name = name # 'real' name ('#{multi/spec}_{id}')
+        self._name = name  # 'real' name ('#{multi/spec}_{id}')
         self.topic = topic
         self.read_priv = read_priv
         self.write_priv = write_priv
@@ -57,7 +58,7 @@ class Channel:
 
     @property
     def basic_info(self) -> tuple[str, str, int]:
-        return (self.name, self.topic, len(self.players))
+        return self.name, self.topic, len(self.players)
 
     def __repr__(self) -> str:
         return f'<{self._name}>'
@@ -77,8 +78,8 @@ class Channel:
 
         for p in self.players:
             if (
-                sender.id not in p.blocks and
-                (to_self or p.id != sender.id)
+                    sender.id not in p.blocks and
+                    (to_self or p.id != sender.id)
             ):
                 p.enqueue(data)
 

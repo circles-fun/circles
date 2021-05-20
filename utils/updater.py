@@ -7,18 +7,15 @@
 
 import asyncio
 import re
-import os
-import signal
-from datetime import datetime as dt
 from importlib.metadata import version as pkg_version
 from pathlib import Path
 from typing import Optional
 
 import aiomysql
 from cmyui import Ansi
+from cmyui import Version
 from cmyui import log
 from cmyui import printc
-from cmyui import Version
 from pip._internal.cli.main import main as pip_main
 
 from objects import glob
@@ -26,6 +23,7 @@ from objects import glob
 __all__ = ('Updater',)
 
 SQL_UPDATES_FILE = Path.cwd() / 'ext/updates.sql'
+
 
 class Updater:
     def __init__(self, version: Version) -> None:
@@ -44,8 +42,8 @@ class Updater:
             ]), Ansi.LCYAN)
             input('> Press enter to continue')
 
-        await self._update_cmyui() # pip install -U cmyui
-        await self._update_sql(prev_ver) # run updates.sql
+        await self._update_cmyui()  # pip install -U cmyui
+        await self._update_sql(prev_ver)  # run updates.sql
 
     @staticmethod
     async def get_prev_version() -> Optional[Version]:
@@ -53,7 +51,7 @@ class Updater:
         res = await glob.db.fetch(
             'SELECT ver_major, ver_minor, ver_micro '
             'FROM startups ORDER BY datetime DESC LIMIT 1',
-            _dict=False # get tuple
+            _dict=False  # get tuple
         )
 
         if res:
@@ -91,8 +89,8 @@ class Updater:
         if module_ver < latest_ver:
             # package is not up to date; update it.
             log(f'Updating cmyui_pkg (v{module_ver!r} -> '
-                                    f'v{latest_ver!r}).', Ansi.LMAGENTA)
-            pip_main(['install', '-Uq', 'cmyui']) # Update quiet
+                f'v{latest_ver!r}).', Ansi.LMAGENTA)
+            pip_main(['install', '-Uq', 'cmyui'])  # Update quiet
 
     async def _update_sql(self, prev_version: Version) -> None:
         """Apply any structural changes to sql since the last startup."""
@@ -138,7 +136,7 @@ class Updater:
             return
 
         log(f'Updating sql (v{prev_version!r} -> '
-                          f'v{self.version!r}).', Ansi.LMAGENTA)
+            f'v{self.version!r}).', Ansi.LMAGENTA)
 
         sql_lock = asyncio.Lock()
 

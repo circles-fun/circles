@@ -20,9 +20,11 @@ __all__ = ('PPCalculator',)
 
 BEATMAPS_PATH = Path.cwd() / '.data/osu'
 
+
 class PPCalculator:
     """Asynchronously wraps the process of calculating difficulty in osu!."""
     __slots__ = ('file', 'mode_vn', 'pp_attrs')
+
     def __init__(self, bmap: 'Beatmap', **pp_attrs) -> None:
         # NOTE: this constructor should not be called
         # unless you are CERTAIN the map is on disk
@@ -56,8 +58,8 @@ class PPCalculator:
         path = BEATMAPS_PATH / f'{bmap.id}.osu'
 
         if (
-            not path.exists() or
-            bmap.md5 != hashlib.md5(path.read_bytes()).hexdigest()
+                not path.exists() or
+                bmap.md5 != hashlib.md5(path.read_bytes()).hexdigest()
         ):
             # map not up to date, we gotta update it
             if not await cls.get_from_osuapi(bmap, path):
@@ -76,7 +78,7 @@ class PPCalculator:
 
     async def perform(self) -> tuple[float, float]:
         """Calculate pp & sr using the current state of the recalculator."""
-        if self.mode_vn in (0, 1): # oppai-ng for std & taiko
+        if self.mode_vn in (0, 1):  # oppai-ng for std & taiko
             # TODO: PLEASE rewrite this with c/py bindings,
             # add ways to get specific stuff like aim pp
 
@@ -104,7 +106,7 @@ class PPCalculator:
             proc = await asyncio.create_subprocess_exec(
                 *cmd, stdout=asyncio.subprocess.PIPE
             )
-            stdout, _ = await proc.communicate() # stderr not needed
+            stdout, _ = await proc.communicate()  # stderr not needed
 
             if stdout[:8] != b'binoppai':
                 # invalid output from oppai-ng
@@ -129,7 +131,7 @@ class PPCalculator:
         elif self.mode_vn == 2:
             # TODO: ctb support
             return (0.0, 0.0)
-        elif self.mode_vn == 3: # use maniera for mania
+        elif self.mode_vn == 3:  # use maniera for mania
             if 'score' not in self.pp_attrs:
                 log('Err: pp calculator needs score for mania.', Ansi.LRED)
                 return (0.0, 0.0)

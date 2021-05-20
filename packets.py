@@ -5,8 +5,8 @@
 # i'm not sure how well it works with an async setup
 # like this, but we'll see B) massive speed gains tho
 
-import struct
 import random
+import struct
 from collections import namedtuple
 from enum import IntEnum
 from enum import unique
@@ -22,8 +22,8 @@ from constants.mods import Mods
 from constants.types import osuTypes
 from objects import glob
 from objects.match import Match
-from objects.match import MatchTeams
 from objects.match import MatchTeamTypes
+from objects.match import MatchTeams
 from objects.match import MatchWinConditions
 from objects.match import ScoreFrame
 from objects.match import SlotStatus
@@ -36,11 +36,12 @@ if TYPE_CHECKING:
 # tuple of some of struct's format specifiers
 # for clean access within packet pack/unpack.
 _specifiers = (
-    '<b', '<B', # 8
-    '<h', '<H', # 16
-    '<i', '<I', '<f', # 32
+    '<b', '<B',  # 8
+    '<h', '<H',  # 16
+    '<i', '<I', '<f',  # 32
     '<q', '<Q', '<d'  # 64
 )
+
 
 @unique
 @pymysql_encode(escape_enum)
@@ -53,7 +54,7 @@ class Packets(IntEnum):
     CHO_USER_ID = 5
     CHO_SEND_MESSAGE = 7
     CHO_PONG = 8
-    CHO_HANDLE_IRC_CHANGE_USERNAME = 9 # unused
+    CHO_HANDLE_IRC_CHANGE_USERNAME = 9  # unused
     CHO_HANDLE_IRC_QUIT = 10
     CHO_USER_STATS = 11
     CHO_USER_LOGOUT = 12
@@ -105,7 +106,7 @@ class Packets(IntEnum):
     OSU_MATCH_HAS_BEATMAP = 59
     OSU_MATCH_SKIP_REQUEST = 60
     CHO_MATCH_SKIP = 61
-    CHO_UNAUTHORIZED = 62 # unused
+    CHO_UNAUTHORIZED = 62  # unused
     OSU_CHANNEL_JOIN = 63
     CHO_CHANNEL_JOIN_SUCCESS = 64
     CHO_CHANNEL_INFO = 65
@@ -123,7 +124,7 @@ class Packets(IntEnum):
     OSU_MATCH_CHANGE_TEAM = 77
     OSU_CHANNEL_PART = 78
     OSU_RECEIVE_UPDATES = 79
-    CHO_MONITOR = 80 # unused
+    CHO_MONITOR = 80  # unused
     CHO_MATCH_PLAYER_SKIPPED = 81
     OSU_SET_AWAY_MESSAGE = 82
     CHO_USER_PRESENCE = 83
@@ -148,7 +149,7 @@ class Packets(IntEnum):
     CHO_VERSION_UPDATE_FORCED = 102
     CHO_SWITCH_SERVER = 103
     CHO_ACCOUNT_RESTRICTED = 104
-    CHO_RTX = 105 # unused
+    CHO_RTX = 105  # unused
     CHO_MATCH_ABORT = 106
     CHO_SWITCH_TOURNAMENT_SERVER = 107
     OSU_TOURNAMENT_JOIN_MATCH_CHANNEL = 108
@@ -156,6 +157,7 @@ class Packets(IntEnum):
 
     def __repr__(self) -> str:
         return f'<{self.name} ({self.value})>'
+
 
 class BanchoPacket:
     """Abstract base class for bancho packets."""
@@ -173,10 +175,13 @@ class BanchoPacket:
             if x in cls.args:
                 del cls.args[x]
 
-    async def handle(self, p: 'Player') -> None: ...
+    async def handle(self, p: 'Player') -> None:
+        ...
+
 
 Message = namedtuple('Message', ['sender', 'msg', 'recipient', 'sender_id'])
 Channel = namedtuple('Channel', ['name', 'topic', 'players'])
+
 
 class BanchoPacketReader:
     """\
@@ -202,6 +207,7 @@ class BanchoPacketReader:
     ```
     """
     __slots__ = ('view', 'packet_map', '_current')
+
     def __init__(self, data: bytes, packet_map: dict) -> None:
         self.view = memoryview(data)
         self.packet_map = packet_map
@@ -306,6 +312,7 @@ class BanchoPacketReader:
     """ type readers (functions to read different types from buf) """
 
     """ basic integral types (signed & unsigned) """
+
     def _read_integral(self, size: int, signed: bool) -> int:
         val = int.from_bytes(self.view[:size], 'little', signed=signed)
         self.view = self.view[size:]
@@ -321,6 +328,7 @@ class BanchoPacketReader:
     read_u64 = partialmethod(_read_integral, size=8, signed=False)
 
     """ floating point types """
+
     def read_f32(self) -> float:
         val, = struct.unpack_from('<f', self.view[:4])
         self.view = self.view[4:]
@@ -332,6 +340,7 @@ class BanchoPacketReader:
         return val
 
     """ integral list types """
+
     # XXX: some osu! packets use i16 for
     # array length, while others use i32
     def _read_i32_list(self, len_size: int) -> tuple[int]:
@@ -346,6 +355,7 @@ class BanchoPacketReader:
     read_i32_list_i32l = partialmethod(_read_i32_list, len_size=4)
 
     """ string type (variable length encoding w/ uleb128) """
+
     def read_string(self) -> str:
         exists = self.view[0] == 0x0b
         self.view = self.view[1:]
@@ -367,27 +377,27 @@ class BanchoPacketReader:
 
             shift += 7
 
-        val = self.view[:length].tobytes().decode() # copy
+        val = self.view[:length].tobytes().decode()  # copy
         self.view = self.view[length:]
         return val
 
     """ custom osu! types """
 
-    def read_message(self) -> Message: # namedtuple
+    def read_message(self) -> Message:  # namedtuple
         """Read an osu! message from the internal buffer."""
         return Message(
-            sender = self.read_string(),
-            msg = self.read_string(),
-            recipient = self.read_string(),
-            sender_id = self.read_i32()
+            sender=self.read_string(),
+            msg=self.read_string(),
+            recipient=self.read_string(),
+            sender_id=self.read_i32()
         )
 
-    def read_channel(self) -> Channel: # namedtuple
+    def read_channel(self) -> Channel:  # namedtuple
         """Read an osu! channel from the internal buffer."""
         return Channel(
-            name = self.read_string(),
-            topic = self.read_string(),
-            players = self.read_i32()
+            name=self.read_string(),
+            topic=self.read_string(),
+            players=self.read_i32()
         )
 
     def read_match(self) -> Match:
@@ -397,7 +407,7 @@ class BanchoPacketReader:
         # ignore match id (i16) and inprogress (i8).
         self.view = self.view[3:]
 
-        self.read_i8() # powerplay unused
+        self.read_i8()  # powerplay unused
 
         m.mods = Mods(self.read_i32())
 
@@ -449,6 +459,7 @@ class BanchoPacketReader:
 
         return sf
 
+
 def write_uleb128(num: int) -> bytearray:
     """ Write `num` into an unsigned LEB128. """
     if num == 0:
@@ -466,6 +477,7 @@ def write_uleb128(num: int) -> bytearray:
 
     return ret
 
+
 def write_string(s: str) -> bytearray:
     """ Write `s` into bytes (ULEB128 & string). """
     if s:
@@ -478,6 +490,7 @@ def write_string(s: str) -> bytearray:
 
     return ret
 
+
 def write_i32_list(l: Sequence[int]) -> bytearray:
     """ Write `l` into bytes (int32 list). """
     ret = bytearray(len(l).to_bytes(2, 'little'))
@@ -486,6 +499,7 @@ def write_i32_list(l: Sequence[int]) -> bytearray:
         ret += i.to_bytes(4, 'little')
 
     return ret
+
 
 def write_message(sender: str, msg: str, recipient: str,
                   sender_id: int) -> bytearray:
@@ -496,6 +510,7 @@ def write_message(sender: str, msg: str, recipient: str,
     ret += sender_id.to_bytes(4, 'little', signed=True)
     return ret
 
+
 def write_channel(name: str, topic: str,
                   count: int) -> bytearray:
     """ Write params into bytes (osu! channel). """
@@ -503,6 +518,7 @@ def write_channel(name: str, topic: str,
     ret += write_string(topic)
     ret += count.to_bytes(2, 'little')
     return ret
+
 
 # XXX: deprecated
 # def write_mapInfoReply(maps: Sequence[BeatmapInfo]) -> bytearray:
@@ -554,13 +570,15 @@ def write_match(m: Match, send_pw: bool = True) -> bytearray:
     ret += (m.seed).to_bytes(4, 'little')
     return ret
 
+
 def write_scoreframe(s: ScoreFrame) -> bytearray:
     """ Write `s` into bytes (osu! scoreframe). """
     return bytearray(struct.pack('<iBHHHHHHiHH?BB?',
-        s.time, s.id, s.num300, s.num100, s.num50, s.num_geki,
-        s.num_katu, s.num_miss, s.total_score, s.current_combo,
-        s.max_combo, s.perfect, s.current_hp, s.tag_byte, s.score_v2
-    ))
+                                 s.time, s.id, s.num300, s.num100, s.num50, s.num_geki,
+                                 s.num_katu, s.num_miss, s.total_score, s.current_combo,
+                                 s.max_combo, s.perfect, s.current_hp, s.tag_byte, s.score_v2
+                                 ))
+
 
 def write(packid: int, *args: Sequence[object]) -> bytes:
     """ Write `args` into bytes. """
@@ -581,7 +599,7 @@ def write(packid: int, *args: Sequence[object]) -> bytes:
             ret += write_match(*p_args)
         elif p_type == osuTypes.scoreframe:
             ret += write_scoreframe(p_args)
-        #elif p_type == osuTypes.mapInfoReply:
+        # elif p_type == osuTypes.mapInfoReply:
         #    ret += write_mapInfoReply(p_args)
         else:
             # not a custom type, use struct to pack the data.
@@ -590,6 +608,7 @@ def write(packid: int, *args: Sequence[object]) -> bytes:
     # add size
     ret[3:3] = struct.pack('<I', len(ret) - 3)
     return bytes(ret)
+
 
 #
 # packets
@@ -613,6 +632,7 @@ def userID(id: int) -> bytes:
         (id, osuTypes.i32)
     )
 
+
 # packet id: 7
 def sendMessage(sender: str, msg: str, recipient: str,
                 sender_id: int) -> bytes:
@@ -621,10 +641,12 @@ def sendMessage(sender: str, msg: str, recipient: str,
         ((sender, msg, recipient, sender_id), osuTypes.message)
     )
 
+
 # packet id: 8
 @cache
 def pong() -> bytes:
     return write(Packets.CHO_PONG)
+
 
 # packet id: 9
 # NOTE: deprecated
@@ -634,13 +656,15 @@ def changeUsername(old: str, new: str) -> bytes:
         (f'{old}>>>>{new}', osuTypes.string)
     )
 
+
 BOT_STATUSES = (
-    (3, 'the source code..'), # editing
-    (6, 'geohot livestreams..'), # watching
-    (6, 'over the server..'), # watching
-    (8, 'out new features..'), # testing
-    (9, 'a pull request..'), # submitting
+    (3, 'the source code..'),  # editing
+    (6, 'geohot livestreams..'),  # watching
+    (6, 'over the server..'),  # watching
+    (8, 'out new features..'),  # testing
+    (9, 'a pull request..'),  # submitting
 )
+
 
 # since the bot is always online and is
 # also automatically added to all player's
@@ -656,20 +680,21 @@ def botStats():
 
     return write(
         Packets.CHO_USER_STATS,
-        (glob.bot.id, osuTypes.i32), # id
-        (status_id, osuTypes.u8), # action
-        (status_txt, osuTypes.string), # info_text
-        ('', osuTypes.string), # map_md5
-        (0, osuTypes.i32), # mods
-        (0, osuTypes.u8), # mode
-        (0, osuTypes.i32), # map_id
-        (0, osuTypes.i64), # rscore
-        (0.0, osuTypes.f32), # acc
-        (0, osuTypes.i32), # plays
-        (0, osuTypes.i64), # tscore
-        (0, osuTypes.i32), # rank
-        (0, osuTypes.i16) # pp
+        (glob.bot.id, osuTypes.i32),  # id
+        (status_id, osuTypes.u8),  # action
+        (status_txt, osuTypes.string),  # info_text
+        ('', osuTypes.string),  # map_md5
+        (0, osuTypes.i32),  # mods
+        (0, osuTypes.u8),  # mode
+        (0, osuTypes.i32),  # map_id
+        (0, osuTypes.i64),  # rscore
+        (0.0, osuTypes.f32),  # acc
+        (0, osuTypes.i32),  # plays
+        (0, osuTypes.i64),  # tscore
+        (0, osuTypes.i32),  # rank
+        (0, osuTypes.i16)  # pp
     )
+
 
 # packet id: 11
 def userStats(p: 'Player') -> bytes:
@@ -700,8 +725,9 @@ def userStats(p: 'Player') -> bytes:
         (gm_stats.plays, osuTypes.i32),
         (gm_stats.tscore, osuTypes.i64),
         (gm_stats.rank, osuTypes.i32),
-        (pp, osuTypes.i16) # why not u16 peppy :(
+        (pp, osuTypes.i16)  # why not u16 peppy :(
     )
+
 
 # packet id: 12
 @cache
@@ -712,6 +738,7 @@ def logout(userID: int) -> bytes:
         (0, osuTypes.u8)
     )
 
+
 # packet id: 13
 @cache
 def spectatorJoined(id: int) -> bytes:
@@ -720,6 +747,7 @@ def spectatorJoined(id: int) -> bytes:
         (id, osuTypes.i32)
     )
 
+
 # packet id: 14
 @cache
 def spectatorLeft(id: int) -> bytes:
@@ -727,6 +755,7 @@ def spectatorLeft(id: int) -> bytes:
         Packets.CHO_SPECTATOR_LEFT,
         (id, osuTypes.i32)
     )
+
 
 # packet id: 15
 # TODO: perhaps optimize this and match
@@ -738,10 +767,12 @@ def spectateFrames(data: bytes) -> bytes:
         (data, osuTypes.raw)
     )
 
+
 # packet id: 19
 @cache
 def versionUpdate() -> bytes:
     return write(Packets.CHO_VERSION_UPDATE)
+
 
 # packet id: 22
 @cache
@@ -751,10 +782,12 @@ def spectatorCantSpectate(id: int) -> bytes:
         (id, osuTypes.i32)
     )
 
+
 # packet id: 23
 @cache
 def getAttention() -> bytes:
     return write(Packets.CHO_GET_ATTENTION)
+
 
 # packet id: 24
 @lru_cache(maxsize=4)
@@ -764,6 +797,7 @@ def notification(msg: str) -> bytes:
         (msg, osuTypes.string)
     )
 
+
 # packet id: 26
 def updateMatch(m: Match, send_pw: bool = True) -> bytes:
     return write(
@@ -771,12 +805,14 @@ def updateMatch(m: Match, send_pw: bool = True) -> bytes:
         ((m, send_pw), osuTypes.match)
     )
 
+
 # packet id: 27
 def newMatch(m: Match) -> bytes:
     return write(
         Packets.CHO_NEW_MATCH,
         ((m, True), osuTypes.match)
     )
+
 
 # packet id: 28
 @cache
@@ -786,10 +822,12 @@ def disposeMatch(id: int) -> bytes:
         (id, osuTypes.i32)
     )
 
+
 # packet id: 34
 @cache
 def toggleBlockNonFriendPM() -> bytes:
     return write(Packets.CHO_TOGGLE_BLOCK_NON_FRIEND_DMS)
+
 
 # packet id: 36
 def matchJoinSuccess(m: Match) -> bytes:
@@ -798,10 +836,12 @@ def matchJoinSuccess(m: Match) -> bytes:
         ((m, True), osuTypes.match)
     )
 
+
 # packet id: 37
 @cache
 def matchJoinFail() -> bytes:
     return write(Packets.CHO_MATCH_JOIN_FAIL)
+
 
 # packet id: 42
 @cache
@@ -811,6 +851,7 @@ def fellowSpectatorJoined(id: int) -> bytes:
         (id, osuTypes.i32)
     )
 
+
 # packet id: 43
 @cache
 def fellowSpectatorLeft(id: int) -> bytes:
@@ -819,12 +860,14 @@ def fellowSpectatorLeft(id: int) -> bytes:
         (id, osuTypes.i32)
     )
 
+
 # packet id: 46
 def matchStart(m: Match) -> bytes:
     return write(
         Packets.CHO_MATCH_START,
         ((m, True), osuTypes.match)
     )
+
 
 # packet id: 48
 # NOTE: this is actually unused, since it's
@@ -837,15 +880,18 @@ def matchScoreUpdate(frame: ScoreFrame) -> bytes:
         (frame, osuTypes.scoreframe)
     )
 
+
 # packet id: 50
 @cache
 def matchTransferHost() -> bytes:
     return write(Packets.CHO_MATCH_TRANSFER_HOST)
 
+
 # packet id: 53
 @cache
 def matchAllPlayerLoaded() -> bytes:
     return write(Packets.CHO_MATCH_ALL_PLAYERS_LOADED)
+
 
 # packet id: 57
 @cache
@@ -855,15 +901,18 @@ def matchPlayerFailed(slot_id: int) -> bytes:
         (slot_id, osuTypes.i32)
     )
 
+
 # packet id: 58
 @cache
 def matchComplete() -> bytes:
     return write(Packets.CHO_MATCH_COMPLETE)
 
+
 # packet id: 61
 @cache
 def matchSkip() -> bytes:
     return write(Packets.CHO_MATCH_SKIP)
+
 
 # packet id: 64
 @lru_cache(maxsize=16)
@@ -872,6 +921,7 @@ def channelJoin(name: str) -> bytes:
         Packets.CHO_CHANNEL_JOIN_SUCCESS,
         (name, osuTypes.string)
     )
+
 
 # packet id: 65
 @lru_cache(maxsize=8)
@@ -882,6 +932,7 @@ def channelInfo(name: str, topic: str,
         ((name, topic, p_count), osuTypes.channel)
     )
 
+
 # packet id: 66
 @lru_cache(maxsize=8)
 def channelKick(name: str) -> bytes:
@@ -889,6 +940,7 @@ def channelKick(name: str) -> bytes:
         Packets.CHO_CHANNEL_KICK,
         (name, osuTypes.string)
     )
+
 
 # packet id: 67
 @lru_cache(maxsize=8)
@@ -899,8 +951,9 @@ def channelAutoJoin(name: str, topic: str,
         ((name, topic, p_count), osuTypes.channel)
     )
 
+
 # packet id: 69
-#def beatmapInfoReply(maps: Sequence[BeatmapInfo]) -> bytes:
+# def beatmapInfoReply(maps: Sequence[BeatmapInfo]) -> bytes:
 #    return write(
 #        Packets.CHO_BEATMAP_INFO_REPLY,
 #        (maps, osuTypes.mapInfoReply)
@@ -914,12 +967,14 @@ def banchoPrivileges(priv: int) -> bytes:
         (priv, osuTypes.i32)
     )
 
+
 # packet id: 72
 def friendsList(*friends) -> bytes:
     return write(
         Packets.CHO_FRIENDS_LIST,
         (friends, osuTypes.i32_list)
     )
+
 
 # packet id: 75
 @cache
@@ -929,6 +984,7 @@ def protocolVersion(ver: int) -> bytes:
         (ver, osuTypes.i32)
     )
 
+
 # packet id: 76
 @cache
 def mainMenuIcon() -> bytes:
@@ -936,6 +992,7 @@ def mainMenuIcon() -> bytes:
         Packets.CHO_MAIN_MENU_ICON,
         ('|'.join(glob.config.menu_icon), osuTypes.string)
     )
+
 
 # packet id: 80
 # NOTE: deprecated
@@ -950,6 +1007,7 @@ def monitor() -> bytes:
     # of trying to put it to use - just coded for completion.
     return write(Packets.CHO_MONITOR)
 
+
 # packet id: 81
 @cache
 def matchPlayerSkipped(pid: int) -> bytes:
@@ -957,6 +1015,7 @@ def matchPlayerSkipped(pid: int) -> bytes:
         Packets.CHO_MATCH_PLAYER_SKIPPED,
         (pid, osuTypes.i32)
     )
+
 
 # since the bot is always online and is
 # also automatically added to all player's
@@ -969,12 +1028,13 @@ def botPresence():
         (glob.bot.id, osuTypes.i32),
         (glob.bot.name, osuTypes.string),
         (-5 + 24, osuTypes.u8),
-        (245, osuTypes.u8), # satellite provider
+        (245, osuTypes.u8),  # satellite provider
         (31, osuTypes.u8),
-        (1234.0, osuTypes.f32), # send coordinates waaay
-        (4321.0, osuTypes.f32), # off the map for the bot
+        (1234.0, osuTypes.f32),  # send coordinates waaay
+        (4321.0, osuTypes.f32),  # off the map for the bot
         (0, osuTypes.i32)
     )
+
 
 # packet id: 83
 def userPresence(p: 'Player') -> bytes:
@@ -988,10 +1048,11 @@ def userPresence(p: 'Player') -> bytes:
         (p.utc_offset + 24, osuTypes.u8),
         (p.country[0], osuTypes.u8),
         (p.bancho_priv | (p.status.mode.as_vanilla << 5), osuTypes.u8),
-        (p.location[1], osuTypes.f32), # long
-        (p.location[0], osuTypes.f32), # lat
+        (p.location[1], osuTypes.f32),  # long
+        (p.location[0], osuTypes.f32),  # lat
         (p.gm_stats.rank, osuTypes.i32)
     )
+
 
 # packet id: 86
 @cache
@@ -1000,6 +1061,7 @@ def restartServer(ms: int) -> bytes:
         Packets.CHO_RESTART,
         (ms, osuTypes.i32)
     )
+
 
 # packet id: 88
 @lru_cache(maxsize=4)
@@ -1010,10 +1072,12 @@ def matchInvite(p: 'Player', t_name: str) -> bytes:
         ((p.name, msg, t_name, p.id), osuTypes.message)
     )
 
+
 # packet id: 89
 @cache
 def channelInfoEnd() -> bytes:
     return write(Packets.CHO_CHANNEL_INFO_END)
+
 
 # packet id: 91
 def matchChangePassword(new: str) -> bytes:
@@ -1022,12 +1086,14 @@ def matchChangePassword(new: str) -> bytes:
         (new, osuTypes.string)
     )
 
+
 # packet id: 92
 def silenceEnd(delta: int) -> bytes:
     return write(
         Packets.CHO_SILENCE_END,
         (delta, osuTypes.i32)
     )
+
 
 # packet id: 94
 @cache
@@ -1037,7 +1103,9 @@ def userSilenced(pid: int) -> bytes:
         (pid, osuTypes.i32)
     )
 
+
 """ not sure why 95 & 96 exist? unused in gulag """
+
 
 # packet id: 95
 @cache
@@ -1047,12 +1115,14 @@ def userPresenceSingle(pid: int) -> bytes:
         (pid, osuTypes.i32)
     )
 
+
 # packet id: 96
 def userPresenceBundle(pid_list: list[int]) -> bytes:
     return write(
         Packets.CHO_USER_PRESENCE_BUNDLE,
         (pid_list, osuTypes.i32_list)
     )
+
 
 # packet id: 100
 def userDMBlocked(target: str) -> bytes:
@@ -1061,6 +1131,7 @@ def userDMBlocked(target: str) -> bytes:
         (('', '', target, 0), osuTypes.message)
     )
 
+
 # packet id: 101
 def targetSilenced(target: str) -> bytes:
     return write(
@@ -1068,10 +1139,12 @@ def targetSilenced(target: str) -> bytes:
         (('', '', target, 0), osuTypes.message)
     )
 
+
 # packet id: 102
 @cache
 def versionUpdateForced() -> bytes:
     return write(Packets.CHO_VERSION_UPDATE_FORCED)
+
 
 # packet id: 103
 def switchServer(t: int) -> bytes:
@@ -1082,10 +1155,12 @@ def switchServer(t: int) -> bytes:
         (t, osuTypes.i32)
     )
 
+
 # packet id: 104
 @cache
 def accountRestricted() -> bytes:
     return write(Packets.CHO_ACCOUNT_RESTRICTED)
+
 
 # packet id: 105
 # NOTE: deprecated
@@ -1099,10 +1174,12 @@ def RTX(msg: str) -> bytes:
         (msg, osuTypes.string)
     )
 
+
 # packet id: 106
 @cache
 def matchAbort() -> bytes:
     return write(Packets.CHO_MATCH_ABORT)
+
 
 # packet id: 107
 def switchTournamentServer(ip: str) -> bytes:

@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import dill as pickle
 import inspect
 import io
-import pymysql
-import requests
 import secrets
 import sys
 import types
@@ -14,12 +11,16 @@ from typing import Callable
 from typing import Sequence
 from typing import Type
 
-from objects import glob
+import dill as pickle
+import pymysql
+import requests
 from cmyui.logging import Ansi
 from cmyui.logging import log
 from cmyui.logging import printc
 from cmyui.osu.replay import Keys
 from cmyui.osu.replay import ReplayFrame
+
+from objects import glob
 
 __all__ = (
     'get_press_times',
@@ -36,6 +37,7 @@ __all__ = (
 
 useful_keys = (Keys.M1, Keys.M2,
                Keys.K1, Keys.K2)
+
 
 def get_press_times(frames: Sequence[ReplayFrame]) -> dict[Keys, float]:
     """A very basic function to press times of an osu! replay.
@@ -67,9 +69,11 @@ def get_press_times(frames: Sequence[ReplayFrame]) -> dict[Keys, float]:
     # return all keys with presses
     return {k: v for k, v in press_times.items() if v}
 
+
 def make_safe_name(name: str) -> str:
     """Return a name safe for usage in sql."""
     return name.lower().replace(' ', '_')
+
 
 def _download_achievement_images_mirror(achievements_path: Path) -> bool:
     """Download all used achievement images (using mirror's zip)."""
@@ -85,6 +89,7 @@ def _download_achievement_images_mirror(achievements_path: Path) -> bool:
             myfile.extractall(achievements_path)
 
     return True
+
 
 def _download_achievement_images_osu(achievements_path: Path) -> bool:
     """Download all used achievement images (one by one, from osu!)."""
@@ -112,6 +117,7 @@ def _download_achievement_images_osu(achievements_path: Path) -> bool:
 
     return True
 
+
 def download_achievement_images(achievements_path: Path) -> None:
     """Download all used achievement images (using best available source)."""
     # try using my cmyui.xyz mirror (zip file)
@@ -127,6 +133,7 @@ def download_achievement_images(achievements_path: Path) -> None:
         # TODO: make the code safe in this state
         log('Failed to download achievement images.', Ansi.LRED)
         achievements_path.rmdir()
+
 
 def seconds_readable(seconds: int) -> str:
     """Turn seconds as an int into 'DD:HH:MM:SS'."""
@@ -146,20 +153,22 @@ def seconds_readable(seconds: int) -> str:
     r.append(f'{seconds % 60:02d}')
     return ':'.join(r)
 
+
 def install_excepthook():
     """Install a thin wrapper for sys.excepthook to catch gulag-related stuff."""
-    sys._excepthook = sys.excepthook # backup
+    sys._excepthook = sys.excepthook  # backup
+
     def _excepthook(
-        type_: Type[BaseException],
-        value: BaseException,
-        traceback: types.TracebackType
+            type_: Type[BaseException],
+            value: BaseException,
+            traceback: types.TracebackType
     ):
         if type_ is KeyboardInterrupt:
             print('\33[2K\r', end='Aborted startup.')
             return
         elif (
-            type_ is AttributeError and
-            value.args[0].startswith("module 'config' has no attribute")
+                type_ is AttributeError and
+                value.args[0].startswith("module 'config' has no attribute")
         ):
             attr_name = value.args[0][34:-1]
             log("gulag's config has been updated, and has "
@@ -169,9 +178,11 @@ def install_excepthook():
             return
 
         print('\x1b[0;31mgulag ran into an issue '
-            'before starting up :(\x1b[0m')
+              'before starting up :(\x1b[0m')
         sys._excepthook(type_, value, traceback)
+
     sys.excepthook = _excepthook
+
 
 def get_appropriate_stacktrace() -> list[inspect.FrameInfo]:
     stack = inspect.stack()[1:]
@@ -189,7 +200,10 @@ def get_appropriate_stacktrace() -> list[inspect.FrameInfo]:
         'locals': {k: repr(v) for k, v in frame.frame.f_locals.items()}
     } for frame in stack[:idx]]
 
+
 STRANGE_LOG_DIR = Path.cwd() / '.data/logs'
+
+
 async def log_strange_occurrence(obj: object) -> None:
     pickled_obj = pickle.dumps(obj)
     uploaded = False
@@ -197,14 +211,14 @@ async def log_strange_occurrence(obj: object) -> None:
     if glob.config.automatically_report_problems:
         # automatically reporting problems to cmyui's server
         async with glob.http.post(
-            url = 'https://log.cmyui.xyz/',
-            headers = {'Gulag-Version': repr(glob.version),
-                       'Gulag-Domain': glob.config.domain},
-            data = pickled_obj,
+                url='https://log.cmyui.xyz/',
+                headers={'Gulag-Version': repr(glob.version),
+                         'Gulag-Domain': glob.config.domain},
+                data=pickled_obj,
         ) as resp:
             if (
-                resp.status == 200 and
-                (await resp.read()) == b'ok'
+                    resp.status == 200 and
+                    (await resp.read()) == b'ok'
             ):
                 uploaded = True
                 log("Logged strange occurrence to cmyui's server.", Ansi.LBLUE)
@@ -227,12 +241,16 @@ async def log_strange_occurrence(obj: object) -> None:
 
         log("Greatly appreciated if you could forward this to cmyui#0425 :)", Ansi.LYELLOW)
 
+
 def pymysql_encode(conv: Callable):
     """Decorator to allow for adding to pymysql's encoders."""
+
     def wrapper(cls):
         pymysql.converters.encoders[cls] = conv
         return cls
+
     return wrapper
 
-def escape_enum(val, mapping=None) -> str: # used for ^
+
+def escape_enum(val, mapping=None) -> str:  # used for ^
     return str(int(val))

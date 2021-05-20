@@ -21,6 +21,7 @@ __all__ = ('RankedStatus', 'Beatmap')
 
 BASE_DOMAIN = glob.config.domain
 
+
 # for some ungodly reason, different values are used to
 # represent different ranked statuses all throughout osu!
 # This drives me and probably everyone else pretty insane,
@@ -61,18 +62,19 @@ class RankedStatus(IntEnum):
 
     @staticmethod
     def from_str(status_str: str) -> 'RankedStatus':
-        """Convert from string value.""" # could perhaps have `'unranked': cls.Pending`?
+        """Convert from string value."""  # could perhaps have `'unranked': cls.Pending`?
         return str2gulagstatus_dict[status_str]
+
 
 osu2gulagstatus_dict = defaultdict(
     lambda: RankedStatus.UpdateAvailable, {
-        -2: RankedStatus.Pending, # graveyard
-        -1: RankedStatus.Pending, # wip
-        0:  RankedStatus.Pending,
-        1:  RankedStatus.Ranked,
-        2:  RankedStatus.Approved,
-        3:  RankedStatus.Qualified,
-        4:  RankedStatus.Loved
+        -2: RankedStatus.Pending,  # graveyard
+        -1: RankedStatus.Pending,  # wip
+        0: RankedStatus.Pending,
+        1: RankedStatus.Ranked,
+        2: RankedStatus.Approved,
+        3: RankedStatus.Qualified,
+        4: RankedStatus.Loved
     }
 )
 
@@ -81,9 +83,9 @@ direct2gulagstatus_dict = defaultdict(
         0: RankedStatus.Ranked,
         2: RankedStatus.Pending,
         3: RankedStatus.Qualified,
-        #4: all ranked statuses lol
-        5: RankedStatus.Pending, # graveyard
-        7: RankedStatus.Ranked, # played before
+        # 4: all ranked statuses lol
+        5: RankedStatus.Pending,  # graveyard
+        7: RankedStatus.Ranked,  # played before
         8: RankedStatus.Loved
     }
 )
@@ -117,13 +119,15 @@ gulagstatus2str_dict = {
 }
 
 ...
-#@dataclass
-#class BeatmapInfoRequest:
+
+
+# @dataclass
+# class BeatmapInfoRequest:
 #    filenames: Sequence[str]
 #    ids: Sequence[int]
 
-#@dataclass
-#class BeatmapInfo:
+# @dataclass
+# class BeatmapInfo:
 #    id: int # i16
 #    map_id: int # i32
 #    set_id: int # i32
@@ -163,7 +167,7 @@ class Beatmap:
 
         self.artist = kwargs.get('artist', '')
         self.title = kwargs.get('title', '')
-        self.version = kwargs.get('version', '') # diff name
+        self.version = kwargs.get('version', '')  # diff name
         self.creator = kwargs.get('creator', '')
 
         self.last_update = kwargs.get('last_update', datetime(1970, 1, 1))
@@ -184,7 +188,7 @@ class Beatmap:
         self.hp = kwargs.get('hp', 0.0)
 
         self.diff = kwargs.get('diff', 0.00)
-        self.pp_cache = {0: {}, 1: {}, 2: {}, 3: {}} # {mode_vn: {mods: (acc/score: pp, ...), ...}}
+        self.pp_cache = {0: {}, 1: {}, 2: {}, 3: {}}  # {mode_vn: {mods: (acc/score: pp, ...), ...}}
 
     @property
     def filename(self) -> str:
@@ -202,7 +206,7 @@ class Beatmap:
         return f'https://osu.{BASE_DOMAIN}/beatmapsets/{self.set_id}#{self.id}'
 
     @property
-    def set_url(self) -> str: # same as above, just no beatmap id
+    def set_url(self) -> str:  # same as above, just no beatmap id
         """The osu! beatmap set url for `self`."""
         return f'https://osu.{BASE_DOMAIN}/beatmapsets/{self.set_id}'
 
@@ -247,13 +251,13 @@ class Beatmap:
     async def from_bid_sql(cls, bid: int) -> Optional['Beatmap']:
         """Fetch & return a map object from sql by id."""
         if res := await glob.db.fetch(
-            'SELECT md5, set_id, '
-            'artist, title, version, creator, '
-            'last_update, total_length, max_combo, '
-            'status, frozen, plays, passes, mode, '
-            'bpm, cs, od, ar, hp, diff '
-            'FROM maps WHERE id = %s',
-            [bid]
+                'SELECT md5, set_id, '
+                'artist, title, version, creator, '
+                'last_update, total_length, max_combo, '
+                'status, frozen, plays, passes, mode, '
+                'bpm, cs, od, ar, hp, diff '
+                'FROM maps WHERE id = %s',
+                [bid]
         ):
             return cls(**res, id=bid)
 
@@ -310,14 +314,14 @@ class Beatmap:
     async def from_md5_sql(cls, md5: str) -> Optional['Beatmap']:
         """Fetch & return a map object from sql by md5."""
         if res := await glob.db.fetch(
-            'SELECT id, set_id, '
-            'artist, title, version, creator, '
-            'last_update, total_length, max_combo, '
-            'status, frozen, plays, passes, '
-            'mode, bpm, cs, od, ar, hp, '
-            'diff '
-            'FROM maps WHERE md5 = %s',
-            [md5]
+                'SELECT id, set_id, '
+                'artist, title, version, creator, '
+                'last_update, total_length, max_combo, '
+                'status, frozen, plays, passes, '
+                'mode, bpm, cs, od, ar, hp, '
+                'diff '
+                'FROM maps WHERE md5 = %s',
+                [md5]
         ):
             return cls(**res, md5=md5)
 
@@ -329,7 +333,7 @@ class Beatmap:
 
         async with glob.http.get(url, params=params) as resp:
             if not resp or resp.status != 200:
-                return # osu!api request failed.
+                return  # osu!api request failed.
 
             if not (apidata := await resp.json()):
                 return
@@ -406,7 +410,7 @@ class Beatmap:
 
         async with glob.http.get(url, params=params) as resp:
             if not resp or resp.status != 200:
-                return # osu!api request failed.
+                return  # osu!api request failed.
 
             # we want all maps returned, so get full json
             if not (apidata := await resp.json()):
@@ -425,7 +429,7 @@ class Beatmap:
 
         for bmap in apidata:
             if bmap['file_md5'] is None:
-                continue # ded
+                continue  # ded
 
             # convert the map's last_update time to datetime.
             bmap['last_update'] = datetime.strptime(
@@ -443,8 +447,8 @@ class Beatmap:
                     api_status = RankedStatus.from_osuapi(int(bmap['approved']))
 
                     if (
-                        current_data[map_id]['frozen'] and
-                        api_status != current_data[map_id]['status']
+                            current_data[map_id]['frozen'] and
+                            api_status != current_data[map_id]['status']
                     ):
                         # keep the ranked status of maps through updates,
                         # if we've specified to (by 'freezing' it).
@@ -516,15 +520,15 @@ class Beatmap:
         if not ppcalc:
             return
 
-        if mode_vn in (0, 1): # std/taiko, use acc
+        if mode_vn in (0, 1):  # std/taiko, use acc
             for idx, acc in enumerate(glob.config.pp_cached_accs):
                 ppcalc.pp_attrs['acc'] = acc
 
-                pp, _ = await ppcalc.perform() # don't need sr
+                pp, _ = await ppcalc.perform()  # don't need sr
                 self.pp_cache[mode_vn][mods][idx] = pp
         elif mode_vn == 2:
-            return # unsupported gm
-        elif mode_vn == 3: # mania, use score
+            return  # unsupported gm
+        elif mode_vn == 3:  # mania, use score
             for idx, score in enumerate(glob.config.pp_cached_scores):
                 ppcalc.pp_attrs['score'] = score
 
@@ -535,18 +539,18 @@ class Beatmap:
         """Save the the object into sql."""
         await glob.db.execute(
             'REPLACE INTO maps ('
-                'server, md5, id, set_id, '
-                'artist, title, version, creator, '
-                'last_update, total_length, max_combo, '
-                'status, frozen, plays, passes, '
-                'mode, bpm, cs, od, ar, hp, diff'
+            'server, md5, id, set_id, '
+            'artist, title, version, creator, '
+            'last_update, total_length, max_combo, '
+            'status, frozen, plays, passes, '
+            'mode, bpm, cs, od, ar, hp, diff'
             ') VALUES ('
-                '"osu!", %s, %s, %s, '
-                '%s, %s, %s, %s, '
-                '%s, %s, %s, '
-                '%s, %s, %s, %s, '
-                '%s, %s, %s, %s, '
-                '%s, %s, %s'
+            '"osu!", %s, %s, %s, '
+            '%s, %s, %s, %s, '
+            '%s, %s, %s, '
+            '%s, %s, %s, %s, '
+            '%s, %s, %s, %s, '
+            '%s, %s, %s'
             ')', [
                 self.md5, self.id, self.set_id,
                 self.artist, self.title, self.version, self.creator,
