@@ -31,7 +31,7 @@ class Privileges(IntFlag):
     # staff permissions, able to manage server state.
     Tournament = 1 << 10  # able to manage match state without host.
     Nominator = 1 << 11  # able to manage maps ranked status.
-    Mod = 1 << 12  # able to manage users (level 1).
+    Mod = 1 << 14  # able to manage users (level 1).
     Admin = 1 << 13  # able to manage users (level 2).
     Dangerous = 1 << 14  # able to manage full server state.
 
