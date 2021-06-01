@@ -15,6 +15,8 @@ domain = Domain({f'b.{BASE_DOMAIN}', 'b.ppy.sh'})
 
 # for now, just send everything to osu!
 # eventually if we do bmap submission, we'll need this.
+
+
 @domain.route(re.compile(r'^.+$'))
 async def everything(conn: Connection) -> Optional[bytes]:
     conn.resp_headers['Location'] = f'https://b.ppy.sh{conn.path}'

@@ -3,7 +3,7 @@
 from re import compile as rcomp
 from re import IGNORECASE
 
-from objects import glob # this will 100% become a problem
+from objects import glob  # this will 100% become a problem
 
 __all__ = ('mapfile', 'osu_ver', 'username', 'email', 'now_playing')
 
@@ -11,7 +11,7 @@ _domain_escaped = glob.config.domain.replace('.', r'\.')
 
 mapfile = rcomp(
     r'^(?P<artist>.+) - (?P<title>.+) \((?P<creator>.+)\) '
-    r'\[(?P<version>.+)\]\.osu$' # ver can technically be 0 chars?
+    r'\[(?P<version>.+)\]\.osu$'  # ver can technically be 0 chars?
 )
 
 osu_ver = rcomp(

@@ -14,21 +14,21 @@ import sys
 
 if __name__ != '__main__':
     # check specifically for asgi servers since
-    # related projects use it (like gulag-web)
+    # related projects use it (like circles-web)
     if (
         __name__ == 'main' and
         any([sys.argv[0].endswith(suffix)
              for suffix in ('hypercorn', 'uvicorn')])
     ):
         raise RuntimeError(
-            "gulag is not an ASGI implementation and uses it's own http "
+            "circles is not an ASGI implementation and uses it's own http "
             "server implementation; please run it directly (./main.py).")
     else:
-        raise RuntimeError('gulag should only be run directly (./main.py).')
+        raise RuntimeError('circles should only be run directly (./main.py).')
 
 import os
 
-# set cwd to /gulag
+# set cwd to /circles
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
 # we print utf-8 content quite often
@@ -71,7 +71,7 @@ from utils.updater import Updater
 
 utils.misc.install_excepthook()
 
-# current version of gulag
+# current version of circles
 # NOTE: this is used internally for the updater, it may be
 # worth reading through it's code before playing with it.
 glob.version = cmyui.Version(3, 3, 6)
@@ -229,16 +229,16 @@ def detect_mysqld_running() -> bool:
         return os.system('pgrep mysqld') == 0
 
 def ensure_platform() -> None:
-    """Ensure we're running on an appropriate platform for gulag."""
+    """Ensure we're running on an appropriate platform for circles."""
     if sys.platform != 'linux':
-        log('gulag currently only supports linux', Ansi.LRED)
+        log('circles currently only supports linux', Ansi.LRED)
         if sys.platform == 'win32':
             log("you could also try wsl(2), i'd recommend ubuntu 18.04 "
-                "(i use it to test gulag)", Ansi.LBLUE)
+                "(i use it to test circles)", Ansi.LBLUE)
         sys.exit()
 
     if sys.version_info < (3, 9):
-        sys.exit('gulag uses many modern python features, '
+        sys.exit('circles uses many modern python features, '
                  'and the minimum python version is 3.9.')
 
 def ensure_services() -> None:
@@ -254,7 +254,7 @@ def ensure_services() -> None:
         sys.exit('Please start your nginx server.')
 
 def main() -> None:
-    """Attempt to start up gulag."""
+    """Attempt to start up circles."""
     # make sure we're running on an appropriate
     # platform with all required software.
     ensure_platform()
@@ -263,9 +263,9 @@ def main() -> None:
     # are being run in the background.
     ensure_services()
 
-    # warn the user if gulag is running on root.
+    # warn the user ifcirclesis running on root.
     if os.geteuid() == 0:
-        log('It is not recommended to run gulag as root, '
+        log('It is not recommended to runcirclesas root, '
             'especially in production..', Ansi.LYELLOW)
 
         if glob.config.advanced:
@@ -352,7 +352,7 @@ def main() -> None:
     # start up the server; this starts an event loop internally,
     # using uvloop if it's installed. it uses SIGUSR1 for restarts.
     # NOTE: eventually the event loop creation will likely be
-    # moved into the gulag codebase for increased flexibility.
+    # moved into thecirclescodebase for increased flexibility.
     app.run(glob.config.server_addr, handle_restart=True)
 
 main()

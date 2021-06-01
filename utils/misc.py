@@ -39,6 +39,7 @@ __all__ = (
 useful_keys = (Keys.M1, Keys.M2,
                Keys.K1, Keys.K2)
 
+
 def get_press_times(frames: Sequence[ReplayFrame]) -> dict[Keys, float]:
     """A very basic function to press times of an osu! replay.
        This is mostly only useful for taiko maps, since it
@@ -69,9 +70,11 @@ def get_press_times(frames: Sequence[ReplayFrame]) -> dict[Keys, float]:
     # return all keys with presses
     return {k: v for k, v in press_times.items() if v}
 
+
 def make_safe_name(name: str) -> str:
     """Return a name safe for usage in sql."""
     return name.lower().replace(' ', '_')
+
 
 def _download_achievement_images_mirror(achievements_path: Path) -> bool:
     """Download all used achievement images (using mirror's zip)."""
@@ -87,6 +90,7 @@ def _download_achievement_images_mirror(achievements_path: Path) -> bool:
             myfile.extractall(achievements_path)
 
     return True
+
 
 def _download_achievement_images_osu(achievements_path: Path) -> bool:
     """Download all used achievement images (one by one, from osu!)."""
@@ -114,6 +118,7 @@ def _download_achievement_images_osu(achievements_path: Path) -> bool:
 
     return True
 
+
 def download_achievement_images(achievements_path: Path) -> None:
     """Download all used achievement images (using best available source)."""
     # try using my cmyui.xyz mirror (zip file)
@@ -129,6 +134,7 @@ def download_achievement_images(achievements_path: Path) -> None:
         # TODO: make the code safe in this state
         log('Failed to download achievement images.', Ansi.LRED)
         achievements_path.rmdir()
+
 
 def seconds_readable(seconds: int) -> str:
     """Turn seconds as an int into 'DD:HH:MM:SS'."""
@@ -148,6 +154,7 @@ def seconds_readable(seconds: int) -> str:
     r.append(f'{seconds % 60:02d}')
     return ':'.join(r)
 
+
 def check_connection(timeout: float = 1.0) -> bool:
     """Check for an active internet connection."""
     online = False
@@ -158,7 +165,7 @@ def check_connection(timeout: float = 1.0) -> bool:
     # attempt to connect to common dns servers.
     with socket.socket() as sock:
         for addr in ('1.1.1.1', '1.0.0.1',  # cloudflare
-                     '8.8.8.8', '8.8.4.4'): # google
+                     '8.8.8.8', '8.8.4.4'):  # google
             try:
                 sock.connect((addr, 53))
                 online = True
@@ -169,9 +176,11 @@ def check_connection(timeout: float = 1.0) -> bool:
     socket.setdefaulttimeout(default_timeout)
     return online
 
+
 def install_excepthook() -> None:
-    """Install a thin wrapper for sys.excepthook to catch gulag-related stuff."""
-    sys._excepthook = sys.excepthook # backup
+    """Install a thin wrapper for sys.excepthook to catch circles-related stuff."""
+    sys._excepthook = sys.excepthook  # backup
+
     def _excepthook(
         type_: Type[BaseException],
         value: BaseException,
@@ -185,7 +194,7 @@ def install_excepthook() -> None:
             value.args[0].startswith("module 'config' has no attribute")
         ):
             attr_name = value.args[0][34:-1]
-            log("gulag's config has been updated, and has "
+            log("circles's config has been updated, and has "
                 f"added a new `{attr_name}` attribute.", Ansi.LMAGENTA)
             log("Please refer to it's value & example in "
                 "ext/config.sample.py for additional info.", Ansi.LCYAN)
@@ -195,6 +204,7 @@ def install_excepthook() -> None:
               'before starting up :(\x1b[0m')
         sys._excepthook(type_, value, traceback)
     sys.excepthook = _excepthook
+
 
 def get_appropriate_stacktrace() -> list[inspect.FrameInfo]:
     """Return information of all frames related to cmyui_pkg and below."""
@@ -213,9 +223,12 @@ def get_appropriate_stacktrace() -> list[inspect.FrameInfo]:
         'locals': {k: repr(v) for k, v in frame.frame.f_locals.items()}
     } for frame in stack[:idx]]
 
+
 STRANGE_LOG_DIR = Path.cwd() / '.data/logs'
+
+
 async def log_strange_occurrence(obj: object) -> None:
-    if not glob.has_internet: # requires internet connection
+    if not glob.has_internet:  # requires internet connection
         return
 
     pickled_obj = pickle.dumps(obj)
@@ -224,10 +237,10 @@ async def log_strange_occurrence(obj: object) -> None:
     if glob.config.automatically_report_problems:
         # automatically reporting problems to cmyui's server
         async with glob.http.post(
-            url = 'https://log.cmyui.xyz/',
-            headers = {'Gulag-Version': repr(glob.version),
-                       'Gulag-Domain': glob.config.domain},
-            data = pickled_obj,
+            url='https://log.cmyui.xyz/',
+            headers={'Gulag-Version': repr(glob.version),
+                     'Gulag-Domain': glob.config.domain},
+            data=pickled_obj,
         ) as resp:
             if (
                 resp.status == 200 and
@@ -237,7 +250,8 @@ async def log_strange_occurrence(obj: object) -> None:
                 log("Logged strange occurrence to cmyui's server.", Ansi.LBLUE)
                 log("Thank you for your participation! <3", Ansi.LBLUE)
             else:
-                log(f"Autoupload to cmyui's server failed (HTTP {resp.status})", Ansi.LRED)
+                log(
+                    f"Autoupload to cmyui's server failed (HTTP {resp.status})", Ansi.LRED)
 
     if not uploaded:
         # log to a file locally, and prompt the user
@@ -252,7 +266,9 @@ async def log_strange_occurrence(obj: object) -> None:
         log('Logged strange occurrence to', Ansi.LYELLOW, end=' ')
         printc('/'.join(log_file.parts[-4:]), Ansi.LBLUE)
 
-        log("Greatly appreciated if you could forward this to cmyui#0425 :)", Ansi.LYELLOW)
+        log("Greatly appreciated if you could forward this to cmyui#0425 :)",
+            Ansi.LYELLOW)
+
 
 def pymysql_encode(conv: Callable) -> Callable:
     """Decorator to allow for adding to pymysql's encoders."""
@@ -261,5 +277,6 @@ def pymysql_encode(conv: Callable) -> Callable:
         return cls
     return wrapper
 
-def escape_enum(val, mapping=None) -> str: # used for ^
+
+def escape_enum(val, mapping=None) -> str:  # used for ^
     return str(int(val))

@@ -5,7 +5,7 @@
 # except for the bottom one :P <3
 
 """ server settings """
-# the domain you'd like gulag to be hosted on.
+# the domain you'd likecirclesto be hosted on.
 domain = 'cmyui.xyz' # cmyui.xyz
 
 # the address which the server runs on, unix or inet4.
@@ -30,7 +30,7 @@ mirror = 'https://api.chimu.moe/v1' # https://api.chimu.moe/v1
 command_prefix = '!'
 
 # the max amount of concurrent
-# connections gulag will hold.
+# connectionscircleswill hold.
 max_conns = 16 # likely ~8-16, depending on playercount & api usage
 
 # the console gets a whole lot louder.
@@ -81,7 +81,7 @@ disallowed_passwords = {
     'password', 'minilamp'
 }
 
-# gulag provides connectivity to
+#circlesprovides connectivity to
 # discord via a few simple webhooks.
 # simply add urls to start receiving.
 webhooks = {

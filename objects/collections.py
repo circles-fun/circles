@@ -34,6 +34,7 @@ __all__ = (
 # TODO: decorator for these collections which automatically
 # adds debugging to their append/remove/insert/extend methods.
 
+
 class Channels(list):
     """The currently active chat channels on the server."""
 
@@ -89,13 +90,14 @@ class Channels(list):
         await db_cursor.execute('SELECT * FROM channels')
         return cls([
             Channel(
-                name = row['name'],
-                topic = row['topic'],
-                read_priv = Privileges(row['read_priv']),
-                write_priv = Privileges(row['write_priv']),
-                auto_join = row['auto_join'] == 1
+                name=row['name'],
+                topic=row['topic'],
+                read_priv=Privileges(row['read_priv']),
+                write_priv=Privileges(row['write_priv']),
+                auto_join=row['auto_join'] == 1
             ) async for row in db_cursor
         ])
+
 
 class Matches(list):
     """The currently active multiplayer matches on the server."""
@@ -140,6 +142,7 @@ class Matches(list):
 
         if glob.app.debug:
             log(f'{m} removed from matches list.')
+
 
 class Players(list):
     """The currently active players on the server."""
@@ -200,7 +203,8 @@ class Players(list):
 
                 return attr, val
         else:
-            raise ValueError('Missing attribute in kwargs! (must provide token/id/name)')
+            raise ValueError(
+                'Missing attribute in kwargs! (must provide token/id/name)')
 
     def get(self, **kwargs) -> Optional[Player]:
         """Get a player by token, id, or name from cache."""
@@ -247,7 +251,7 @@ class Players(list):
                         sql: bool = False) -> Optional[Player]:
         """Return a player with a given name & pw_md5, from cache or sql."""
         if not (p := self.get(name=name)):
-            if not sql: # not to fetch from sql.
+            if not sql:  # not to fetch from sql.
                 return
 
             if not (p := await self.get_sql(name=name)):
@@ -274,6 +278,7 @@ class Players(list):
             return
 
         super().remove(p)
+
 
 class MapPools(list):
     """The currently active mappools on the server."""
@@ -323,10 +328,10 @@ class MapPools(list):
         await db_cursor.execute('SELECT * FROM tourney_pools')
         obj = cls([
             MapPool(
-                id = row['id'],
-                name = row['name'],
-                created_at = row['created_at'],
-                created_by = await glob.players.get_ensure(id=row['created_by'])
+                id=row['id'],
+                name=row['name'],
+                created_at=row['created_at'],
+                created_by=await glob.players.get_ensure(id=row['created_by'])
             ) async for row in db_cursor
         ])
 
@@ -334,6 +339,7 @@ class MapPools(list):
             await pool.maps_from_sql(db_cursor)
 
         return obj
+
 
 class Clans(list):
     """The currently active clans on the server."""
@@ -362,7 +368,8 @@ class Clans(list):
             if val := kwargs.pop(attr, None):
                 break
         else:
-            raise ValueError('must provide valid kwarg (name, tag, id) to get()')
+            raise ValueError(
+                'must provide valid kwarg (name, tag, id) to get()')
 
         for c in self:
             if getattr(c, attr) == val:

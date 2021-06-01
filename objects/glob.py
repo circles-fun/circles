@@ -68,7 +68,7 @@ http: 'Optional[ClientSession]'
 
 datadog: 'Optional[ThreadStats]'
 
-# gulag's main cache.
+# circles's main cache.
 # the idea here is simple - keep a copy of things either from sql or
 # that take a lot of time to produce in memory for quick and easy access.
 # ideally, the cache is hidden away in methods so that developers do not

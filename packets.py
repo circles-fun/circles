@@ -1005,7 +1005,7 @@ def restartServer(ms: int) -> bytes:
 # packet id: 88
 @lru_cache(maxsize=4)
 def matchInvite(p: 'Player', t_name: str) -> bytes:
-    msg = f'Come join my game: {p.match.embed}.'
+    msg = f'Come join my lobby: {p.match.embed}.'
     return write(
         Packets.CHO_MATCH_INVITE,
         ((p.name, msg, t_name, p.id), osuTypes.message)
@@ -1038,7 +1038,7 @@ def userSilenced(pid: int) -> bytes:
         (pid, osuTypes.i32)
     )
 
-""" not sure why 95 & 96 exist? unused in gulag """
+""" not sure why 95 & 96 exist? unused incircles"""
 
 # packet id: 95
 @cache

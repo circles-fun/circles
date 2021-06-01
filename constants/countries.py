@@ -2,7 +2,7 @@
 
 __all__ = ('country_codes',)
 
-country_codes = { # talk about ugly lol
+country_codes = {  # talk about ugly lol
     'OC':   1, 'EU':   2, 'AD':   3, 'AE':   4, 'AF':   5, 'AG':   6, 'AI':   7,
     'AL':   8, 'AM':   9, 'AN':  10, 'AO':  11, 'AQ':  12, 'AR':  13, 'AS':  14,
     'AT':  15, 'AU':  16, 'AW':  17, 'AZ':  18, 'BA':  19, 'BB':  20, 'BD':  21,

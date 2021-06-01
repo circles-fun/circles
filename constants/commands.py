@@ -56,12 +56,14 @@ if TYPE_CHECKING:
 Messageable = Union['Channel', Player]
 CommandResponse = dict[str, str]
 
+
 class Command(NamedTuple):
     triggers: list[str]
     callback: Callable
     priv: Privileges
     hidden: bool
     doc: str
+
 
 @dataclass
 class Context:
@@ -71,6 +73,7 @@ class Context:
 
     recipient: Optional[Messageable] = None
     match: Optional[Match] = None
+
 
 class CommandSet:
     __slots__ = ('trigger', 'doc', 'commands')
@@ -87,12 +90,12 @@ class CommandSet:
             self.commands.append(Command(
                 # NOTE: this method assumes that functions without any
                 # triggers will be named like '{self.trigger}_{trigger}'.
-                triggers = (
+                triggers=(
                     [f.__name__.removeprefix(f'{self.trigger}_').strip()] +
                     aliases
                 ),
-                callback = f, priv = priv,
-                hidden = hidden, doc = f.__doc__
+                callback=f, priv=priv,
+                hidden=hidden, doc=f.__doc__
             ))
 
             return f
@@ -100,6 +103,7 @@ class CommandSet:
 
 # TODO: refactor help commands into some base ver
 #       since they're all the same anyways lol.
+
 
 # not sure if this should be in glob or not,
 # trying to think of some use cases lol..
@@ -115,24 +119,27 @@ glob.commands = {
     'sets': command_sets
 }
 
+
 def command(priv: Privileges, aliases: list[str] = [],
             hidden: bool = False) -> Callable:
     def wrapper(f: Callable):
         regular_commands.append(Command(
-            callback = f,
-            priv = priv,
-            hidden = hidden,
-            triggers = [f.__name__.strip('_')] + aliases,
-            doc = f.__doc__
+            callback=f,
+            priv=priv,
+            hidden=hidden,
+            triggers=[f.__name__.strip('_')] + aliases,
+            doc=f.__doc__
         ))
 
         return f
     return wrapper
 
+
 """ User commands
 # The commands below are not considered dangerous,
 # and are granted to any unbanned players.
 """
+
 
 @command(Privileges.Normal, aliases=['h'], hidden=True)
 async def _help(ctx: Context) -> str:
@@ -148,7 +155,7 @@ async def _help(ctx: Context) -> str:
 
         l.append(f'{prefix}{cmd.triggers[0]}: {cmd.doc}')
 
-    l.append('') # newline
+    l.append('')  # newline
     l.extend(['Command sets',
               '-----------'])
 
@@ -156,6 +163,7 @@ async def _help(ctx: Context) -> str:
         l.append(f'{prefix}{cmd_set.trigger}: {cmd_set.doc}')
 
     return '\n'.join(l)
+
 
 @command(Privileges.Normal)
 async def roll(ctx: Context) -> str:
@@ -170,6 +178,7 @@ async def roll(ctx: Context) -> str:
 
     points = random.randrange(0, max_roll)
     return f'{ctx.player.name} rolls {points} points!'
+
 
 @command(Privileges.Normal, hidden=True)
 async def block(ctx: Context) -> str:
@@ -194,6 +203,7 @@ async def block(ctx: Context) -> str:
     await ctx.player.add_block(target)
     return f'Added {target.name} to blocked users.'
 
+
 @command(Privileges.Normal, hidden=True)
 async def unblock(ctx: Context) -> str:
     """Unblock another user from communicating with you."""
@@ -214,10 +224,12 @@ async def unblock(ctx: Context) -> str:
     await ctx.player.remove_block(target)
     return f'Removed {target.name} from blocked users.'
 
+
 @command(Privileges.Normal)
 async def reconnect(ctx: Context) -> str:
     """Disconnect and reconnect to the server."""
     ctx.player.logout()
+
 
 @command(Privileges.Normal)
 async def changename(ctx: Context) -> str:
@@ -251,6 +263,7 @@ async def changename(ctx: Context) -> str:
     )
     ctx.player.logout()
 
+
 @command(Privileges.Normal, aliases=['bloodcat', 'beatconnect', 'chimu', 'q'])
 async def maplink(ctx: Context) -> str:
     """Return a download link to the user's current map (situation dependant)."""
@@ -270,6 +283,7 @@ async def maplink(ctx: Context) -> str:
         return 'No map found!'
 
     return f'[https://chimu.moe/d/{bmap.set_id} {bmap.full}]'
+
 
 @command(Privileges.Normal, aliases=['last', 'r'])
 async def recent(ctx: Context) -> str:
@@ -294,7 +308,7 @@ async def recent(ctx: Context) -> str:
         rank = s.rank if s.status == SubmissionStatus.BEST else 'NA'
         l.append(f'PASS {{{s.pp:.2f}pp #{rank}}}')
     else:
-        # XXX: prior to v3.2.0, gulag didn't parse total_length from
+        # XXX: prior to v3.2.0,circlesdidn't parse total_length from
         # the osu!api, and thus this can do some zerodivision moments.
         # this can probably be removed in the future, or better yet
         # replaced with a better system to fix the maps.
@@ -309,6 +323,7 @@ async def recent(ctx: Context) -> str:
 # TODO: !top (get top #1 score)
 # TODO: !compare (compare to previous !last/!top post's map)
 
+
 @command(Privileges.Normal, aliases=['w'], hidden=True)
 async def _with(ctx: Context) -> str:
     """Specify custom accuracy & mod combinations with `/np`."""
@@ -322,9 +337,9 @@ async def _with(ctx: Context) -> str:
     mode_vn = ctx.player.last_np['mode_vn']
 
     pp_attrs = {'mode_vn': mode_vn}
-    mods = key_value = None # key_value is acc when std, score when mania
+    mods = key_value = None  # key_value is acc when std, score when mania
 
-    if mode_vn in (0, 1): # oppai-ng
+    if mode_vn in (0, 1):  # oppai-ng
         # +?<mods> <acc>%?
         if 1 < len(ctx.args) > 2:
             return 'Invalid syntax: !with <mods/acc> ...'
@@ -332,19 +347,19 @@ async def _with(ctx: Context) -> str:
         mods = key_value = None
 
         for param in (p.strip('+%') for p in ctx.args):
-            if cmyui._isdecimal(param, _float=True): # acc
+            if cmyui._isdecimal(param, _float=True):  # acc
                 if not 0 <= (key_value := float(param)) <= 100:
                     return 'Invalid accuracy.'
                 pp_attrs['acc'] = key_value
-            elif len(param) % 2 == 0: # mods
+            elif len(param) % 2 == 0:  # mods
                 mods = Mods.from_modstr(param).filter_invalid_combos(mode_vn)
                 pp_attrs['mods'] = mods
             else:
                 return 'Invalid syntax: !with <mods/acc> ...'
 
-    elif mode_vn == 2: # TODO: catch support
+    elif mode_vn == 2:  # TODO: catch support
         return 'PP not yet supported for that mode.'
-    elif mode_vn == 3: # maniera
+    elif mode_vn == 3:  # maniera
         if bmap.mode.as_vanilla != 3:
             return 'Mania converts not yet supported.'
 
@@ -355,12 +370,12 @@ async def _with(ctx: Context) -> str:
         mods = key_value = None
 
         for param in (p.lstrip('+') for p in ctx.args):
-            if param.isdecimal(): # score
+            if param.isdecimal():  # score
                 if not 0 <= (key_value := int(param)) <= 1000000:
                     return 'Invalid score.'
 
                 pp_attrs['score'] = key_value
-            elif len(param) % 2 == 0: # mods
+            elif len(param) % 2 == 0:  # mods
                 mods = Mods.from_modstr(param).filter_invalid_combos(mode_vn)
                 pp_attrs['mods'] = mods
             else:
@@ -372,11 +387,11 @@ async def _with(ctx: Context) -> str:
         if not ppcalc:
             return 'Could not retrieve map file.'
 
-        pp, _ = await ppcalc.perform() # don't need sr
+        pp, _ = await ppcalc.perform()  # don't need sr
 
-        if mode_vn in (0, 1): # acc
+        if mode_vn in (0, 1):  # acc
             _key = f'{key_value:.2f}%'
-        elif mode_vn == 3: # score
+        elif mode_vn == 3:  # score
             _key = f'{key_value // 1000}k'
         pp_values = [(_key, pp)]
     else:
@@ -386,12 +401,12 @@ async def _with(ctx: Context) -> str:
 
         pp_cache = bmap.pp_cache[mode_vn][mods]
 
-        if mode_vn in (0, 1): # use acc
+        if mode_vn in (0, 1):  # use acc
             _keys = (
                 f'{acc:.2f}%'
                 for acc in glob.config.pp_cached_accs
             )
-        elif mode_vn == 3: # use score
+        elif mode_vn == 3:  # use score
             _keys = (
                 f'{int(score // 1000)}k'
                 for score in glob.config.pp_cached_scores
@@ -402,6 +417,7 @@ async def _with(ctx: Context) -> str:
     _mods = f'+{mods!r} ' if mods else ''
     return _mods + ' | '.join([f'{k}: {pp:,.2f}pp'
                                for k, pp in pp_values])
+
 
 @command(Privileges.Normal, aliases=['req'])
 async def request(ctx: Context) -> str:
@@ -426,6 +442,7 @@ async def request(ctx: Context) -> str:
 
     return 'Request submitted.'
 
+
 @command(Privileges.Normal)
 async def get_apikey(ctx: Context) -> str:
     """Generate a new api key & assign it to the player."""
@@ -447,13 +464,15 @@ async def get_apikey(ctx: Context) -> str:
     )
     glob.api_keys[ctx.player.api_key] = ctx.player.id
 
-    ctx.player.enqueue(packets.notification('/savelog & click popup for an easy copy.'))
+    ctx.player.enqueue(packets.notification(
+        '/savelog & click popup for an easy copy.'))
     return f'Your API key is now: {ctx.player.api_key}'
 
 """ Nominator commands
 # The commands below allow users to
 # manage  the server's state of beatmaps.
 """
+
 
 @command(Privileges.Nominator, aliases=['reqs'], hidden=True)
 async def requests(ctx: Context) -> str:
@@ -464,7 +483,7 @@ async def requests(ctx: Context) -> str:
     res = await glob.db.fetchall(
         'SELECT map_id, player_id, datetime '
         'FROM map_requests WHERE active = 1',
-        _dict=False # return rows as tuples
+        _dict=False  # return rows as tuples
     )
 
     if not res:
@@ -491,8 +510,11 @@ _status_str_to_int_map = {
     'rank': 2,
     'love': 5
 }
+
+
 def status_to_id(s: str) -> int:
     return _status_str_to_int_map[s]
+
 
 @command(Privileges.Nominator)
 async def _map(ctx: Context) -> str:
@@ -573,6 +595,7 @@ async def _map(ctx: Context) -> str:
 # and are generally for managing players.
 """
 
+
 @command(Privileges.Mod, hidden=True)
 async def notes(ctx: Context) -> str:
     """Retrieve the logs of a specified player by name."""
@@ -601,6 +624,7 @@ async def notes(ctx: Context) -> str:
         return f'No notes found on {t} in the past {days} days.'
 
     return '\n'.join(['[{time}] {msg}'.format(**row) for row in res])
+
 
 @command(Privileges.Mod, hidden=True)
 async def addnote(ctx: Context) -> str:
@@ -638,6 +662,7 @@ DURATION_MULTIPLIERS = {
     'd': 86400, 'w': 604800
 }
 
+
 @command(Privileges.Mod, hidden=True)
 async def silence(ctx: Context) -> str:
     """Silence a specified player with a specified duration & reason."""
@@ -667,6 +692,7 @@ async def silence(ctx: Context) -> str:
     await t.silence(ctx.player, duration, reason)
     return f'{t} was silenced.'
 
+
 @command(Privileges.Mod, hidden=True)
 async def unsilence(ctx: Context) -> str:
     """Unsilence a specified player."""
@@ -692,6 +718,7 @@ async def unsilence(ctx: Context) -> str:
 # The commands below are relatively dangerous,
 # and are generally for managing players.
 """
+
 
 @command(Privileges.Admin, hidden=True)
 async def restrict(ctx: Context) -> str:
@@ -721,6 +748,7 @@ async def restrict(ctx: Context) -> str:
 
     return f'{t} was restricted.'
 
+
 @command(Privileges.Admin, hidden=True)
 async def unrestrict(ctx: Context) -> str:
     """Unrestrict a specified player's account, with a reason."""
@@ -749,6 +777,7 @@ async def unrestrict(ctx: Context) -> str:
 
     return f'{t} was unrestricted.'
 
+
 @command(Privileges.Admin, hidden=True)
 async def alert(ctx: Context) -> str:
     """Send a notification to all players."""
@@ -759,6 +788,7 @@ async def alert(ctx: Context) -> str:
 
     glob.players.enqueue(packets.notification(notif_txt))
     return 'Alert sent.'
+
 
 @command(Privileges.Admin, aliases=['alertu'], hidden=True)
 async def alertuser(ctx: Context) -> str:
@@ -777,6 +807,8 @@ async def alertuser(ctx: Context) -> str:
 # NOTE: this is pretty useless since it doesn't switch anything other
 # than the c[e4-6].ppy.sh domains; it exists on bancho as a tournament
 # server switch mechanism, perhaps we could leverage this in the future.
+
+
 @command(Privileges.Admin, hidden=True)
 async def switchserv(ctx: Context) -> str:
     """Switch your client's internal endpoints to a specified IP address."""
@@ -788,6 +820,7 @@ async def switchserv(ctx: Context) -> str:
     ctx.player.enqueue(packets.switchTournamentServer(new_bancho_ip))
     return 'Have a nice journey..'
 
+
 @command(Privileges.Admin, aliases=['restart'])
 async def shutdown(ctx: Context) -> str:
     """Gracefully shutdown the server."""
@@ -796,7 +829,7 @@ async def shutdown(ctx: Context) -> str:
     else:
         _signal = signal.SIGTERM
 
-    if ctx.args: # shutdown after a delay
+    if ctx.args:  # shutdown after a delay
         if not (r_match := regexes.scaled_duration.match(ctx.args[0])):
             return f'Invalid syntax: !{ctx.trigger} <delay> <msg ...>'
 
@@ -817,7 +850,7 @@ async def shutdown(ctx: Context) -> str:
         loop = asyncio.get_running_loop()
         loop.call_later(delay, os.kill, os.getpid(), _signal)
         return f'Enqueued {ctx.trigger}.'
-    else: # shutdown immediately
+    else:  # shutdown immediately
         os.kill(os.getpid(), _signal)
 
 """ Developer commands
@@ -826,6 +859,8 @@ async def shutdown(ctx: Context) -> str:
 """
 
 _fake_users = []
+
+
 @command(Privileges.Dangerous, aliases=['fu'])
 async def fakeusers(ctx: Context) -> str:
     """Add fake users to the online player list (for testing)."""
@@ -853,7 +888,7 @@ async def fakeusers(ctx: Context) -> str:
     data = bytearray()
 
     if action == 'add':
-        const_uinfo = { # non important stuff
+        const_uinfo = {  # non important stuff
             'utc_offset': 0,
             'osu_ver': 'dn',
             'pm_private': False,
@@ -861,13 +896,14 @@ async def fakeusers(ctx: Context) -> str:
             'clan_priv': None,
             'priv': Privileges.Normal | Privileges.Verified,
             'silence_end': 0,
-            'login_time': 0x7fffffff # never auto-dc
+            'login_time': 0x7fffffff  # never auto-dc
         }
 
         _stats = packets.userStats(ctx.player)
 
         if _fake_users:
-            current_fakes = max([x.id for x in _fake_users]) - (FAKE_ID_START - 1)
+            current_fakes = max([x.id for x in _fake_users]
+                                ) - (FAKE_ID_START - 1)
         else:
             current_fakes = 0
 
@@ -883,11 +919,11 @@ async def fakeusers(ctx: Context) -> str:
         # no need to redo this every iteration.
         static_presence = struct.pack(
             '<BBBffi',
-            19, # -5 (EST) + 24
-            38, # country (canada)
-            0b11111, # all in-game privs
-            0.0, 0.0, # lat, lon
-            1 # rank #1
+            19,  # -5 (EST) + 24
+            38,  # country (canada)
+            0b11111,  # all in-game privs
+            0.0, 0.0,  # lat, lon
+            1  # rank #1
         )
 
         for i in range(start_id, end_id):
@@ -900,9 +936,9 @@ async def fakeusers(ctx: Context) -> str:
             # append userpresence packet
             data += struct.pack(
                 '<HxIi',
-                83, # packetid
-                21 + len(name), # packet len
-                i # userid
+                83,  # packetid
+                21 + len(name),  # packet len
+                i  # userid
             )
             data += f'\x0b{chr(len(name))}{name}'.encode()
             data += static_presence
@@ -916,7 +952,7 @@ async def fakeusers(ctx: Context) -> str:
         del new_fakes
 
         msg = 'Added.'
-    else: # remove
+    else:  # remove
         len_fake_users = len(_fake_users)
         if amount > len_fake_users:
             return f'Too many! only {len_fake_users} remaining.'
@@ -931,21 +967,22 @@ async def fakeusers(ctx: Context) -> str:
                 continue
 
             data += logout_packet_header
-            data += fake.id.to_bytes(4, 'little') # 4 bytes pid
-            data += b'\x00' # 1 byte 0
+            data += fake.id.to_bytes(4, 'little')  # 4 bytes pid
+            data += b'\x00'  # 1 byte 0
 
             glob.players.remove(fake)
             _fake_users.remove(fake)
 
         msg = 'Removed.'
 
-    data = bytes(data) # bytearray -> bytes
+    data = bytes(data)  # bytearray -> bytes
 
     # only enqueue data to real users.
     for o in [x for x in glob.players if x.id < FAKE_ID_START]:
         o.enqueue(data)
 
     return msg
+
 
 @command(Privileges.Dangerous)
 async def stealth(ctx: Context) -> str:
@@ -956,13 +993,14 @@ async def stealth(ctx: Context) -> str:
 
     return f'Stealth {"enabled" if ctx.player.stealth else "disabled"}.'
 
+
 @command(Privileges.Dangerous)
 async def recalc(ctx: Context) -> str:
     """Performs a full PP recalc on a specified map, or all maps."""
     if len(ctx.args) != 1 or ctx.args[0] not in ('map', 'all'):
         return 'Invalid syntax: !recalc <map/all>'
 
-    score_counts = [] # keep track of # of scores recalced
+    score_counts = []  # keep track of # of scores recalced
 
     if ctx.args[0] == 'map':
         # recalculate all scores on their last /np'ed map.
@@ -1004,7 +1042,7 @@ async def recalc(ctx: Context) -> str:
                 ppcalc.pp_attrs['nmiss'] = score['nmiss']
                 ppcalc.pp_attrs['acc'] = score['acc']
 
-                pp, _ = await ppcalc.perform() # sr not needed
+                pp, _ = await ppcalc.perform()  # sr not needed
 
                 await glob.db.execute(
                     f'UPDATE {table} '
@@ -1022,6 +1060,7 @@ async def recalc(ctx: Context) -> str:
 
     recap = '{0} vn | {1} rx | {2} ap'.format(*score_counts)
     return f'Recalculated {sum(score_counts)} ({recap}) scores.'
+
 
 @command(Privileges.Dangerous, hidden=True)
 async def debug(ctx: Context) -> str:
@@ -1045,6 +1084,7 @@ str_priv_dict = {
     'dangerous': Privileges.Dangerous
 }
 
+
 @command(Privileges.Dangerous, hidden=True)
 async def addpriv(ctx: Context) -> str:
     """Set privileges for a specified player (by name)."""
@@ -1065,6 +1105,7 @@ async def addpriv(ctx: Context) -> str:
     await t.add_privs(bits)
     return f"Updated {t}'s privileges."
 
+
 @command(Privileges.Dangerous, hidden=True)
 async def rmpriv(ctx: Context) -> str:
     """Set privileges for a specified player (by name)."""
@@ -1084,6 +1125,7 @@ async def rmpriv(ctx: Context) -> str:
 
     await t.remove_privs(bits)
     return f"Updated {t}'s privileges."
+
 
 @command(Privileges.Dangerous)
 async def wipemap(ctx: Context) -> str:
@@ -1107,8 +1149,8 @@ async def wipemap(ctx: Context) -> str:
 
     return 'Scores wiped.'
 
-#@command(Privileges.Dangerous, aliases=['men'], hidden=True)
-#async def menu_preview(ctx: Context) -> str:
+# @command(Privileges.Dangerous, aliases=['men'], hidden=True)
+# async def menu_preview(ctx: Context) -> str:
 #    """Temporary command to illustrate the menu option idea."""
 #    async def callback():
 #        # this is called when the menu item is clicked
@@ -1117,6 +1159,7 @@ async def wipemap(ctx: Context) -> str:
 #    # add the option to their menu opts & send them a button
 #    opt_id = await p.add_to_menu(callback)
 #    return f'[osump://{opt_id}/dn option]'
+
 
 @command(Privileges.Dangerous, aliases=['re'])
 async def reload(ctx: Context) -> str:
@@ -1144,11 +1187,12 @@ async def reload(ctx: Context) -> str:
 
     return f'Reloaded {mod.__name__}'
 
+
 @command(Privileges.Normal)
 async def server(ctx: Context) -> str:
     """Retrieve performance data about the server."""
 
-    build_str = f'gulag v{glob.version!r} ({glob.config.domain})'
+    build_str = f'circles v{glob.version!r} ({glob.config.domain})'
 
     # get info about this process
     proc = psutil.Process(os.getpid())
@@ -1224,7 +1268,7 @@ if glob.config.advanced:
     @command(Privileges.Dangerous)
     async def py(ctx: Context) -> str:
         """Allow for (async) access to the python interpreter."""
-        # This can be very good for getting used to gulag's API; just look
+        # This can be very good for getting used to circles's API; just look
         # around the codebase and find things to play with in your server.
         # Ex: !py return (await glob.players.get(name='cmyui')).status.action
         if not ctx.args:
@@ -1236,10 +1280,10 @@ if glob.config.advanced:
             ' '.join(ctx.args)
         ])
 
-        try: # def __py(ctx)
+        try:  # def __py(ctx)
             exec(definition, __py_namespace)  # add to namespace
-            ret = await __py_namespace['__py'](ctx) # await it's return
-        except Exception as exc: # return exception in osu! chat
+            ret = await __py_namespace['__py'](ctx)  # await it's return
+        except Exception as exc:  # return exception in osu! chat
             ret = f'{exc.__class__}: {exc}'
 
         if '__py' in __py_namespace:
@@ -1260,6 +1304,7 @@ if glob.config.advanced:
 # Most commands are open to player usage.
 """
 
+
 @mp_commands.add(Privileges.Normal, aliases=['h'])
 async def mp_help(ctx: Context) -> str:
     """Show all documented multiplayer commands the play can access."""
@@ -1274,6 +1319,7 @@ async def mp_help(ctx: Context) -> str:
         cmds.append(f'{prefix}mp {cmd.triggers[0]}: {cmd.doc}')
 
     return '\n'.join(cmds)
+
 
 @mp_commands.add(Privileges.Normal, aliases=['st'])
 async def mp_start(ctx: Context) -> str:
@@ -1359,6 +1405,7 @@ async def mp_start(ctx: Context) -> str:
     ctx.match.start()
     return 'Good luck!'
 
+
 @mp_commands.add(Privileges.Normal, aliases=['a'])
 async def mp_abort(ctx: Context) -> str:
     """Abort the current in-progress multiplayer match."""
@@ -1371,6 +1418,7 @@ async def mp_abort(ctx: Context) -> str:
     ctx.match.enqueue(packets.matchAbort())
     ctx.match.enqueue_state()
     return 'Match aborted.'
+
 
 @mp_commands.add(Privileges.Normal)
 async def mp_map(ctx: Context) -> str:
@@ -1395,6 +1443,7 @@ async def mp_map(ctx: Context) -> str:
     ctx.match.enqueue_state()
     return f'Selected: {bmap.embed}.'
 
+
 @mp_commands.add(Privileges.Normal)
 async def mp_mods(ctx: Context) -> str:
     """Set the current match's mods, from string form."""
@@ -1418,6 +1467,7 @@ async def mp_mods(ctx: Context) -> str:
     ctx.match.enqueue_state()
     return 'Match mods updated.'
 
+
 @mp_commands.add(Privileges.Normal, aliases=['fm', 'fmods'])
 async def mp_freemods(ctx: Context) -> str:
     """Toggle freemods status for the match."""
@@ -1439,7 +1489,7 @@ async def mp_freemods(ctx: Context) -> str:
         # host mods -> central mods.
         ctx.match.freemods = False
 
-        host = ctx.match.get_host_slot() # should always exist
+        host = ctx.match.get_host_slot()  # should always exist
         # the match keeps any speed-changing mods,
         # and also takes any mods the host has enabled.
         ctx.match.mods &= SPEED_CHANGING_MODS
@@ -1451,6 +1501,7 @@ async def mp_freemods(ctx: Context) -> str:
 
     ctx.match.enqueue_state()
     return 'Match freemod status updated.'
+
 
 @mp_commands.add(Privileges.Normal)
 async def mp_host(ctx: Context) -> str:
@@ -1472,11 +1523,13 @@ async def mp_host(ctx: Context) -> str:
     ctx.match.enqueue_state(lobby=False)
     return 'Match host updated.'
 
+
 @mp_commands.add(Privileges.Normal)
 async def mp_randpw(ctx: Context) -> str:
     """Randomize the current match's password."""
     ctx.match.passwd = secrets.token_hex(8)
     return 'Match password randomized.'
+
 
 @mp_commands.add(Privileges.Normal, aliases=['inv'])
 async def mp_invite(ctx: Context) -> str:
@@ -1496,6 +1549,7 @@ async def mp_invite(ctx: Context) -> str:
     t.enqueue(packets.matchInvite(ctx.player, t.name))
     return f'Invited {t} to the match.'
 
+
 @mp_commands.add(Privileges.Normal)
 async def mp_addref(ctx: Context) -> str:
     """Add a referee to the current match by name."""
@@ -1513,6 +1567,7 @@ async def mp_addref(ctx: Context) -> str:
 
     ctx.match._refs.add(t)
     return f'{t.name} added to match referees.'
+
 
 @mp_commands.add(Privileges.Normal)
 async def mp_rmref(ctx: Context) -> str:
@@ -1532,10 +1587,12 @@ async def mp_rmref(ctx: Context) -> str:
     ctx.match._refs.remove(t)
     return f'{t.name} removed from match referees.'
 
+
 @mp_commands.add(Privileges.Normal)
 async def mp_listref(ctx: Context) -> str:
     """List all referees from the current match."""
     return ', '.join(map(str, ctx.match.refs)) + '.'
+
 
 @mp_commands.add(Privileges.Normal)
 async def mp_lock(ctx: Context) -> str:
@@ -1547,6 +1604,7 @@ async def mp_lock(ctx: Context) -> str:
     ctx.match.enqueue_state()
     return 'All unused slots locked.'
 
+
 @mp_commands.add(Privileges.Normal)
 async def mp_unlock(ctx: Context) -> str:
     """Unlock locked slots in the current match."""
@@ -1556,6 +1614,7 @@ async def mp_unlock(ctx: Context) -> str:
 
     ctx.match.enqueue_state()
     return 'All locked slots unlocked.'
+
 
 @mp_commands.add(Privileges.Normal)
 async def mp_teams(ctx: Context) -> str:
@@ -1599,6 +1658,7 @@ async def mp_teams(ctx: Context) -> str:
     ctx.match.enqueue_state()
     return 'Match team type updated.'
 
+
 @mp_commands.add(Privileges.Normal, aliases=['cond'])
 async def mp_condition(ctx: Context) -> str:
     """Change the win condition for the match."""
@@ -1609,7 +1669,7 @@ async def mp_condition(ctx: Context) -> str:
 
     if cond == 'pp':
         # special case - pp can't actually be used as an ingame
-        # win condition, but gulag allows it to be passed into
+        # win condition, butcirclesallows it to be passed into
         # this command during a scrims to use pp as a win cond.
         if not ctx.match.is_scrimming:
             return 'PP is only useful as a win condition during scrims.'
@@ -1634,6 +1694,7 @@ async def mp_condition(ctx: Context) -> str:
 
     ctx.match.enqueue_state(lobby=False)
     return 'Match win condition updated.'
+
 
 @mp_commands.add(Privileges.Normal)
 async def mp_scrim(ctx: Context) -> str:
@@ -1672,6 +1733,7 @@ async def mp_scrim(ctx: Context) -> str:
     ctx.match.winning_pts = winning_pts
     return msg
 
+
 @mp_commands.add(Privileges.Normal, aliases=['end'])
 async def mp_endscrim(ctx: Context) -> str:
     """End the current matches ongoing scrim."""
@@ -1680,7 +1742,8 @@ async def mp_endscrim(ctx: Context) -> str:
 
     ctx.match.is_scrimming = False
     ctx.match.reset_scrim()
-    return 'Scrimmage ended.' # TODO: final score (get_score method?)
+    return 'Scrimmage ended.'  # TODO: final score (get_score method?)
+
 
 @mp_commands.add(Privileges.Normal, aliases=['rm'])
 async def mp_rematch(ctx: Context) -> str:
@@ -1709,12 +1772,13 @@ async def mp_rematch(ctx: Context) -> str:
         if (recent_winner := ctx.match.winners[-1]) is None:
             return 'The last point was a tie!'
 
-        ctx.match.match_points[recent_winner] -= 1 # TODO: team name
+        ctx.match.match_points[recent_winner] -= 1  # TODO: team name
         ctx.match.winners.pop()
 
         msg = f'A point has been deducted from {recent_winner}.'
 
     return msg
+
 
 @mp_commands.add(Privileges.Admin, aliases=['f'], hidden=True)
 async def mp_force(ctx: Context) -> str:
@@ -1730,6 +1794,7 @@ async def mp_force(ctx: Context) -> str:
     return 'Welcome.'
 
 # mappool-related mp commands
+
 
 @mp_commands.add(Privileges.Normal, aliases=['lp'])
 async def mp_loadpool(ctx: Context) -> str:
@@ -1751,6 +1816,7 @@ async def mp_loadpool(ctx: Context) -> str:
     ctx.match.pool = pool
     return f'{pool!r} selected.'
 
+
 @mp_commands.add(Privileges.Normal, aliases=['ulp'])
 async def mp_unloadpool(ctx: Context) -> str:
     """Unload the current matches mappool."""
@@ -1765,6 +1831,7 @@ async def mp_unloadpool(ctx: Context) -> str:
 
     ctx.match.pool = None
     return 'Mappool unloaded.'
+
 
 @mp_commands.add(Privileges.Normal)
 async def mp_ban(ctx: Context) -> str:
@@ -1794,6 +1861,7 @@ async def mp_ban(ctx: Context) -> str:
     ctx.match.bans.add((mods, slot))
     return f'{mods_slot} banned.'
 
+
 @mp_commands.add(Privileges.Normal)
 async def mp_unban(ctx: Context) -> str:
     """Unban a pick in the currently loaded mappool."""
@@ -1821,6 +1889,7 @@ async def mp_unban(ctx: Context) -> str:
 
     ctx.match.bans.remove((mods, slot))
     return f'{mods_slot} unbanned.'
+
 
 @mp_commands.add(Privileges.Normal)
 async def mp_pick(ctx: Context) -> str:
@@ -1876,6 +1945,7 @@ async def mp_pick(ctx: Context) -> str:
 # tedious processes of running tournaments.
 """
 
+
 @pool_commands.add(Privileges.Tournament, aliases=['h'], hidden=True)
 async def pool_help(ctx: Context) -> str:
     """Show all documented mappool commands the play can access."""
@@ -1890,6 +1960,7 @@ async def pool_help(ctx: Context) -> str:
         cmds.append(f'{prefix}pool {cmd.triggers[0]}: {cmd.doc}')
 
     return '\n'.join(cmds)
+
 
 @pool_commands.add(Privileges.Tournament, aliases=['c'], hidden=True)
 async def pool_create(ctx: Context) -> str:
@@ -1920,6 +1991,7 @@ async def pool_create(ctx: Context) -> str:
 
     return f'{name} created.'
 
+
 @pool_commands.add(Privileges.Tournament, aliases=['del', 'd'], hidden=True)
 async def pool_delete(ctx: Context) -> str:
     """Remove a mappool from the database."""
@@ -1943,6 +2015,7 @@ async def pool_delete(ctx: Context) -> str:
 
     return f'{name} deleted.'
 
+
 @pool_commands.add(Privileges.Tournament, aliases=['a'], hidden=True)
 async def pool_add(ctx: Context) -> str:
     """Add a new map to a mappool in the database."""
@@ -1953,7 +2026,7 @@ async def pool_add(ctx: Context) -> str:
         return 'Please /np a map first!'
 
     name, mods_slot = ctx.args
-    mods_slot = mods_slot.upper() # ocd
+    mods_slot = mods_slot.upper()  # ocd
     bmap = ctx.player.last_np['bmap']
 
     # separate mods & slot
@@ -1989,6 +2062,7 @@ async def pool_add(ctx: Context) -> str:
 
     return f'{bmap.embed} added to {name}.'
 
+
 @pool_commands.add(Privileges.Tournament, aliases=['rm', 'r'], hidden=True)
 async def pool_remove(ctx: Context) -> str:
     """Remove a map from a mappool in the database."""
@@ -1996,7 +2070,7 @@ async def pool_remove(ctx: Context) -> str:
         return 'Invalid syntax: !pool remove <name> <pick>'
 
     name, mods_slot = ctx.args
-    mods_slot = mods_slot.upper() # ocd
+    mods_slot = mods_slot.upper()  # ocd
 
     # separate mods & slot
     if not (r_match := regexes.mappool_pick.fullmatch(mods_slot)):
@@ -2024,6 +2098,7 @@ async def pool_remove(ctx: Context) -> str:
 
     return f'{mods_slot} removed from {name}.'
 
+
 @pool_commands.add(Privileges.Tournament, aliases=['l'], hidden=True)
 async def pool_list(ctx: Context) -> str:
     """List all existing mappools information."""
@@ -2039,6 +2114,7 @@ async def pool_list(ctx: Context) -> str:
         )
 
     return '\n'.join(l)
+
 
 @pool_commands.add(Privileges.Tournament, aliases=['i'], hidden=True)
 async def pool_info(ctx: Context) -> str:
@@ -2062,9 +2138,10 @@ async def pool_info(ctx: Context) -> str:
     return '\n'.join(l)
 
 """ Clan managment commands
-# The commands below are for managing gulag
+# The commands below are for managing circles
 # clans, for users, clan staff, and server staff.
 """
+
 
 @clan_commands.add(Privileges.Normal, aliases=['h'])
 async def clan_help(ctx: Context) -> str:
@@ -2080,6 +2157,7 @@ async def clan_help(ctx: Context) -> str:
         cmds.append(f'{prefix}clan {cmd.triggers[0]}: {cmd.doc}')
 
     return '\n'.join(cmds)
+
 
 @clan_commands.add(Privileges.Normal, aliases=['c'])
 async def clan_create(ctx: Context) -> str:
@@ -2125,12 +2203,12 @@ async def clan_create(ctx: Context) -> str:
     clan.members.add(ctx.player.id)
 
     if 'full_name' in ctx.player.__dict__:
-        del ctx.player.full_name # wipe cached_property
+        del ctx.player.full_name  # wipe cached_property
 
     await glob.db.execute(
         'UPDATE users '
         'SET clan_id = %s, '
-        'clan_priv = 3 ' # ClanPrivileges.Owner
+        'clan_priv = 3 '  # ClanPrivileges.Owner
         'WHERE id = %s',
         [clan_id, ctx.player.id]
     )
@@ -2143,6 +2221,7 @@ async def clan_create(ctx: Context) -> str:
         announce_chan.send(msg, sender=ctx.player, to_self=True)
 
     return f'{clan!r} created.'
+
 
 @clan_commands.add(Privileges.Normal, aliases=['delete', 'd'])
 async def clan_disband(ctx: Context) -> str:
@@ -2171,7 +2250,7 @@ async def clan_disband(ctx: Context) -> str:
     # NOTE: only online players need be to be uncached.
     for m in [glob.players.get(id=p_id) for p_id in clan.members]:
         if 'full_name' in m.__dict__:
-            del m.full_name # wipe cached_property
+            del m.full_name  # wipe cached_property
 
         m.clan = m.clan_priv = None
 
@@ -2192,6 +2271,7 @@ async def clan_disband(ctx: Context) -> str:
         announce_chan.send(msg, sender=ctx.player, to_self=True)
 
     return f'{clan!r} disbanded.'
+
 
 @clan_commands.add(Privileges.Normal, aliases=['i'])
 async def clan_info(ctx: Context) -> str:
@@ -2225,6 +2305,7 @@ async def clan_info(ctx: Context) -> str:
 
 # TODO: !clan inv, !clan join, !clan leave
 
+
 @clan_commands.add(Privileges.Normal, aliases=['l'])
 async def clan_list(ctx: Context) -> str:
     """List all existing clans information."""
@@ -2239,12 +2320,13 @@ async def clan_list(ctx: Context) -> str:
     if offset >= (total_clans := len(glob.clans)):
         return 'No clans found.'
 
-    msg = [f'gulag clans listing ({total_clans} total).']
+    msg = [f'circles clans listing ({total_clans} total).']
 
     for idx, clan in enumerate(glob.clans, offset):
         msg.append(f'{idx + 1}. {clan!r}')
 
     return '\n'.join(msg)
+
 
 async def process_commands(p: Player, t: Messageable,
                            msg: str) -> Optional[CommandResponse]:
@@ -2279,9 +2361,9 @@ async def process_commands(p: Player, t: Messageable,
                     # doesn't have privs to use !mp commands (allow help).
                     return
 
-                t = m # send match for mp commands instead of chan
+                t = m  # send match for mp commands instead of chan
 
-            trigger, *args = args # get subcommand
+            trigger, *args = args  # get subcommand
 
             # case-insensitive triggers
             trigger = trigger.lower()

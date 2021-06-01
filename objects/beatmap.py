@@ -27,6 +27,7 @@ BASE_DOMAIN = glob.config.domain
 # This drives me and probably everyone else pretty insane,
 # but we have nothing to do but deal with it B).
 
+
 @unique
 @pymysql_encode(escape_enum)
 class RankedStatus(IntEnum):
@@ -62,13 +63,14 @@ class RankedStatus(IntEnum):
 
     @staticmethod
     def from_str(status_str: str) -> 'RankedStatus':
-        """Convert from string value.""" # could perhaps have `'unranked': cls.Pending`?
+        """Convert from string value."""  # could perhaps have `'unranked': cls.Pending`?
         return str2gulagstatus_dict[status_str]
+
 
 osu2gulagstatus_dict = defaultdict(
     lambda: RankedStatus.UpdateAvailable, {
-        -2: RankedStatus.Pending, # graveyard
-        -1: RankedStatus.Pending, # wip
+        -2: RankedStatus.Pending,  # graveyard
+        -1: RankedStatus.Pending,  # wip
         0:  RankedStatus.Pending,
         1:  RankedStatus.Ranked,
         2:  RankedStatus.Approved,
@@ -82,9 +84,9 @@ direct2gulagstatus_dict = defaultdict(
         0: RankedStatus.Ranked,
         2: RankedStatus.Pending,
         3: RankedStatus.Qualified,
-        #4: all ranked statuses lol
-        5: RankedStatus.Pending, # graveyard
-        7: RankedStatus.Ranked, # played before
+        # 4: all ranked statuses lol
+        5: RankedStatus.Pending,  # graveyard
+        7: RankedStatus.Ranked,  # played before
         8: RankedStatus.Loved
     }
 )
@@ -117,13 +119,13 @@ gulagstatus2str_dict = {
     RankedStatus.Loved: 'Loved'
 }
 
-#@dataclass
-#class BeatmapInfoRequest:
+# @dataclass
+# class BeatmapInfoRequest:
 #    filenames: Sequence[str]
 #    ids: Sequence[int]
 
-#@dataclass
-#class BeatmapInfo:
+# @dataclass
+# class BeatmapInfo:
 #    id: int # i16
 #    map_id: int # i32
 #    set_id: int # i32
@@ -134,6 +136,7 @@ gulagstatus2str_dict = {
 #    taiko_rank: int # u8
 #    mania_rank: int # u8
 #    map_md5: str
+
 
 class Beatmap:
     """A class representing an osu! beatmap.
@@ -163,7 +166,7 @@ class Beatmap:
 
         self.artist = kwargs.get('artist', '')
         self.title = kwargs.get('title', '')
-        self.version = kwargs.get('version', '') # diff name
+        self.version = kwargs.get('version', '')  # diff name
         self.creator = kwargs.get('creator', '')
 
         self.last_update = kwargs.get('last_update', datetime(1970, 1, 1))
@@ -184,7 +187,8 @@ class Beatmap:
         self.hp = kwargs.get('hp', 0.0)
 
         self.diff = kwargs.get('diff', 0.00)
-        self.pp_cache = {0: {}, 1: {}, 2: {}, 3: {}} # {mode_vn: {mods: (acc/score: pp, ...), ...}}
+        # {mode_vn: {mods: (acc/score: pp, ...), ...}}
+        self.pp_cache = {0: {}, 1: {}, 2: {}, 3: {}}
 
     @property
     def filename(self) -> str:
@@ -202,7 +206,7 @@ class Beatmap:
         return f'https://osu.{BASE_DOMAIN}/beatmapsets/{self.set_id}#{self.id}'
 
     @property
-    def set_url(self) -> str: # same as above, just no beatmap id
+    def set_url(self) -> str:  # same as above, just no beatmap id
         """The osu! beatmap set url for `self`."""
         return f'https://osu.{BASE_DOMAIN}/beatmapsets/{self.set_id}'
 
@@ -324,7 +328,7 @@ class Beatmap:
     @classmethod
     async def from_md5_osuapi(cls, md5: str) -> Optional['Beatmap']:
         """Fetch & return a map object from osu!api by md5."""
-        if not glob.has_internet: # requires internet connection
+        if not glob.has_internet:  # requires internet connection
             return None
 
         url = 'https://old.ppy.sh/api/get_beatmaps'
@@ -332,7 +336,7 @@ class Beatmap:
 
         async with glob.http.get(url, params=params) as resp:
             if not resp or resp.status != 200:
-                return # osu!api request failed.
+                return  # osu!api request failed.
 
             if not (apidata := await resp.json()):
                 return
@@ -404,7 +408,7 @@ class Beatmap:
     @classmethod
     async def cache_set(cls, set_id: int) -> None:
         """Cache (ram & sql) all maps from the osu!api."""
-        if not glob.has_internet: # requires internet connection
+        if not glob.has_internet:  # requires internet connection
             return None
 
         url = 'https://old.ppy.sh/api/get_beatmaps'
@@ -412,7 +416,7 @@ class Beatmap:
 
         async with glob.http.get(url, params=params) as resp:
             if not resp or resp.status != 200:
-                return # osu!api request failed.
+                return  # osu!api request failed.
 
             # we want all maps returned, so get full json
             if not (apidata := await resp.json()):
@@ -431,7 +435,7 @@ class Beatmap:
 
         for bmap in apidata:
             if bmap['file_md5'] is None:
-                continue # ded
+                continue  # ded
 
             # convert the map's last_update time to datetime.
             bmap['last_update'] = datetime.strptime(
@@ -446,7 +450,8 @@ class Beatmap:
                     # the map we're receiving is indeed newer, check if the
                     # map's status is frozen in sql - if so, update the
                     # api's value before inserting it into the database.
-                    api_status = RankedStatus.from_osuapi(int(bmap['approved']))
+                    api_status = RankedStatus.from_osuapi(
+                        int(bmap['approved']))
 
                     if (
                         current_data[map_id]['frozen'] and
@@ -469,7 +474,8 @@ class Beatmap:
                 # map not found in our database.
                 # copy the status from the osu!api,
                 # and do not freeze it's ranked status.
-                bmap['approved'] = RankedStatus.from_osuapi(int(bmap['approved']))
+                bmap['approved'] = RankedStatus.from_osuapi(
+                    int(bmap['approved']))
                 bmap['frozen'] = False
 
             m = cls()
@@ -522,15 +528,15 @@ class Beatmap:
         if not ppcalc:
             return
 
-        if mode_vn in (0, 1): # std/taiko, use acc
+        if mode_vn in (0, 1):  # std/taiko, use acc
             for idx, acc in enumerate(glob.config.pp_cached_accs):
                 ppcalc.pp_attrs['acc'] = acc
 
-                pp, _ = await ppcalc.perform() # don't need sr
+                pp, _ = await ppcalc.perform()  # don't need sr
                 self.pp_cache[mode_vn][mods][idx] = pp
         elif mode_vn == 2:
-            return # unsupported gm
-        elif mode_vn == 3: # mania, use score
+            return  # unsupported gm
+        elif mode_vn == 3:  # mania, use score
             for idx, score in enumerate(glob.config.pp_cached_scores):
                 ppcalc.pp_attrs['score'] = score
 
@@ -541,18 +547,18 @@ class Beatmap:
         """Save the the object into sql."""
         await glob.db.execute(
             'REPLACE INTO maps ('
-                'server, md5, id, set_id, '
-                'artist, title, version, creator, '
-                'last_update, total_length, max_combo, '
-                'status, frozen, plays, passes, '
-                'mode, bpm, cs, od, ar, hp, diff'
+            'server, md5, id, set_id, '
+            'artist, title, version, creator, '
+            'last_update, total_length, max_combo, '
+            'status, frozen, plays, passes, '
+            'mode, bpm, cs, od, ar, hp, diff'
             ') VALUES ('
-                '"osu!", %s, %s, %s, '
-                '%s, %s, %s, %s, '
-                '%s, %s, %s, '
-                '%s, %s, %s, %s, '
-                '%s, %s, %s, %s, '
-                '%s, %s, %s'
+            '"osu!", %s, %s, %s, '
+            '%s, %s, %s, %s, '
+            '%s, %s, %s, '
+            '%s, %s, %s, %s, '
+            '%s, %s, %s, %s, '
+            '%s, %s, %s'
             ')', [
                 self.md5, self.id, self.set_id,
                 self.artist, self.title, self.version, self.creator,

@@ -249,7 +249,7 @@ async def osuGetBeatmapInfo(p: 'Player', conn: Connection) -> Optional[bytes]:
 
                 res = await db_cursor.fetchone()
 
-                # convert from gulag -> osu!api status
+                # convert fromcircles-> osu!api status
                 res['status'] = gulag_to_osuapi_status(res['status'])
 
                 # try to get the user's grades on the map osu!
@@ -374,7 +374,7 @@ async def lastFM(p: 'Player', conn: Connection) -> Optional[bytes]:
         pass
     """
 
-# gulag supports both cheesegull mirrors & chimu.moe.
+#circlessupports both cheesegull mirrors & chimu.moe.
 # chimu.moe handles things a bit differently than cheesegull,
 # and has some extra features we'll eventually use more of.
 USING_CHIMU = 'chimu.moe' in glob.config.mirror
@@ -482,7 +482,7 @@ async def osuSearchSetHandler(p: 'Player', conn: Connection) -> Optional[bytes]:
     # Since we only need set-specific data, we can basically
     # just do same same query with either bid or bsid.
     if 's' in conn.args:
-        # gulag chat menu: if the argument is negative,
+        #circleschat menu: if the argument is negative,
         # check if it's in the players menu options.
         if conn.args['s'][0] == '-':
             opt_id = int(conn.args['s'])

@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
 __all__ = 'Channel',
 
+
 class Channel:
     """An osu! chat channel.
 
@@ -37,7 +38,7 @@ class Channel:
                  write_priv: Privileges = Privileges.Normal,
                  auto_join: bool = True,
                  instance: bool = False) -> None:
-        self._name = name # 'real' name ('#{multi/spec}_{id}')
+        self._name = name  # 'real' name ('#{multi/spec}_{id}')
         self.topic = topic
         self.read_priv = read_priv
         self.write_priv = write_priv
