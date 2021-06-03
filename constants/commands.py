@@ -741,7 +741,7 @@ async def resetpassword(ctx: Context) -> str:
     ):
         return 'Only developers can manage staff members.'
 
-    characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
+    characters = "1234567890"
     length = int(8)
     password = ""
 
@@ -755,7 +755,7 @@ async def resetpassword(ctx: Context) -> str:
         'UPDATE users '
         'SET pw_bcrypt = %s '
         'WHERE id = %s',
-        [pw_bcrypt, ctx.args[0]]
+        [pw_bcrypt, int(ctx.args[0])]
     )
 
     return f'{ctx.args[0]}\'s password was changed to {password}.'
