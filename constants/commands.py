@@ -774,12 +774,7 @@ async def getemail(ctx: Context) -> str:
     if not (t := await glob.players.get_ensure(id=ctx.args[0])):
         return f'"{ctx.args[0]}" not found.'
     
-    email = await glob.db.execute(
-        'SELECT email '
-        'FROM users '
-        'WHERE id = %s',
-        [int(ctx.args[0])]
-    )
+    email = await glob.db.execute(f'SELECT email FROM `users` WHERE id={ctx.args[0]}')
 
     return f'{email}'
 
