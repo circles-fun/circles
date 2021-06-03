@@ -726,8 +726,8 @@ async def unsilence(ctx: Context) -> str:
 @command(Privileges.Admin, hidden=True)
 async def resetpassword(ctx: Context) -> str:
     """Resets a players password to the one specified."""
-    if len(ctx.args) < 2:
-        return 'Invalid syntax: !resetpassword <name> <newpassword>'
+    if len(ctx.args) < 1:
+        return 'Invalid syntax: !resetpassword <name>'
 
     # find any user matching (including offline).
     if not (t := await glob.players.get_ensure(name=ctx.args[0])):
@@ -739,8 +739,14 @@ async def resetpassword(ctx: Context) -> str:
     ):
         return 'Only developers can manage staff members.'
 
-    new_password = ctx.args[1:]
-    pw_md5 = hashlib.md5(new_password.encode()).hexdigest().encode()
+    characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"
+    length = int(8)
+    password = ""
+
+    for i in range(length+1):
+        password += random.choice(characters)
+
+    pw_md5 = hashlib.md5(password.encode()).hexdigest().encode()
     pw_bcrypt = bcrypt.hashpw(pw_md5, bcrypt.gensalt())
 
     await glob.db.execute(
@@ -750,7 +756,7 @@ async def resetpassword(ctx: Context) -> str:
         [pw_bcrypt, utils.get_safe_name(ctx.args[0])]
     )
 
-    return f'{t}\'s password was changed.'
+    return f'{t}\'s password was changed to {password}.'
 
 
 @command(Privileges.Admin, hidden=True)
