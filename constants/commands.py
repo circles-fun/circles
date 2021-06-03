@@ -749,7 +749,11 @@ async def resetpassword(ctx: Context) -> str:
     pw_md5 = hashlib.md5(password.encode()).hexdigest().encode()
     pw_bcrypt = bcrypt.hashpw(pw_md5, bcrypt.gensalt())
 
-    user = await glob.db.fetch(f'SELECT * FROM users WHERE id = {ctx.args[0]}')
+    user = await glob.db.fetch(
+    'SELECT * '
+    'FROM users ' 
+    'WHERE id = %s',
+    [int(ctx.args[0])])
     name = user['name']
 
     await glob.db.execute(
@@ -775,7 +779,11 @@ async def getemail(ctx: Context) -> str:
     if not (t := await glob.players.get_ensure(id=ctx.args[0])):
         return f'"{ctx.args[0]}" not found.'
 
-    user = await glob.db.fetch(f'SELECT * FROM users WHERE id = {ctx.args[0]}')
+    user = await glob.db.fetch(
+    'SELECT * '
+    'FROM users ' 
+    'WHERE id = %s',
+    [int(ctx.args[0])])
     name = user['name']
     email = user['email']
 
