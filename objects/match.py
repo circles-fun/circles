@@ -190,9 +190,9 @@ class Slot:
         self.team = other.team
         self.mods = other.mods
 
-    def reset(self, new_status: SlotStatus = SlotStatus.open) -> None:
+    def reset(self) -> None:
         self.player = None
-        self.status = new_status
+        self.status = SlotStatus.open
         self.team = MatchTeams.neutral
         self.mods = Mods.NOMOD
         self.loaded = False

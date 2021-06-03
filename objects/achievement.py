@@ -9,16 +9,17 @@ __all__ = ('Achievement',)
 class Achievement:
     """A class to represent a single osu! achievement."""
     __slots__ = ('id', 'file', 'name',
-                 'desc', 'cond')
+                 'desc', 'cond', 'mode')
 
     def __init__(self, id: int, file: str, name: str,
-                 desc: str, cond: Callable) -> None:
+                 desc: str, cond: Callable, mode: int) -> None:
         self.id = id
         self.file = file
         self.name = name
         self.desc = desc
 
         self.cond = cond
+        self.mode = mode
 
     @functools.cache
     def __repr__(self) -> str:

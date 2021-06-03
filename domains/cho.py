@@ -10,6 +10,7 @@ from typing import Union
 
 import aiomysql
 import bcrypt
+from cmyui.discord import Webhook
 from cmyui.logging import Ansi
 from cmyui.logging import AnsiRGB
 from cmyui.logging import log
@@ -296,7 +297,7 @@ class SendMessage(BanchoPacket, type=Packets.OSU_SEND_PUBLIC_MESSAGE):
 
             t_chan.send(msg, sender=p)
 
-        p.update_latest_activity()
+        await p.update_latest_activity()
         log(f'{p} @ {t_chan}: {msg}', Ansi.LCYAN, fd='.data/logs/chat.log')
 
 
@@ -313,7 +314,7 @@ class Logout(BanchoPacket, type=Packets.OSU_LOGOUT):
 
         p.logout()
 
-        p.update_latest_activity()
+        await p.update_latest_activity()
 
 
 @register(restricted=True)
@@ -746,7 +747,7 @@ async def login(body: bytes, ip: str, db_cursor: aiomysql.DictCursor) -> tuple[b
     user_os = 'unix (wine)' if is_wine else 'win32'
     log(f'{p} logged in with {osu_ver_str} on {user_os}.', Ansi.LCYAN)
 
-    p.update_latest_activity()
+    await p.update_latest_activity()
     return bytes(data), p.token
 
 
@@ -903,7 +904,7 @@ class SendPrivateMessage(BanchoPacket, type=Packets.OSU_SEND_PRIVATE_MESSAGE):
                         p.last_np = {
                             'bmap': bmap,
                             'mode_vn': mode_vn,
-                            'timeout': time.time() + 300 # /np's last 5mins
+                            'timeout': time.time() + 300  # 5mins
                         }
 
                         # calc pp if possible
@@ -968,7 +969,7 @@ class SendPrivateMessage(BanchoPacket, type=Packets.OSU_SEND_PRIVATE_MESSAGE):
                 [p.id, t.id, msg]
             )
 
-        p.update_latest_activity()
+        await p.update_latest_activity()
         log(f'{p} @ {t}: {msg}', Ansi.LCYAN, fd='.data/logs/chat.log')
 
 
@@ -1031,7 +1032,7 @@ class MatchCreate(BanchoPacket, type=Packets.OSU_CREATE_MATCH):
         glob.channels.append(chan)
         self.match.chat = chan
 
-        p.update_latest_activity()
+        await p.update_latest_activity()
         p.join_match(self.match, self.match.passwd)
 
         self.match.chat.send_bot(f'Match created by {p.name}.')
@@ -1093,14 +1094,14 @@ class MatchJoin(BanchoPacket, type=Packets.OSU_JOIN_MATCH):
             )
             return
 
-        p.update_latest_activity()
+        await p.update_latest_activity()
         p.join_match(m, self.match_passwd)
 
 
 @register
 class MatchPart(BanchoPacket, type=Packets.OSU_PART_MATCH):
     async def handle(self, p: Player) -> None:
-        p.update_latest_activity()
+        await p.update_latest_activity()
         p.leave_match()
 
 
@@ -1569,7 +1570,7 @@ class FriendAdd(BanchoPacket, type=Packets.OSU_FRIEND_ADD):
         if t.id in p.blocks:
             p.blocks.remove(t.id)
 
-        p.update_latest_activity()
+        await p.update_latest_activity()
         await p.add_friend(t)
 
 
@@ -1585,7 +1586,7 @@ class FriendRemove(BanchoPacket, type=Packets.OSU_FRIEND_REMOVE):
         if t is glob.bot:
             return
 
-        p.update_latest_activity()
+        await p.update_latest_activity()
         await p.remove_friend(t)
 
 
@@ -1677,7 +1678,7 @@ class MatchInvite(BanchoPacket, type=Packets.OSU_MATCH_INVITE):
             return
 
         t.enqueue(packets.matchInvite(p, t.name))
-        p.update_latest_activity()
+        await p.update_latest_activity()
 
         log(f'{p} invited {t} to their match.')
 
@@ -1727,4 +1728,4 @@ class ToggleBlockingDMs(BanchoPacket, type=Packets.OSU_TOGGLE_BLOCK_NON_FRIEND_D
     async def handle(self, p: Player) -> None:
         p.pm_private = self.value == 1
 
-        p.update_latest_activity()
+        await p.update_latest_activity()

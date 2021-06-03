@@ -563,7 +563,7 @@ async def osuSubmitModularSelector(conn: Connection) -> Optional[bytes]:
 
     # we should update their activity no matter
     # what the result of the score submission is.
-    score.player.update_latest_activity()
+    await score.player.update_latest_activity()
 
     # attempt to update their stats if their
     # gm/gm-affecting-mods change at all.
@@ -862,12 +862,14 @@ async def osuSubmitModularSelector(conn: Connection) -> Optional[bytes]:
         # achievements unlocked only for non-restricted players
         if not score.player.restricted:
             if score.bmap.awards_pp:
-                for ach in glob.achievements:
-                    if ach in score.player.achievements:
+                player_achs = score.player.achievements[mode_vn]
+
+                for ach in glob.achievements[mode_vn]:
+                    if ach in player_achs:
                         # player already has this achievement.
                         continue
 
-                    if ach.cond(score, mode_vn):
+                    if ach.cond(score):
                         await score.player.unlock_achievement(ach)
                         achievements.append(ach)
 
@@ -939,7 +941,6 @@ async def osuSubmitModularSelector(conn: Connection) -> Optional[bytes]:
 
     log(f'[{score.mode!r}] {score.player} submitted a score! '
         f'({score.status!r}, {score.pp:,.2f}pp / {stats.pp:,}pp)', Ansi.LGREEN)
-
     return ret
 
 @domain.route('/web/osu-getreplay.php')
@@ -1183,7 +1184,7 @@ async def getScores(p: 'Player', conn: Connection) -> Optional[bytes]:
 
     if not scores:
         # simply return an empty set.
-        return ('\n'.join(l) + '\n\n').encode()
+        return '\n'.join(l + ['', '']).encode()
 
     p_best = await glob.db.fetch(
         f'SELECT id, {scoring} AS _score, '
@@ -1218,11 +1219,9 @@ async def getScores(p: 'Player', conn: Connection) -> Optional[bytes]:
         l.append(
             score_fmt.format(
                 **p_best,
-                name=p.full_name,
-                userid=p.id,
-                score=int(p_best['_score']),
-                has_replay='1',
-                rank=p_best_rank
+                name = p.full_name, userid = p.id,
+                score = int(p_best['_score']),
+                has_replay = '1', rank = p_best_rank
             )
         )
     else:
@@ -1230,10 +1229,8 @@ async def getScores(p: 'Player', conn: Connection) -> Optional[bytes]:
 
     l.extend([
         score_fmt.format(
-            **s,
-            score=int(s['_score']),
-            has_replay='1',
-            rank=idx + 1
+            **s, score = int(s['_score']),
+            has_replay = '1', rank = idx + 1
         ) for idx, s in enumerate(scores)
     ])
 
@@ -1278,7 +1275,7 @@ async def osuComment(p: 'Player', conn: Connection) -> Optional[bytes]:
             ret.append('{time}\t{target_type}\t'
                        '{fmt}\t{comment}'.format(fmt=fmt, **cmt))
 
-        p.update_latest_activity()
+        await p.update_latest_activity()
         return '\n'.join(ret).encode()
 
     elif action == 'post':
@@ -1320,7 +1317,7 @@ async def osuComment(p: 'Player', conn: Connection) -> Optional[bytes]:
              sttime, comment, colour]
         )
 
-        p.update_latest_activity()
+        await p.update_latest_activity()
         return # empty resp is fine
 
     else:

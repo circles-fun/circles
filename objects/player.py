@@ -194,7 +194,11 @@ class Player:
         self.clan_priv: Optional['ClanPrivileges'] = extras.get(
             'clan_priv', None)
 
-        self.achievements: set['Achievement'] = set()
+        # store achievements per-gamemode
+        self.achievements: dict[int, set['Achievement']] = {
+            0: set(), 1: set(),
+            2: set(), 3: set()
+        }
 
         self.country = (0, 'XX')  # (code, letters)
         self.location = (0.0, 0.0)  # (lat, long)
@@ -594,16 +598,7 @@ class Player:
                 log(f"{self} tried leaving a match they're not in?", Ansi.LYELLOW)
             return
 
-        slot = self.match.get_slot(self)
-
-        if slot.status == SlotStatus.locked:
-            # player was kicked, keep the slot locked.
-            new_status = SlotStatus.locked
-        else:
-            # player left, open the slot for new players to join.
-            new_status = SlotStatus.open
-
-        slot.reset(new_status=new_status)
+        self.match.get_slot(self).reset()
 
         self.leave_channel(self.match.chat)
 
@@ -779,9 +774,8 @@ class Player:
             # remove host from channel, deleting it.
             self.leave_channel(c)
         else:
-            # send new playercount
-            c_info = packets.channelInfo(c.name, c.topic, len(c.players))
             fellow = packets.fellowSpectatorLeft(p.id)
+            c_info = packets.channelInfo(*c.basic_info)  # new playercount
 
             self.enqueue(c_info)
 
@@ -897,7 +891,7 @@ class Player:
             [self.id, a.id]
         )
 
-        self.achievements.add(a)
+        self.achievements[a.mode].add(a)
 
     async def relationships_from_sql(self, db_cursor: aiomysql.DictCursor) -> None:
         """Retrieve `self`'s relationships from sql."""
@@ -919,17 +913,27 @@ class Player:
 
     async def achievements_from_sql(self, db_cursor: aiomysql.DictCursor) -> None:
         """Retrieve `self`'s achievements from sql."""
-        await db_cursor.execute(
-            'SELECT ua.achid id FROM user_achievements ua '
-            'INNER JOIN achievements a ON a.id = ua.achid '
-            'WHERE ua.userid = %s',
-            [self.id]
-        )
+        for mode in range(4):
+            # get all users achievements for this mode
+            await db_cursor.execute(
+                'SELECT ua.achid id FROM user_achievements ua '
+                'INNER JOIN achievements a ON a.id = ua.achid '
+                'WHERE ua.userid = %s AND a.mode = %s',
+                [self.id, mode]
+            )
 
-        async for row in db_cursor:
-            for ach in glob.achievements:
-                if row['id'] == ach.id:
-                    self.achievements.add(ach)
+            if db_cursor.rowcount == 0:
+                # no achievements
+                # for given mode
+                continue
+
+            # get cached achievements for this mode
+            achs = glob.achievements[mode]
+
+            async for row in db_cursor:
+                for ach in achs:
+                    if row['id'] == ach.id:
+                        self.achievements[mode].add(ach)
 
     async def stats_from_sql_full(self, db_cursor: aiomysql.DictCursor) -> None:
         """Retrieve `self`'s stats (all modes) from sql."""
@@ -990,15 +994,14 @@ class Player:
         # return the key.
         return randnum
 
-    def update_latest_activity(self) -> None:
+    async def update_latest_activity(self) -> None:
         """Update the player's latest activity in the database."""
-        task = glob.db.execute(
+        await glob.db.execute(
             'UPDATE users '
             'SET latest_activity = UNIX_TIMESTAMP() '
             'WHERE id = %s',
             [self.id]
         )
-        glob.loop.create_task(task)
 
     def enqueue(self, b: bytes) -> None:
         """Add data to be sent to the client."""
