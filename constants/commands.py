@@ -729,6 +729,9 @@ async def resetpassword(ctx: Context) -> str:
     if len(ctx.args) < 1:
         return 'Invalid syntax: !resetpassword <name>'
 
+    if ctx.recipient is not glob.bot:
+        return 'This command can only be used in DMs with the bot.'
+
     # find any user matching (including offline).
     if not (t := await glob.players.get_ensure(name=ctx.args[0])):
         return f'"{ctx.args[0]}" not found.'
