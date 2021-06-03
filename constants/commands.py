@@ -724,9 +724,9 @@ async def unsilence(ctx: Context) -> str:
 
 @command(Privileges.Admin, hidden=True)
 async def resetpassword(ctx: Context) -> str:
-    """Resets a players password to the one specified."""
+    """Resets a players password using there id."""
     if len(ctx.args) < 1:
-        return 'Invalid syntax: !resetpassword <name>'
+        return 'Invalid syntax: !resetpassword <id>'
 
     if ctx.recipient is not glob.bot:
         return 'This command can only be used in DMs with the bot.'
@@ -734,13 +734,14 @@ async def resetpassword(ctx: Context) -> str:
     # find any user matching (including offline).
     if not (t := await glob.players.get_ensure(id=ctx.args[0])):
         return f'"{ctx.args[0]}" not found.'
-
+        
     if (
         t.priv & Privileges.Staff and
         not ctx.player.priv & Privileges.Dangerous
     ):
         return 'Only developers can manage staff members.'
-
+    
+    # TODO: Make better password generator
     characters = "1234567890"
     length = int(8)
     password = ""
@@ -758,7 +759,8 @@ async def resetpassword(ctx: Context) -> str:
         [pw_bcrypt, int(ctx.args[0])]
     )
 
-    return f'{ctx.args[0]}\'s password was changed to {password}.'
+    name = await glob.players.get(id=int(ctx.args[0])).name
+    return f'{name}\'s password was changed to {password}.'
 
 
 @command(Privileges.Admin, hidden=True)
