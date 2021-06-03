@@ -759,7 +759,7 @@ async def resetpassword(ctx: Context) -> str:
         [pw_bcrypt, int(ctx.args[0])]
     )
 
-    name = await glob.players.get(id=int(ctx.args[0])).name
+    name = await glob.players.get(id=int(ctx.args[0])).safe_name
     return f'{name}\'s password was changed to {password}.'
 
 
