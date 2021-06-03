@@ -734,13 +734,13 @@ async def resetpassword(ctx: Context) -> str:
     # find any user matching (including offline).
     if not (t := await glob.players.get_ensure(id=ctx.args[0])):
         return f'"{ctx.args[0]}" not found.'
-        
+
     if (
         t.priv & Privileges.Staff and
         not ctx.player.priv & Privileges.Dangerous
     ):
         return 'Only developers can manage staff members.'
-    
+
     # TODO: Make better password generator
     characters = "1234567890"
     length = int(8)
@@ -761,6 +761,7 @@ async def resetpassword(ctx: Context) -> str:
 
     return f'{ctx.args[0]}\'s password was changed to {password}.'
 
+
 @command(Privileges.Admin, hidden=True)
 async def getemail(ctx: Context) -> str:
     """Retrieve a players email using there id for password reset verification."""
@@ -773,10 +774,12 @@ async def getemail(ctx: Context) -> str:
     # find any user matching (including offline).
     if not (t := await glob.players.get_ensure(id=ctx.args[0])):
         return f'"{ctx.args[0]}" not found.'
-    
-    email = await glob.db.execute(f'SELECT email FROM `users` WHERE id={ctx.args[0]}')
 
-    return f'{email}'
+    user = await glob.db.fetch(f'SELECT * FROM users WHERE id = {ctx.args[0]}')
+    name = user['name']
+    email = user['email']
+
+    return f'{name}\'s email: {email}'
 
 
 @command(Privileges.Admin, hidden=True)
