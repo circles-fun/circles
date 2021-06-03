@@ -28,7 +28,6 @@ from typing import Union
 from pathlib import Path
 
 import cmyui
-from cmyui import utils
 import psutil
 
 import packets
@@ -733,7 +732,7 @@ async def resetpassword(ctx: Context) -> str:
         return 'This command can only be used in DMs with the bot.'
 
     # find any user matching (including offline).
-    if not (t := await glob.players.get_ensure(name=ctx.args[0])):
+    if not (t := await glob.players.get_ensure(id=ctx.args[0])):
         return f'"{ctx.args[0]}" not found.'
 
     if (
@@ -755,11 +754,11 @@ async def resetpassword(ctx: Context) -> str:
     await glob.db.execute(
         'UPDATE users '
         'SET pw_bcrypt = %s '
-        'WHERE safe_name = %s',
-        [pw_bcrypt, utils.get_safe_name(ctx.args[0])]
+        'WHERE id = %s',
+        [pw_bcrypt, ctx.args[0]]
     )
 
-    return f'{t}\'s password was changed to {password}.'
+    return f'{ctx.args[0]}\'s password was changed to {password}.'
 
 
 @command(Privileges.Admin, hidden=True)
