@@ -743,7 +743,7 @@ async def resetpassword(ctx: Context) -> str:
 
     # TODO: Make better password generator
     characters = "1234567890"
-    length = int(8)
+    length = 8
     password = ""
 
     for i in range(length+1):
