@@ -728,6 +728,9 @@ async def resetpassword(ctx: Context) -> str:
     if ctx.recipient is not glob.bot:
         return 'This command can only be used in DMs with the bot.'
 
+    if not ctx.args[0].isdecimal():
+        return 'Please specify a players ID!'
+    
     # find any user matching (including offline).
     if not (t := await glob.players.get_ensure(id=ctx.args[0])):
         return f'"{ctx.args[0]}" not found.'
@@ -771,6 +774,9 @@ async def getemail(ctx: Context) -> str:
     """Retrieve a players email using there id for password reset verification."""
     if len(ctx.args) < 1:
         return 'Invalid syntax: !getemail <id>'
+
+    if not ctx.args[0].isdecimal():
+        return 'Please specify a players ID!'
 
     if ctx.recipient is not glob.bot:
         return 'This command can only be used in DMs with the bot.'
