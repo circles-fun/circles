@@ -3,6 +3,8 @@
 import asyncio
 import copy
 import importlib
+import bcrypt
+import hashlib
 import os
 import pprint
 import random
@@ -26,6 +28,7 @@ from typing import Union
 from pathlib import Path
 
 import cmyui
+from cmyui import utils
 import psutil
 
 import packets
@@ -718,6 +721,36 @@ async def unsilence(ctx: Context) -> str:
 # The commands below are relatively dangerous,
 # and are generally for managing players.
 """
+
+
+@command(Privileges.Admin, hidden=True)
+async def resetpassword(ctx: Context) -> str:
+    """Resets a players password to the one specified."""
+    if len(ctx.args) < 2:
+        return 'Invalid syntax: !resetpassword <name> <newpassword>'
+
+    # find any user matching (including offline).
+    if not (t := await glob.players.get_ensure(name=ctx.args[0])):
+        return f'"{ctx.args[0]}" not found.'
+
+    if (
+        t.priv & Privileges.Staff and
+        not ctx.player.priv & Privileges.Dangerous
+    ):
+        return 'Only developers can manage staff members.'
+
+    new_password = ctx.args[1:]
+    pw_md5 = hashlib.md5(new_password.encode()).hexdigest().encode()
+    pw_bcrypt = bcrypt.hashpw(pw_md5, bcrypt.gensalt())
+
+    await glob.db.execute(
+        'UPDATE users '
+        'SET pw_bcrypt = %s '
+        'WHERE safe_name = %s',
+        [pw_bcrypt, utils.get_safe_name(ctx.args[0])]
+    )
+
+    return f'{t}\'s password was changed.'
 
 
 @command(Privileges.Admin, hidden=True)
