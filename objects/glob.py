@@ -7,6 +7,7 @@ import config  # NOQA
 
 # this file contains no actualy definitions
 if __import__('typing').TYPE_CHECKING:
+    from asyncio import AbstractEventLoop
     #from asyncio import Queue
     from typing import Optional
 
@@ -35,7 +36,8 @@ __all__ = (
     'version', 'bot', 'api_keys',
     'bancho_packets', 'db',
     'has_internet', 'http',
-    'datadog', 'cache'#, 'sketchy_queue'
+    'datadog', 'cache', 'loop',
+    #'sketchy_queue'
 )
 
 # server object
@@ -47,7 +49,7 @@ channels: 'Channels'
 matches: 'Matches'
 clans: 'Clans'
 pools: 'MapPools'
-achievements: dict[int, list['Achievement']] # per vn gamemode
+achievements: list['Achievement']
 
 bot: 'Player'
 version: 'Version'
@@ -89,6 +91,8 @@ cache = {
     'unsubmitted': set(), # {md5, ...}
     'needs_update': set() # {md5, ...}
 }
+
+loop: 'AbstractEventLoop'
 
 ''' (currently unused)
 # queue of submitted scores deemed 'sketchy'; to be analyzed.

@@ -45,6 +45,7 @@ except ModuleNotFoundError as exc:
     else:
         raise
 
+import asyncio
 from pathlib import Path
 
 import aiohttp
@@ -74,7 +75,7 @@ utils.misc.install_excepthook()
 # current version of circles
 # NOTE: this is used internally for the updater, it may be
 # worth reading through it's code before playing with it.
-glob.version = cmyui.Version(3, 3, 6)
+glob.version = cmyui.Version(3, 3, 7)
 
 OPPAI_PATH = Path.cwd() / 'oppai-ng'
 GEOLOC_DB_FILE = Path.cwd() / 'ext/GeoLite2-City.mmdb'
@@ -113,18 +114,17 @@ async def setup_collections(db_cursor: aiomysql.DictCursor) -> None:
     glob.players.append(glob.bot)
 
     # global achievements (sorted by vn gamemodes)
-    glob.achievements = {0: [], 1: [], 2: [], 3: []}
+    glob.achievements = []
 
     await db_cursor.execute('SELECT * FROM achievements')
     async for row in db_cursor:
         # NOTE: achievement conditions are stored as
         # stringified python expressions in the database
         # to allow for easy custom achievements.
-        condition = eval(f'lambda score: {row.pop("cond")}')
+        condition = eval(f'lambda score, mode_vn: {row.pop("cond")}')
         achievement = Achievement(**row, cond=condition)
 
-        # NOTE: achievements are grouped by modes internally.
-        glob.achievements[row['mode']].append(achievement)
+        glob.achievements.append(achievement)
 
     # static api keys
     await db_cursor.execute(
@@ -138,6 +138,8 @@ async def setup_collections(db_cursor: aiomysql.DictCursor) -> None:
 
 async def before_serving() -> None:
     """Called before the server begins serving connections."""
+    glob.loop = asyncio.get_event_loop()
+
     if glob.has_internet:
         # retrieve a client session to use for http connections.
         glob.http = aiohttp.ClientSession(json_serialize=orjson.dumps) # type: ignore
