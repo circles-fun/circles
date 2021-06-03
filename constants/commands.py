@@ -776,7 +776,7 @@ async def getemail(ctx: Context) -> str:
     
     email = await glob.db.execute(
         'SELECT email '
-        'FROM = users '
+        'FROM users '
         'WHERE id = %s',
         [int(ctx.args[0])]
     )
