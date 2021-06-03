@@ -761,6 +761,28 @@ async def resetpassword(ctx: Context) -> str:
 
     return f'{ctx.args[0]}\'s password was changed to {password}.'
 
+@command(Privileges.Admin, hidden=True)
+async def getemail(ctx: Context) -> str:
+    """Retrieve a players email using there id for password reset verification."""
+    if len(ctx.args) < 1:
+        return 'Invalid syntax: !getemail <id>'
+
+    if ctx.recipient is not glob.bot:
+        return 'This command can only be used in DMs with the bot.'
+
+    # find any user matching (including offline).
+    if not (t := await glob.players.get_ensure(id=ctx.args[0])):
+        return f'"{ctx.args[0]}" not found.'
+    
+    email = await glob.db.execute(
+        'SELECT email '
+        'FROM = users '
+        'WHERE id = %s',
+        [int(ctx.args[0])]
+    )
+
+    return f'{email}'
+
 
 @command(Privileges.Admin, hidden=True)
 async def restrict(ctx: Context) -> str:
