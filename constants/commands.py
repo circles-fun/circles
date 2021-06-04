@@ -557,10 +557,8 @@ async def _map(ctx: Context) -> str:
                 )
                 map_ids = [row[0] async for row in db_cursor]
 
-                for cached in glob.cache['beatmap'].values():
-                    # not going to bother checking timeout
-                    if cached['map'].set_id == bmap.set_id:
-                        cached['map'].status = new_status
+                for bmap in glob.cache['beatmapsets'][bmap.set_id].maps:
+                    bmap.status = new_status
 
             else:
                 # update only map
@@ -572,11 +570,8 @@ async def _map(ctx: Context) -> str:
 
                 map_ids = [bmap.id]
 
-                for cached in glob.cache['beatmap'].values():
-                    # not going to bother checking timeout
-                    if cached['map'] is bmap:
-                        cached['map'].status = new_status
-                        break
+                if bmap.md5 in glob.cache['beatmap']:
+                    glob.cache['beatmap'][bmap.md5].status = new_status
 
             # deactivate rank requests for all ids
             for map_id in map_ids:
@@ -795,6 +790,37 @@ async def getemail(ctx: Context) -> str:
 
     return f'{name}\'s email: {email}'
 
+
+@command(Privileges.Admin, hidden=True)
+async def user(ctx: Context) -> str:
+    """Return general information about a given user."""
+    if not ctx.args:
+        # no username specified, use ctx.player
+        p = ctx.player
+    else:
+        # username given, fetch the player
+        p = await glob.players.get_ensure(name=' '.join(ctx.args))
+
+        if not p:
+            return 'Player not found.'
+
+    priv_readable = '|'.join(reversed([priv.name for priv in Privileges
+                                if bin(priv).count('1') == 1])) # py3.10 save me
+
+    current_time = time.time()
+    login_delta = current_time - p.login_time
+    last_recv_delta = current_time - p.last_recv_time
+
+    return '\n'.join((
+        f'[{"Bot" if p.bot_client else "Player"}] {p.full_name} ({p.id})',
+        f'Privileges: {priv_readable}',
+        f'Channels: {[p._name for p in p.channels]}',
+        f'Logged in: {login_delta:.2f} sec ago',
+        f'Last server interaction: {last_recv_delta:.2f} sec ago',
+        f'osu! build: {p.osu_ver} | Tourney: {p.tourney_client}',
+        f'Silenced: {p.silenced} | Spectating: {p.spectating}',
+        f'Spectators: {p.spectators}',
+    ))
 
 @command(Privileges.Admin, hidden=True)
 async def restrict(ctx: Context) -> str:

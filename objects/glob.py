@@ -27,7 +27,7 @@ if __import__('typing').TYPE_CHECKING:
     from objects.player import Player
     #from objects.score import Score
     from packets import BanchoPacket
-    from packets import Packets
+    from packets import ClientPackets
 
 __all__ = (
     # current server state
@@ -60,7 +60,7 @@ geoloc_db: 'Optional[geoip2.database.Reader]'
 api_keys: dict[str, int] # {api_key: player_id}
 
 # list of registered packets
-bancho_packets: dict['Packets', 'BanchoPacket']
+bancho_packets: dict['ClientPackets', 'BanchoPacket']
 
 # active connections
 db: 'AsyncSQLPool'
@@ -83,7 +83,8 @@ cache = {
     # are relatively frequently and won't change very frequently.
     # cache all beatmap data calculated while online. this way,
     # the most requested maps will inevitably always end up cached.
-    'beatmap': {}, # {md5: {timeout, map}, ...}
+    'beatmap': {}, # {md5: map, id: map, ...}
+    'beatmapsets': {},
 
     # cache all beatmaps which are unsubmitted or need an update,
     # since their osu!api requests will fail and thus we'll do the
