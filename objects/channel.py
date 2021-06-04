@@ -39,7 +39,7 @@ class Channel:
                  auto_join: bool = True,
                  instance: bool = False) -> None:
         # TODO: think of better names than `_name` and `name`
-        self._name = name # 'real' name ('#{multi/spec}_{id}')
+        self._name = name  # 'real' name ('#{multi/spec}_{id}')
 
         if self._name.startswith('#spec_'):
             self.name = '#spectator'

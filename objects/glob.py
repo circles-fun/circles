@@ -37,7 +37,7 @@ __all__ = (
     'bancho_packets', 'db',
     'has_internet', 'http',
     'datadog', 'cache', 'loop',
-    #'sketchy_queue'
+    # 'sketchy_queue'
 )
 
 # server object
@@ -57,7 +57,7 @@ version: 'Version'
 geoloc_db: 'Optional[geoip2.database.Reader]'
 
 # currently registered api tokens
-api_keys: dict[str, int] # {api_key: player_id}
+api_keys: dict[str, int]  # {api_key: player_id}
 
 # list of registered packets
 bancho_packets: dict['ClientPackets', 'BanchoPacket']
@@ -78,19 +78,19 @@ datadog: 'Optional[ThreadStats]'
 cache = {
     # algorithms like brypt these are intentionally designed to be
     # slow; we'll cache the results to speed up subsequent logins.
-    'bcrypt': {}, # {bcrypt: md5, ...}
+    'bcrypt': {},  # {bcrypt: md5, ...}
     # we'll cache results for osu! client update requests since they
     # are relatively frequently and won't change very frequently.
     # cache all beatmap data calculated while online. this way,
     # the most requested maps will inevitably always end up cached.
-    'beatmap': {}, # {md5: map, id: map, ...}
+    'beatmap': {},  # {md5: map, id: map, ...}
     'beatmapsets': {},
 
     # cache all beatmaps which are unsubmitted or need an update,
     # since their osu!api requests will fail and thus we'll do the
     # request multiple times which is quite slow & not great.
-    'unsubmitted': set(), # {md5, ...}
-    'needs_update': set() # {md5, ...}
+    'unsubmitted': set(),  # {md5, ...}
+    'needs_update': set()  # {md5, ...}
 }
 
 loop: 'AbstractEventLoop'
