@@ -49,14 +49,14 @@ BASE_DOMAIN = glob.config.domain
 @unique
 @pymysql_encode(escape_enum)
 class SlotStatus(IntEnum):
-    open = 1
-    locked = 2
+    open      = 1
+    locked    = 2
     not_ready = 4
-    ready = 8
-    no_map = 16
-    playing = 32
-    complete = 64
-    quit = 128
+    ready     = 8
+    no_map    = 16
+    playing   = 32
+    complete  = 64
+    quit      = 128
 
     has_player = not_ready | ready | no_map | playing | complete
 

@@ -303,7 +303,7 @@ class SendMessage(BanchoPacket, type=ClientPackets.SEND_PUBLIC_MESSAGE):
 
 @register(restricted=True)
 class Logout(BanchoPacket, type=ClientPackets.LOGOUT):
-    _: osuTypes.i32  # pretty awesome design on osu!'s end :P
+    _: osuTypes.i32 # pretty awesome design on osu!'s end :P
 
     async def handle(self, p: Player) -> None:
         if (time.time() - p.login_time) < 1:
@@ -409,8 +409,7 @@ async def login(body: bytes, ip: str, db_cursor: aiomysql.DictCursor) -> tuple[b
     if not glob.app.debug:
         # TODO: look into why datetime.now() is a few multiples
         # faster than date.today() & datetime.today()
-        # ! datetime.now() does not function properly.
-        if osu_ver_date < (datetime.today() - DELTA_60_DAYS):
+        if osu_ver_date < (datetime.now() - DELTA_60_DAYS):
             return (packets.versionUpdateForced() +
                     packets.userID(-2)), 'no'
 
@@ -903,7 +902,7 @@ class SendPrivateMessage(BanchoPacket, type=ClientPackets.SEND_PRIVATE_MESSAGE):
                         p.last_np = {
                             'bmap': bmap,
                             'mode_vn': mode_vn,
-                            'timeout': time.time() + 300  # /np's last 5mins
+                            'timeout': time.time() + 300 # /np's last 5mins
                         }
 
                         # calc pp if possible
@@ -1710,8 +1709,7 @@ class UserPresenceRequest(BanchoPacket, type=ClientPackets.USER_PRESENCE_REQUEST
 
 @register
 class UserPresenceRequestAll(BanchoPacket, type=ClientPackets.USER_PRESENCE_REQUEST_ALL):
-    # TODO: should probably ratelimit with this (300k s)
-    ingame_time: osuTypes.i32
+    ingame_time: osuTypes.i32 # TODO: should probably ratelimit with this (300k s)
 
     async def handle(self, p: Player) -> None:
         # NOTE: this packet is only used when there
