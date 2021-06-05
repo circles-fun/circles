@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 
-import asyncio
 import copy
-import importlib
-import bcrypt
 import hashlib
+import importlib
 import os
 import pprint
 import random
@@ -18,6 +16,7 @@ from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime
 from importlib.metadata import version as pkg_version
+from pathlib import Path
 from time import perf_counter_ns as clock_ns
 from typing import Callable
 from typing import NamedTuple
@@ -25,8 +24,8 @@ from typing import Optional
 from typing import Sequence
 from typing import TYPE_CHECKING
 from typing import Union
-from pathlib import Path
 
+import bcrypt
 import cmyui
 import psutil
 
@@ -41,10 +40,10 @@ from objects.beatmap import Beatmap
 from objects.beatmap import RankedStatus
 from objects.clan import Clan
 from objects.clan import ClanPrivileges
-from objects.match import Match
 from objects.match import MapPool
-from objects.match import MatchTeams
+from objects.match import Match
 from objects.match import MatchTeamTypes
+from objects.match import MatchTeams
 from objects.match import MatchWinConditions
 from objects.match import SlotStatus
 from objects.player import Player
@@ -53,7 +52,7 @@ from utils.misc import seconds_readable
 from utils.recalculator import PPCalculator
 
 if TYPE_CHECKING:
-    from objects.channel import Channel
+    pass
 
 Messageable = Union['Channel', Player]
 CommandResponse = dict[str, str]

@@ -17,9 +17,9 @@ from constants.gamemodes import GameMode
 from constants.mods import Mods
 from objects import glob
 from objects.beatmap import Beatmap
-from utils.recalculator import PPCalculator
 from utils.misc import escape_enum
 from utils.misc import pymysql_encode
+from utils.recalculator import PPCalculator
 
 if TYPE_CHECKING:
     from objects.player import Player

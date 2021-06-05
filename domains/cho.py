@@ -31,16 +31,16 @@ from objects import glob
 from objects.beatmap import Beatmap
 from objects.channel import Channel
 from objects.clan import ClanPrivileges
-from objects.match import MatchTeams
 from objects.match import MatchTeamTypes
+from objects.match import MatchTeams
 from objects.match import Slot
 from objects.match import SlotStatus
 from objects.player import Action
 from objects.player import Player
 from objects.player import PresenceFilter
-from packets import ClientPackets
 from packets import BanchoPacket
 from packets import BanchoPacketReader
+from packets import ClientPackets
 
 """ Bancho: handle connections from the osu! client """
 

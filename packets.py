@@ -5,8 +5,8 @@
 # i'm not sure how well it works with an async setup
 # like this, but we'll see B) massive speed gains tho
 
-import struct
 import random
+import struct
 from collections import namedtuple
 from dataclasses import dataclass
 from enum import IntEnum
@@ -23,10 +23,10 @@ from constants.gamemodes import GameMode
 from constants.mods import Mods
 from constants.types import osuTypes
 from objects import glob
-#from objects.beatmap import BeatmapInfo
+# from objects.beatmap import BeatmapInfo
 from objects.match import Match
-from objects.match import MatchTeams
 from objects.match import MatchTeamTypes
+from objects.match import MatchTeams
 from objects.match import MatchWinConditions
 from objects.match import ScoreFrame
 from objects.match import SlotStatus

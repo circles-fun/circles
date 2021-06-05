@@ -1,10 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import dill as pickle
 import inspect
 import io
-import pymysql
-import requests
 import secrets
 import socket
 import sys
@@ -15,12 +12,16 @@ from typing import Callable
 from typing import Sequence
 from typing import Type
 
-from objects import glob
+import dill as pickle
+import pymysql
+import requests
 from cmyui.logging import Ansi
 from cmyui.logging import log
 from cmyui.logging import printc
 from cmyui.osu.replay import Keys
 from cmyui.osu.replay import ReplayFrame
+
+from objects import glob
 
 __all__ = (
     'get_press_times',

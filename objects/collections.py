@@ -15,9 +15,9 @@ from cmyui.logging import log
 
 from constants.privileges import Privileges
 from objects import glob
+from objects.channel import Channel
 from objects.clan import Clan
 from objects.clan import ClanPrivileges
-from objects.channel import Channel
 from objects.match import MapPool
 from objects.match import Match
 from objects.player import Player

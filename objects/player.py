@@ -15,9 +15,9 @@ from typing import TYPE_CHECKING
 from typing import Union
 
 import aiomysql
+from cmyui.discord import Webhook
 from cmyui.logging import Ansi
 from cmyui.logging import log
-from cmyui.discord import Webhook
 
 import packets
 from constants.countries import country_codes
@@ -28,8 +28,8 @@ from constants.privileges import Privileges
 from objects import glob
 from objects.channel import Channel
 from objects.match import Match
-from objects.match import MatchTeams
 from objects.match import MatchTeamTypes
+from objects.match import MatchTeams
 from objects.match import Slot
 from objects.match import SlotStatus
 from utils.misc import escape_enum

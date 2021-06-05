@@ -26,8 +26,6 @@ from utils.misc import escape_enum
 from utils.misc import pymysql_encode
 
 if TYPE_CHECKING:
-    from asyncio import TimerHandle
-
     from objects.player import Player
     from objects.channel import Channel
 

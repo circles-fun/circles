@@ -5,13 +5,12 @@
 # and when it detects a change, it will apply any nescessary
 # changes to your sql database & keep cmyui_pkg up to date.
 
-import re
 import importlib.metadata
+import re
 from pathlib import Path
 from typing import Optional
 
 import aiomysql
-
 from cmyui.logging import Ansi
 from cmyui.logging import log
 from cmyui.logging import printc
