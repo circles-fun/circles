@@ -4,6 +4,7 @@ import asyncio
 import re
 import time
 from datetime import date
+from datetime import datetime
 from datetime import timedelta
 from typing import Callable
 from typing import Union
@@ -690,7 +691,7 @@ async def login(body: bytes, ip: str, db_cursor: aiomysql.DictCursor) -> tuple[b
                     )
                     sent_to.add(msg['from'])
 
-                msg_time = date.fromtimestamp(msg['time'])
+                msg_time = datetime.fromtimestamp(msg['time'])
                 msg_ts = f'[{msg_time:%a %b %d @ %H:%M%p}] {msg["msg"]}'
 
                 data += packets.sendMessage(
