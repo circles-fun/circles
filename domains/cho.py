@@ -186,6 +186,7 @@ class ChangeAction(BanchoPacket, type=ClientPackets.CHANGE_ACTION):
         if not p.restricted:
             glob.players.enqueue(packets.userStats(p))
 
+IGNORED_CHANNELS = ['#highlight', '#userlog']
 
 @register
 class SendMessage(BanchoPacket, type=ClientPackets.SEND_PUBLIC_MESSAGE):
@@ -200,7 +201,7 @@ class SendMessage(BanchoPacket, type=ClientPackets.SEND_PUBLIC_MESSAGE):
         msg = self.msg.msg.strip()
         recipient = self.msg.recipient
 
-        if recipient == '#highlight':
+        if recipient in IGNORED_CHANNELS:
             return
         elif recipient == '#spectator':
             if p.spectating:
@@ -1458,7 +1459,7 @@ class ChannelJoin(BanchoPacket, type=ClientPackets.CHANNEL_JOIN):
     name: osuTypes.string
 
     async def handle(self, p: Player) -> None:
-        if self.name == '#highlight':
+        if self.name in IGNORED_CHANNELS:
             return
 
         c = glob.channels[self.name]
@@ -1609,7 +1610,7 @@ class ChannelPart(BanchoPacket, type=ClientPackets.CHANNEL_PART):
     name: osuTypes.string
 
     async def handle(self, p: Player) -> None:
-        if self.name == '#highlight':
+        if self.name in IGNORED_CHANNELS:
             return
 
         c = glob.channels[self.name]
