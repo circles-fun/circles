@@ -381,7 +381,7 @@ class Beatmap:
             osuapi_resp['version'], osuapi_resp['creator']
         )
 
-        # quite a bit faster than using dt.strptime.
+        # quite a bit faster than using date.strptime.
         _last_update = osuapi_resp['last_update']
         self.last_update = datetime(
             year=int(_last_update[0:4]),

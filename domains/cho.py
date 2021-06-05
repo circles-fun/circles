@@ -391,7 +391,7 @@ async def login(body: bytes, ip: str, db_cursor: aiomysql.DictCursor) -> tuple[b
     if not (r_match := regexes.osu_ver.match(osu_ver_str)):
         return  # invalid request
 
-    # quite a bit faster than using dt.strptime.
+    # quite a bit faster than using date.strptime.
     osu_ver_date = date(
         year=int(r_match['ver'][0:4]),
         month=int(r_match['ver'][4:6]),
@@ -690,7 +690,7 @@ async def login(body: bytes, ip: str, db_cursor: aiomysql.DictCursor) -> tuple[b
                     )
                     sent_to.add(msg['from'])
 
-                msg_time = dt.fromtimestamp(msg['time'])
+                msg_time = date.fromtimestamp(msg['time'])
                 msg_ts = f'[{msg_time:%a %b %d @ %H:%M%p}] {msg["msg"]}'
 
                 data += packets.sendMessage(
