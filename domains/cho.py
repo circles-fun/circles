@@ -2,6 +2,7 @@
 
 import asyncio
 import re
+import struct
 import time
 from datetime import date
 from datetime import datetime
@@ -27,20 +28,19 @@ from constants.mods import Mods
 from constants.mods import SPEED_CHANGING_MODS
 from constants.privileges import ClientPrivileges
 from constants.privileges import Privileges
-from constants.types import osuTypes
 from objects import glob
 from objects.beatmap import Beatmap
 from objects.channel import Channel
 from objects.clan import ClanPrivileges
-from objects.match import MatchTeamTypes
 from objects.match import MatchTeams
+from objects.match import MatchTeamTypes
 from objects.match import Slot
 from objects.match import SlotStatus
 from objects.player import Action
 from objects.player import Player
 from objects.player import PresenceFilter
-from packets import BanchoPacket
 from packets import BanchoPacketReader
+from packets import BasePacket
 from packets import ClientPackets
 
 """ Bancho: handle connections from the osu! client """
@@ -49,21 +49,19 @@ BASE_DOMAIN = glob.config.domain
 _domain_escaped = BASE_DOMAIN.replace('.', r'\.')
 domain = Domain(re.compile(rf'^c[e4-6]?\.(?:{_domain_escaped}|ppy\.sh)$'))
 
-
 @domain.route('/')
 async def bancho_http_handler(conn: Connection) -> bytes:
     """Handle a request from a web browser."""
     packets = glob.bancho_packets['all']
 
     return b'<!DOCTYPE html>' + '<br>'.join((
-        f'Running circles v{glob.version}',
+        f'Running gulag v{glob.version}',
         f'Players online: {len(glob.players) - 1}',
-        '<a href="https://github.com/circles-fun/circles">Source code</a>',
+        '<a href="https://github.com/cmyui/gulag">Source code</a>',
         '',
         f'<b>Packets handled ({len(packets)})</b>',
         '<br>'.join([f'{p.name} ({p.value})' for p in packets])
     )).encode()
-
 
 @domain.route('/', methods=['POST'])
 async def bancho_handler(conn: Connection) -> bytes:
@@ -98,7 +96,7 @@ async def bancho_handler(conn: Connection) -> bytes:
         # token not found; chances are that we just restarted
         # the server - tell their client to reconnect immediately.
         return (packets.notification('Server has restarted.') +
-                packets.restartServer(0))  # send 0ms since server is up
+                packets.restartServer(0)) # send 0ms since server is up
 
     # restricted users may only use certain packet handlers.
     if not player.restricted:
@@ -109,16 +107,15 @@ async def bancho_handler(conn: Connection) -> bytes:
     # bancho connections can be comprised of multiple packets;
     # our reader is designed to iterate through them individually,
     # allowing logic to be implemented around the actual handler.
+    # NOTE: any unhandled packets will be ignored internally.
 
-    # NOTE: the reader will internally discard any
-    # packets whose logic has not been defined.
-    packets_read = []
+    packets_handled = []
     for packet in BanchoPacketReader(conn.body, packet_map):
         await packet.handle(player)
-        packets_read.append(packet.type)
+        packets_handled.append(packet.__class__.__name__)
 
     if glob.app.debug:
-        packets_str = ', '.join([p.name for p in packets_read]) or 'None'
+        packets_str = ', '.join(packets_handled) or 'None'
         log(f'[BANCHO] {player} | {packets_str}.', AnsiRGB(0xff68ab))
 
     player.last_recv_time = time.time()
@@ -134,38 +131,35 @@ glob.bancho_packets = {
     'restricted': {}
 }
 
-
-def register(restricted: Union[bool, Callable] = False) -> Callable:
+def register(
+    packet: ClientPackets,
+    restricted: Union[bool, Callable] = False
+) -> Callable:
     """Register a handler in `glob.bancho_packets`."""
-    def wrapper(cls: BanchoPacket) -> Callable:
-        new_entry = {cls.type: cls}
+    def wrapper(cls) -> Callable:
+        new_entry = {packet: cls}
+
+        glob.bancho_packets['all'] |= new_entry
 
         if restricted:
             glob.bancho_packets['restricted'] |= new_entry
-        glob.bancho_packets['all'] |= new_entry
         return cls
-
-    if callable(restricted):
-        # packet class passed right in
-        _cls, restricted = restricted, False
-        return wrapper(_cls)
     return wrapper
 
-
-@register(restricted=True)
-class Ping(BanchoPacket, type=ClientPackets.PING):
+@register(ClientPackets.PING, restricted=True)
+class Ping(BasePacket):
     async def handle(self, p: Player) -> None:
-        pass  # ping be like
+        pass # ping be like
 
-
-@register(restricted=True)
-class ChangeAction(BanchoPacket, type=ClientPackets.CHANGE_ACTION):
-    action: osuTypes.u8
-    info_text: osuTypes.string
-    map_md5: osuTypes.string
-    mods: osuTypes.u32
-    mode: osuTypes.u8
-    map_id: osuTypes.i32
+@register(ClientPackets.CHANGE_ACTION, restricted=True)
+class ChangeAction(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        self.action = reader.read_u8()
+        self.info_text = reader.read_string()
+        self.map_md5 = reader.read_string()
+        self.mods = reader.read_u32()
+        self.mode = reader.read_u8()
+        self.map_id = reader.read_i32()
 
     async def handle(self, p: Player) -> None:
         # update the user's status.
@@ -188,9 +182,10 @@ class ChangeAction(BanchoPacket, type=ClientPackets.CHANGE_ACTION):
 
 IGNORED_CHANNELS = ['#highlight', '#userlog']
 
-@register
-class SendMessage(BanchoPacket, type=ClientPackets.SEND_PUBLIC_MESSAGE):
-    msg: osuTypes.message
+@register(ClientPackets.SEND_PUBLIC_MESSAGE)
+class SendMessage(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        self.msg = reader.read_message()
 
     async def handle(self, p: Player) -> None:
         if p.silenced:
@@ -198,7 +193,7 @@ class SendMessage(BanchoPacket, type=ClientPackets.SEND_PUBLIC_MESSAGE):
             return
 
         # remove leading/trailing whitespace
-        msg = self.msg.msg.strip()
+        msg = self.msg.text.strip()
         recipient = self.msg.recipient
 
         if recipient in IGNORED_CHANNELS:
@@ -252,15 +247,15 @@ class SendMessage(BanchoPacket, type=ClientPackets.SEND_PUBLIC_MESSAGE):
             else:
                 staff = glob.players.staff
                 t_chan.send_selective(
-                    msg=msg,
-                    sender=p,
-                    recipients=staff - {p}
+                    msg = msg,
+                    sender = p,
+                    recipients = staff - {p}
                 )
                 if 'resp' in cmd:
                     t_chan.send_selective(
-                        msg=cmd['resp'],
-                        sender=glob.bot,
-                        recipients=staff | {p}
+                        msg = cmd['resp'],
+                        sender = glob.bot,
+                        recipients = staff | {p}
                     )
 
         else:
@@ -290,7 +285,7 @@ class SendMessage(BanchoPacket, type=ClientPackets.SEND_PUBLIC_MESSAGE):
                     p.last_np = {
                         'bmap': bmap,
                         'mode_vn': mode_vn,
-                        'timeout': time.time() + 300  # /np's last 5mins
+                        'timeout': time.time() + 300 # /np's last 5mins
                     }
                 else:
                     # time out their previous /np
@@ -301,10 +296,10 @@ class SendMessage(BanchoPacket, type=ClientPackets.SEND_PUBLIC_MESSAGE):
         p.update_latest_activity()
         log(f'{p} @ {t_chan}: {msg}', Ansi.LCYAN, fd='.data/logs/chat.log')
 
-
-@register(restricted=True)
-class Logout(BanchoPacket, type=ClientPackets.LOGOUT):
-    _: osuTypes.i32 # pretty awesome design on osu!'s end :P
+@register(ClientPackets.LOGOUT, restricted=True)
+class Logout(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        reader.read_i32() # reserved
 
     async def handle(self, p: Player) -> None:
         if (time.time() - p.login_time) < 1:
@@ -317,19 +312,17 @@ class Logout(BanchoPacket, type=ClientPackets.LOGOUT):
 
         p.update_latest_activity()
 
-
-@register(restricted=True)
-class StatsUpdateRequest(BanchoPacket, type=ClientPackets.REQUEST_STATUS_UPDATE):
+@register(ClientPackets.REQUEST_STATUS_UPDATE, restricted=True)
+class StatsUpdateRequest(BasePacket):
     async def handle(self, p: Player) -> None:
         p.enqueue(packets.userStats(p))
-
 
 # Some messages to send on welcome/restricted/etc.
 # TODO: these should probably be moved to the config.
 WELCOME_MSG = '\n'.join((
-    f"Welcome to {BASE_DOMAIN}!",
+    f"Welcome to {BASE_DOMAIN}.",
     "To see a list of commands, use !help.",
-    "We have a public (Discord)[https://discord.gg/vVpg9Nc2nR]!",
+    "We have a public (Discord)[https://discord.gg/ShEQgUx]!",
     "Enjoy the server!"
 ))
 
@@ -340,7 +333,8 @@ RESTRICTED_MSG = (
 )
 
 WELCOME_NOTIFICATION = packets.notification(
-    'Welcome back to Circles!'
+    'Welcome back to the gulag!\n'
+    f'Current build: v{glob.version}'
 )
 
 OFFLINE_NOTIFICATION = packets.notification(
@@ -350,8 +344,7 @@ OFFLINE_NOTIFICATION = packets.notification(
 
 DELTA_60_DAYS = timedelta(days=60)
 
-
-async def login(body: bytes, ip: str, db_cursor: aiomysql.DictCursor) -> tuple[bytes, str]:
+async def login(body_view: memoryview, ip: str, db_cursor: aiomysql.DictCursor) -> tuple[bytes, str]:
     """\
     Login has no specific packet, but happens when the osu!
     client sends a request without an 'osu-token' header.
@@ -377,23 +370,26 @@ async def login(body: bytes, ip: str, db_cursor: aiomysql.DictCursor) -> tuple[b
     """
 
     """ Parse data and verify the request is legitimate. """
+    # the body for login requests is quite small
+    # so copying here is fine for simplicity
+    body = body_view.tobytes()
 
     if len(split := body.decode().split('\n')[:-1]) != 3:
         log(f'Invalid login request from {ip}.', Ansi.LRED)
-        return  # invalid request
+        return # invalid request
 
     username = split[0]
     pw_md5 = split[1].encode()
 
     if len(client_info := split[2].split('|')) != 5:
-        return  # invalid request
+        return # invalid request
 
     osu_ver_str = client_info[0]
 
     if not (r_match := regexes.osu_ver.match(osu_ver_str)):
-        return  # invalid request
+        return # invalid request
 
-    # quite a bit faster than using date.strptime.
+    # quite a bit faster than using dt.strptime.
     osu_ver_date = date(
         year=int(r_match['ver'][0:4]),
         month=int(r_match['ver'][4:6]),
@@ -416,7 +412,7 @@ async def login(body: bytes, ip: str, db_cursor: aiomysql.DictCursor) -> tuple[b
 
     # ensure utc_offset is a number (negative inclusive).
     if not _isdecimal(client_info[1], _negative=True):
-        return  # invalid request
+        return # invalid request
 
     utc_offset = int(client_info[1])
     #display_city = client_info[2] == '1'
@@ -429,39 +425,40 @@ async def login(body: bytes, ip: str, db_cursor: aiomysql.DictCursor) -> tuple[b
     # [3]: md5(uniqueid) (osu! uninstall id)
     # [4]: md5(uniqueid2) (disk signature/serial num)
     if len(client_hashes := client_info[3].split(':')[:-1]) != 5:
-        return  # invalid request
+        return # invalid request
 
     adapters = client_hashes.pop(1)
-    is_wine = adapters == 'runningunderwine'
 
-    if adapters == '.':  # none sent
+    if adapters == '.': # none sent
         data = (packets.userID(-1) +
                 packets.notification('Please restart your osu! and try again.'))
         return data, 'no'
 
+    is_wine = adapters == 'runningunderwine'
     pm_private = client_info[4] == '1'
 
     """ Parsing complete, now check the given data. """
 
     login_time = time.time()
 
+    # TODO: improve tourney client support, this is not great.
     if not using_tourney_client:
         # Check if the player is already online
-        if (
-            (p := glob.players.get(name=username)) and
-            not p.tourney_client
-        ):
-            if (login_time - p.last_recv_time) > 10:
-                # if the current player obj online hasn't
-                # pinged the server in > 10 seconds, log
-                # them out and login the new user.
-                p.logout()
-            else:
-                # the user is currently online, send back failure.
-                data = packets.userID(-1) + \
-                    packets.notification('User already logged in.')
+        if p := glob.players.get(name=username):
+            # player is online, only allow multiple
+            # logins if they're on a tourney client.
+            if not p.tourney_client:
+                if (login_time - p.last_recv_time) > 10:
+                    # if the current player obj online hasn't
+                    # pinged the server in > 10 seconds, log
+                    # them out and login the new user.
+                    p.logout()
+                else:
+                    # the user is currently online, send back failure.
+                    data = packets.userID(-1) + \
+                           packets.notification('User already logged in.')
 
-                return data, 'no'
+                    return data, 'no'
 
     await db_cursor.execute(
         'SELECT id, name, priv, pw_bcrypt, '
@@ -493,11 +490,11 @@ async def login(body: bytes, ip: str, db_cursor: aiomysql.DictCursor) -> tuple[b
 
     # check credentials against db. algorithms like these are intentionally
     # designed to be slow; we'll cache the results to speed up subsequent logins.
-    if pw_bcrypt in bcrypt_cache:  # ~0.01 ms
+    if pw_bcrypt in bcrypt_cache: # ~0.01 ms
         if pw_md5 != bcrypt_cache[pw_bcrypt]:
             return (packets.notification(f'{BASE_DOMAIN}: Incorrect password') +
                     packets.userID(-1)), 'no'
-    else:  # ~200ms
+    else: # ~200ms
         if not bcrypt.checkpw(pw_md5, pw_bcrypt):
             return (packets.notification(f'{BASE_DOMAIN}: Incorrect password') +
                     packets.userID(-1)), 'no'
@@ -557,7 +554,7 @@ async def login(body: bytes, ip: str, db_cursor: aiomysql.DictCursor) -> tuple[b
             if not all([hw_match['priv'] & Privileges.Normal
                         for hw_match in hw_matches]):
                 return (packets.notification('Please contact staff directly '
-                                             'to create an account.') +
+                                            'to create an account.') +
                         packets.userID(-1)), 'no'
 
     """ All checks passed, player is safe to login """
@@ -572,7 +569,7 @@ async def login(body: bytes, ip: str, db_cursor: aiomysql.DictCursor) -> tuple[b
         clan = clan_priv = None
 
     p = Player(
-        **user_info,  # {id, name, priv, pw_bcrypt, silence_end, api_key}
+        **user_info, # {id, name, priv, pw_bcrypt, silence_end, api_key}
         utc_offset=utc_offset,
         osu_ver=osu_ver_date,
         pm_private=pm_private,
@@ -583,7 +580,7 @@ async def login(body: bytes, ip: str, db_cursor: aiomysql.DictCursor) -> tuple[b
     )
 
     for mode in GameMode:
-        p.recent_scores[mode] = None  # TODO: sql?
+        p.recent_scores[mode] = None # TODO: sql?
         p.stats[mode] = None
 
     data = bytearray(packets.protocolVersion(19))
@@ -613,7 +610,7 @@ async def login(body: bytes, ip: str, db_cursor: aiomysql.DictCursor) -> tuple[b
         if (
             not c.auto_join or
             p.priv & c.read_priv != c.read_priv or
-            c._name == '#lobby'  # (can't be in mp lobby @ login)
+            c._name == '#lobby' # (can't be in mp lobby @ login)
         ):
             continue
 
@@ -682,7 +679,7 @@ async def login(body: bytes, ip: str, db_cursor: aiomysql.DictCursor) -> tuple[b
         )
 
         if db_cursor.rowcount != 0:
-            sent_to = set()  # ids
+            sent_to = set() # ids
 
             async for msg in db_cursor:
                 if msg['from'] not in sent_to:
@@ -728,10 +725,10 @@ async def login(body: bytes, ip: str, db_cursor: aiomysql.DictCursor) -> tuple[b
 
         data += packets.accountRestricted()
         data += packets.sendMessage(
-            sender=glob.bot.name,
-            msg=RESTRICTED_MSG,
-            recipient=p.name,
-            sender_id=glob.bot.id
+            sender = glob.bot.name,
+            msg = RESTRICTED_MSG,
+            recipient = p.name,
+            sender_id = glob.bot.id
         )
 
     # TODO: some sort of admin panel for staff members?
@@ -753,10 +750,10 @@ async def login(body: bytes, ip: str, db_cursor: aiomysql.DictCursor) -> tuple[b
     p.update_latest_activity()
     return bytes(data), p.token
 
-
-@register
-class StartSpectating(BanchoPacket, type=ClientPackets.START_SPECTATING):
-    target_id: osuTypes.i32
+@register(ClientPackets.START_SPECTATING)
+class StartSpectating(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        self.target_id = reader.read_i32()
 
     async def handle(self, p: Player) -> None:
         if not (new_host := glob.players.get(id=self.target_id)):
@@ -773,9 +770,8 @@ class StartSpectating(BanchoPacket, type=ClientPackets.START_SPECTATING):
 
         new_host.add_spectator(p)
 
-
-@register
-class StopSpectating(BanchoPacket, type=ClientPackets.STOP_SPECTATING):
+@register(ClientPackets.STOP_SPECTATING)
+class StopSpectating(BasePacket):
     async def handle(self, p: Player) -> None:
         host = p.spectating
 
@@ -785,22 +781,26 @@ class StopSpectating(BanchoPacket, type=ClientPackets.STOP_SPECTATING):
 
         host.remove_spectator(p)
 
-
-@register
-class SpectateFrames(BanchoPacket, type=ClientPackets.SPECTATE_FRAMES):
-    frame_bundle: osuTypes.replayFrameBundle
+@register(ClientPackets.SPECTATE_FRAMES)
+class SpectateFrames(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        self.frame_bundle = reader.read_replayframe_bundle()
 
     async def handle(self, p: Player) -> None:
-        data = packets.spectateFrames(self.frame_bundle.raw_data)
+        # packing this manually is about ~3x faster
+        #data = packets.spectateFrames(self.frame_bundle.raw_data)
+        data = (
+            struct.pack('<HxI', 15, len(self.frame_bundle.raw_data)) +
+            self.frame_bundle.raw_data
+        )
 
         # enqueue the data
         # to all spectators.
         for t in p.spectators:
             t.enqueue(data)
 
-
-@register
-class CantSpectate(BanchoPacket, type=ClientPackets.CANT_SPECTATE):
+@register(ClientPackets.CANT_SPECTATE)
+class CantSpectate(BasePacket):
     async def handle(self, p: Player) -> None:
         if not p.spectating:
             log(f"{p} sent can't spectate while not spectating?", Ansi.LRED)
@@ -814,10 +814,10 @@ class CantSpectate(BanchoPacket, type=ClientPackets.CANT_SPECTATE):
         for t in host.spectators:
             t.enqueue(data)
 
-
-@register
-class SendPrivateMessage(BanchoPacket, type=ClientPackets.SEND_PRIVATE_MESSAGE):
-    msg: osuTypes.message
+@register(ClientPackets.SEND_PRIVATE_MESSAGE)
+class SendPrivateMessage(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        self.msg = reader.read_message()
 
     async def handle(self, p: Player) -> None:
         if p.silenced:
@@ -826,7 +826,7 @@ class SendPrivateMessage(BanchoPacket, type=ClientPackets.SEND_PRIVATE_MESSAGE):
             return
 
         # remove leading/trailing whitespace
-        msg = self.msg.msg.strip()
+        msg = self.msg.text.strip()
         t_name = self.msg.recipient
 
         # allow this to get from sql - players can receive
@@ -907,7 +907,7 @@ class SendPrivateMessage(BanchoPacket, type=ClientPackets.SEND_PRIVATE_MESSAGE):
                         }
 
                         # calc pp if possible
-                        if mode_vn == 2:  # TODO: catch
+                        if mode_vn == 2: # TODO: catch
                             msg = 'PP not yet supported for that mode.'
                         elif mode_vn == 3 and bmap.mode.as_vanilla != 3:
                             msg = 'Mania converts not yet supported.'
@@ -923,12 +923,12 @@ class SendPrivateMessage(BanchoPacket, type=ClientPackets.SEND_PRIVATE_MESSAGE):
 
                             # since this is a DM to the bot, we should
                             # send back a list of general PP values.
-                            if mode_vn in (0, 1):  # use acc
+                            if mode_vn in (0, 1): # use acc
                                 _keys = (
                                     f'{acc:.2f}%'
                                     for acc in glob.config.pp_cached_accs
                                 )
-                            elif mode_vn == 3:  # use score
+                            elif mode_vn == 3: # use score
                                 _keys = (
                                     f'{int(score // 1000)}k'
                                     for score in glob.config.pp_cached_scores
@@ -971,15 +971,13 @@ class SendPrivateMessage(BanchoPacket, type=ClientPackets.SEND_PRIVATE_MESSAGE):
         p.update_latest_activity()
         log(f'{p} @ {t}: {msg}', Ansi.LCYAN, fd='.data/logs/chat.log')
 
-
-@register
-class LobbyPart(BanchoPacket, type=ClientPackets.PART_LOBBY):
+@register(ClientPackets.PART_LOBBY)
+class LobbyPart(BasePacket):
     async def handle(self, p: Player) -> None:
         p.in_lobby = False
 
-
-@register
-class LobbyJoin(BanchoPacket, type=ClientPackets.JOIN_LOBBY):
+@register(ClientPackets.JOIN_LOBBY)
+class LobbyJoin(BasePacket):
     async def handle(self, p: Player) -> None:
         p.in_lobby = True
 
@@ -987,10 +985,10 @@ class LobbyJoin(BanchoPacket, type=ClientPackets.JOIN_LOBBY):
             if m is not None:
                 p.enqueue(packets.newMatch(m))
 
-
-@register
-class MatchCreate(BanchoPacket, type=ClientPackets.CREATE_MATCH):
-    match: osuTypes.match
+@register(ClientPackets.CREATE_MATCH)
+class MatchCreate(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        self.match = reader.read_match()
 
     async def handle(self, p: Player) -> None:
         # TODO: match validation..?
@@ -1022,10 +1020,10 @@ class MatchCreate(BanchoPacket, type=ClientPackets.CREATE_MATCH):
         # to the global channel list as
         # an instanced channel.
         chan = Channel(
-            name=f'#multi_{self.match.id}',
-            topic=f"MID {self.match.id}'s multiplayer channel.",
-            auto_join=False,
-            instance=True
+            name = f'#multi_{self.match.id}',
+            topic = f"MID {self.match.id}'s multiplayer channel.",
+            auto_join = False,
+            instance = True
         )
 
         glob.channels.append(chan)
@@ -1036,7 +1034,6 @@ class MatchCreate(BanchoPacket, type=ClientPackets.CREATE_MATCH):
 
         self.match.chat.send_bot(f'Match created by {p.name}.')
         log(f'{p} created a new multiplayer match.')
-
 
 async def check_menu_option(p: Player, key: int):
     if key not in p.menu_options:
@@ -1055,11 +1052,11 @@ async def check_menu_option(p: Player, key: int):
     if not opt['reusable']:
         del p.menu_options[key]
 
-
-@register
-class MatchJoin(BanchoPacket, type=ClientPackets.JOIN_MATCH):
-    match_id: osuTypes.i32
-    match_passwd: osuTypes.string
+@register(ClientPackets.JOIN_MATCH)
+class MatchJoin(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        self.match_id = reader.read_i32()
+        self.match_passwd = reader.read_string()
 
     async def handle(self, p: Player) -> None:
         if not 0 <= self.match_id < 64:
@@ -1096,17 +1093,16 @@ class MatchJoin(BanchoPacket, type=ClientPackets.JOIN_MATCH):
         p.update_latest_activity()
         p.join_match(m, self.match_passwd)
 
-
-@register
-class MatchPart(BanchoPacket, type=ClientPackets.PART_MATCH):
+@register(ClientPackets.PART_MATCH)
+class MatchPart(BasePacket):
     async def handle(self, p: Player) -> None:
         p.update_latest_activity()
         p.leave_match()
 
-
-@register
-class MatchChangeSlot(BanchoPacket, type=ClientPackets.MATCH_CHANGE_SLOT):
-    slot_id: osuTypes.i32
+@register(ClientPackets.MATCH_CHANGE_SLOT)
+class MatchChangeSlot(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        self.slot_id = reader.read_i32()
 
     async def handle(self, p: Player) -> None:
         if not (m := p.match):
@@ -1125,11 +1121,10 @@ class MatchChangeSlot(BanchoPacket, type=ClientPackets.MATCH_CHANGE_SLOT):
         m.slots[self.slot_id].copy_from(s)
         s.reset()
 
-        m.enqueue_state()  # technically not needed for host?
+        m.enqueue_state() # technically not needed for host?
 
-
-@register
-class MatchReady(BanchoPacket, type=ClientPackets.MATCH_READY):
+@register(ClientPackets.MATCH_READY)
+class MatchReady(BasePacket):
     async def handle(self, p: Player) -> None:
         if not (m := p.match):
             return
@@ -1137,10 +1132,10 @@ class MatchReady(BanchoPacket, type=ClientPackets.MATCH_READY):
         m.get_slot(p).status = SlotStatus.ready
         m.enqueue_state(lobby=False)
 
-
-@register
-class MatchLock(BanchoPacket, type=ClientPackets.MATCH_LOCK):
-    slot_id: osuTypes.i32
+@register(ClientPackets.MATCH_LOCK)
+class MatchLock(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        self.slot_id = reader.read_i32()
 
     async def handle(self, p: Player) -> None:
         if not (m := p.match):
@@ -1168,16 +1163,16 @@ class MatchLock(BanchoPacket, type=ClientPackets.MATCH_LOCK):
                 # uggggggh i hate trusting the osu! client
                 # man why is it designed like this
                 # TODO: probably going to end up changing
-                ...  # slot.reset()
+                ... #slot.reset()
 
             slot.status = SlotStatus.locked
 
         m.enqueue_state()
 
-
-@register
-class MatchChangeSettings(BanchoPacket, type=ClientPackets.MATCH_CHANGE_SETTINGS):
-    new: osuTypes.match
+@register(ClientPackets.MATCH_CHANGE_SETTINGS)
+class MatchChangeSettings(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        self.new = reader.read_match()
 
     async def handle(self, p: Player) -> None:
         if not (m := p.match):
@@ -1203,7 +1198,7 @@ class MatchChangeSettings(BanchoPacket, type=ClientPackets.MATCH_CHANGE_SETTINGS
                 m.mods &= SPEED_CHANGING_MODS
             else:
                 # host mods -> match mods.
-                host = m.get_host_slot()  # should always exist
+                host = m.get_host_slot() # should always exist
                 # the match keeps any speed-changing mods,
                 # and also takes any mods the host has enabled.
                 m.mods &= SPEED_CHANGING_MODS
@@ -1280,9 +1275,8 @@ class MatchChangeSettings(BanchoPacket, type=ClientPackets.MATCH_CHANGE_SETTINGS
 
         m.enqueue_state()
 
-
-@register
-class MatchStart(BanchoPacket, type=ClientPackets.MATCH_START):
+@register(ClientPackets.MATCH_START)
+class MatchStart(BasePacket):
     async def handle(self, p: Player) -> None:
         if not (m := p.match):
             return
@@ -1293,10 +1287,10 @@ class MatchStart(BanchoPacket, type=ClientPackets.MATCH_START):
 
         m.start()
 
-
-@register
-class MatchScoreUpdate(BanchoPacket, type=ClientPackets.MATCH_SCORE_UPDATE):
-    play_data: osuTypes.raw
+@register(ClientPackets.MATCH_SCORE_UPDATE)
+class MatchScoreUpdate(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        self.play_data = reader.read_raw() # TODO: probably not necessary
 
     async def handle(self, p: Player) -> None:
         # this runs very frequently in matches,
@@ -1313,9 +1307,8 @@ class MatchScoreUpdate(BanchoPacket, type=ClientPackets.MATCH_SCORE_UPDATE):
 
         m.enqueue(bytes(buf), lobby=False)
 
-
-@register
-class MatchComplete(BanchoPacket, type=ClientPackets.MATCH_COMPLETE):
+@register(ClientPackets.MATCH_COMPLETE)
+class MatchComplete(BasePacket):
     async def handle(self, p: Player) -> None:
         if not (m := p.match):
             return
@@ -1347,10 +1340,10 @@ class MatchComplete(BanchoPacket, type=ClientPackets.MATCH_COMPLETE):
             # determine winner, update match points & inform players.
             asyncio.create_task(m.update_matchpoints(was_playing))
 
-
-@register
-class MatchChangeMods(BanchoPacket, type=ClientPackets.MATCH_CHANGE_MODS):
-    mods: osuTypes.i32
+@register(ClientPackets.MATCH_CHANGE_MODS)
+class MatchChangeMods(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        self.mods = reader.read_i32()
 
     async def handle(self, p: Player) -> None:
         if not (m := p.match):
@@ -1373,16 +1366,14 @@ class MatchChangeMods(BanchoPacket, type=ClientPackets.MATCH_CHANGE_MODS):
 
         m.enqueue_state()
 
-
 def is_playing(slot: Slot) -> bool:
     return (
         slot.status == SlotStatus.playing and
         not slot.loaded
     )
 
-
-@register
-class MatchLoadComplete(BanchoPacket, type=ClientPackets.MATCH_LOAD_COMPLETE):
+@register(ClientPackets.MATCH_LOAD_COMPLETE)
+class MatchLoadComplete(BasePacket):
     async def handle(self, p: Player) -> None:
         if not (m := p.match):
             return
@@ -1395,9 +1386,8 @@ class MatchLoadComplete(BanchoPacket, type=ClientPackets.MATCH_LOAD_COMPLETE):
         if not any(map(is_playing, m.slots)):
             m.enqueue(packets.matchAllPlayerLoaded(), lobby=False)
 
-
-@register
-class MatchNoBeatmap(BanchoPacket, type=ClientPackets.MATCH_NO_BEATMAP):
+@register(ClientPackets.MATCH_NO_BEATMAP)
+class MatchNoBeatmap(BasePacket):
     async def handle(self, p: Player) -> None:
         if not (m := p.match):
             return
@@ -1405,9 +1395,8 @@ class MatchNoBeatmap(BanchoPacket, type=ClientPackets.MATCH_NO_BEATMAP):
         m.get_slot(p).status = SlotStatus.no_map
         m.enqueue_state(lobby=False)
 
-
-@register
-class MatchNotReady(BanchoPacket, type=ClientPackets.MATCH_NOT_READY):
+@register(ClientPackets.MATCH_NOT_READY)
+class MatchNotReady(BasePacket):
     async def handle(self, p: Player) -> None:
         if not (m := p.match):
             return
@@ -1415,9 +1404,8 @@ class MatchNotReady(BanchoPacket, type=ClientPackets.MATCH_NOT_READY):
         m.get_slot(p).status = SlotStatus.not_ready
         m.enqueue_state(lobby=False)
 
-
-@register
-class MatchFailed(BanchoPacket, type=ClientPackets.MATCH_FAILED):
+@register(ClientPackets.MATCH_FAILED)
+class MatchFailed(BasePacket):
     async def handle(self, p: Player) -> None:
         if not (m := p.match):
             return
@@ -1426,9 +1414,8 @@ class MatchFailed(BanchoPacket, type=ClientPackets.MATCH_FAILED):
         # they've failed to all other players in the match.
         m.enqueue(packets.matchPlayerFailed(m.get_slot_id(p)), lobby=False)
 
-
-@register
-class MatchHasBeatmap(BanchoPacket, type=ClientPackets.MATCH_HAS_BEATMAP):
+@register(ClientPackets.MATCH_HAS_BEATMAP)
+class MatchHasBeatmap(BasePacket):
     async def handle(self, p: Player) -> None:
         if not (m := p.match):
             return
@@ -1436,9 +1423,8 @@ class MatchHasBeatmap(BanchoPacket, type=ClientPackets.MATCH_HAS_BEATMAP):
         m.get_slot(p).status = SlotStatus.not_ready
         m.enqueue_state(lobby=False)
 
-
-@register
-class MatchSkipRequest(BanchoPacket, type=ClientPackets.MATCH_SKIP_REQUEST):
+@register(ClientPackets.MATCH_SKIP_REQUEST)
+class MatchSkipRequest(BasePacket):
     async def handle(self, p: Player) -> None:
         if not (m := p.match):
             return
@@ -1453,10 +1439,10 @@ class MatchSkipRequest(BanchoPacket, type=ClientPackets.MATCH_SKIP_REQUEST):
         # all users have skipped, enqueue a skip.
         m.enqueue(packets.matchSkip(), lobby=False)
 
-
-@register(restricted=True)
-class ChannelJoin(BanchoPacket, type=ClientPackets.CHANNEL_JOIN):
-    name: osuTypes.string
+@register(ClientPackets.CHANNEL_JOIN, restricted=True)
+class ChannelJoin(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        self.name = reader.read_string()
 
     async def handle(self, p: Player) -> None:
         if self.name in IGNORED_CHANNELS:
@@ -1468,10 +1454,10 @@ class ChannelJoin(BanchoPacket, type=ClientPackets.CHANNEL_JOIN):
             log(f'{p} failed to join {self.name}.', Ansi.LYELLOW)
             return
 
-
-@register
-class MatchTransferHost(BanchoPacket, type=ClientPackets.MATCH_TRANSFER_HOST):
-    slot_id: osuTypes.i32
+@register(ClientPackets.MATCH_TRANSFER_HOST)
+class MatchTransferHost(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        self.slot_id = reader.read_i32()
 
     async def handle(self, p: Player) -> None:
         if not (m := p.match):
@@ -1493,70 +1479,70 @@ class MatchTransferHost(BanchoPacket, type=ClientPackets.MATCH_TRANSFER_HOST):
         m.host.enqueue(packets.matchTransferHost())
         m.enqueue_state()
 
-
-@register
-class TourneyMatchInfoRequest(BanchoPacket, type=ClientPackets.TOURNAMENT_MATCH_INFO_REQUEST):
-    match_id: osuTypes.i32
+@register(ClientPackets.TOURNAMENT_MATCH_INFO_REQUEST)
+class TourneyMatchInfoRequest(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        self.match_id = reader.read_i32()
 
     async def handle(self, p: Player) -> None:
         if not 0 <= self.match_id < 64:
-            return  # invalid match id
+            return # invalid match id
 
         if not p.priv & Privileges.Donator:
-            return  # insufficient privs
+            return # insufficient privs
 
         if not (m := glob.matches[self.match_id]):
-            return  # match not found
+            return # match not found
 
         p.enqueue(packets.updateMatch(m, send_pw=False))
 
-
-@register
-class TourneyMatchJoinChannel(BanchoPacket, type=ClientPackets.TOURNAMENT_JOIN_MATCH_CHANNEL):
-    match_id: osuTypes.i32
+@register(ClientPackets.TOURNAMENT_JOIN_MATCH_CHANNEL)
+class TourneyMatchJoinChannel(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        self.match_id = reader.read_i32()
 
     async def handle(self, p: Player) -> None:
         if not 0 <= self.match_id < 64:
-            return  # invalid match id
+            return # invalid match id
 
         if not p.priv & Privileges.Donator:
-            return  # insufficient privs
+            return # insufficient privs
 
         if not (m := glob.matches[self.match_id]):
-            return  # match not found
+            return # match not found
 
         for s in m.slots:
             if s.player is not None:
                 if p.id == s.player.id:
-                    return  # playing in the match
+                    return # playing in the match
 
         # attempt to join match chan
         if p.join_channel(m.chat):
             m.tourney_clients.add(p.id)
 
-
-@register
-class TourneyMatchLeaveChannel(BanchoPacket, type=ClientPackets.TOURNAMENT_LEAVE_MATCH_CHANNEL):
-    match_id: osuTypes.i32
+@register(ClientPackets.TOURNAMENT_LEAVE_MATCH_CHANNEL)
+class TourneyMatchLeaveChannel(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        self.match_id = reader.read_i32()
 
     async def handle(self, p: Player) -> None:
         if not 0 <= self.match_id < 64:
-            return  # invalid match id
+            return # invalid match id
 
         if not p.priv & Privileges.Donator:
-            return  # insufficient privs
+            return # insufficient privs
 
         if not (m := glob.matches[self.match_id]):
-            return  # match not found
+            return # match not found
 
         # attempt to join match chan
         p.leave_channel(m.chat)
         m.tourney_clients.remove(p.id)
 
-
-@register
-class FriendAdd(BanchoPacket, type=ClientPackets.FRIEND_ADD):
-    user_id: osuTypes.i32
+@register(ClientPackets.FRIEND_ADD)
+class FriendAdd(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        self.user_id = reader.read_i32()
 
     async def handle(self, p: Player) -> None:
         if not (t := glob.players.get(id=self.user_id)):
@@ -1572,10 +1558,10 @@ class FriendAdd(BanchoPacket, type=ClientPackets.FRIEND_ADD):
         p.update_latest_activity()
         await p.add_friend(t)
 
-
-@register
-class FriendRemove(BanchoPacket, type=ClientPackets.FRIEND_REMOVE):
-    user_id: osuTypes.i32
+@register(ClientPackets.FRIEND_REMOVE)
+class FriendRemove(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        self.user_id = reader.read_i32()
 
     async def handle(self, p: Player) -> None:
         if not (t := glob.players.get(id=self.user_id)):
@@ -1588,9 +1574,8 @@ class FriendRemove(BanchoPacket, type=ClientPackets.FRIEND_REMOVE):
         p.update_latest_activity()
         await p.remove_friend(t)
 
-
-@register
-class MatchChangeTeam(BanchoPacket, type=ClientPackets.MATCH_CHANGE_TEAM):
+@register(ClientPackets.MATCH_CHANGE_TEAM)
+class MatchChangeTeam(BasePacket):
     async def handle(self, p: Player) -> None:
         if not (m := p.match):
             return
@@ -1604,10 +1589,10 @@ class MatchChangeTeam(BanchoPacket, type=ClientPackets.MATCH_CHANGE_TEAM):
 
         m.enqueue_state(lobby=False)
 
-
-@register(restricted=True)
-class ChannelPart(BanchoPacket, type=ClientPackets.CHANNEL_PART):
-    name: osuTypes.string
+@register(ClientPackets.CHANNEL_PART, restricted=True)
+class ChannelPart(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        self.name = reader.read_string()
 
     async def handle(self, p: Player) -> None:
         if self.name in IGNORED_CHANNELS:
@@ -1626,10 +1611,10 @@ class ChannelPart(BanchoPacket, type=ClientPackets.CHANNEL_PART):
         # leave the chan server-side.
         p.leave_channel(c)
 
-
-@register(restricted=True)
-class ReceiveUpdates(BanchoPacket, type=ClientPackets.RECEIVE_UPDATES):
-    value: osuTypes.i32
+@register(ClientPackets.RECEIVE_UPDATES, restricted=True)
+class ReceiveUpdates(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        self.value = reader.read_i32()
 
     async def handle(self, p: Player) -> None:
         if not 0 <= self.value < 3:
@@ -1638,31 +1623,31 @@ class ReceiveUpdates(BanchoPacket, type=ClientPackets.RECEIVE_UPDATES):
 
         p.pres_filter = PresenceFilter(self.value)
 
-
-@register
-class SetAwayMessage(BanchoPacket, type=ClientPackets.SET_AWAY_MESSAGE):
-    msg: osuTypes.message
+@register(ClientPackets.SET_AWAY_MESSAGE)
+class SetAwayMessage(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        self.msg = reader.read_message()
 
     async def handle(self, p: Player) -> None:
-        p.away_msg = self.msg.msg
+        p.away_msg = self.msg.text
 
-
-@register(restricted=True)
-class StatsRequest(BanchoPacket, type=ClientPackets.USER_STATS_REQUEST):
-    user_ids: osuTypes.i32_list
+@register(ClientPackets.USER_STATS_REQUEST, restricted=True)
+class StatsRequest(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        self.user_ids = reader.read_i32_list_i16l()
 
     async def handle(self, p: Player) -> None:
         unrestrcted_ids = [p.id for p in glob.players.unrestricted]
-        def is_online(o): return o in unrestrcted_ids and o != p.id
+        is_online = lambda o: o in unrestrcted_ids and o != p.id
 
         for online in filter(is_online, self.user_ids):
             if t := glob.players.get(id=online):
                 p.enqueue(packets.userStats(t))
 
-
-@register
-class MatchInvite(BanchoPacket, type=ClientPackets.MATCH_INVITE):
-    user_id: osuTypes.i32
+@register(ClientPackets.MATCH_INVITE)
+class MatchInvite(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        self.user_id = reader.read_i32()
 
     async def handle(self, p: Player) -> None:
         if not p.match:
@@ -1681,10 +1666,10 @@ class MatchInvite(BanchoPacket, type=ClientPackets.MATCH_INVITE):
 
         log(f'{p} invited {t} to their match.')
 
-
-@register
-class MatchChangePassword(BanchoPacket, type=ClientPackets.MATCH_CHANGE_PASSWORD):
-    match: osuTypes.match
+@register(ClientPackets.MATCH_CHANGE_PASSWORD)
+class MatchChangePassword(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        self.match = reader.read_match()
 
     async def handle(self, p: Player) -> None:
         if not (m := p.match):
@@ -1697,20 +1682,21 @@ class MatchChangePassword(BanchoPacket, type=ClientPackets.MATCH_CHANGE_PASSWORD
         m.passwd = self.match.passwd
         m.enqueue_state()
 
-
-@register
-class UserPresenceRequest(BanchoPacket, type=ClientPackets.USER_PRESENCE_REQUEST):
-    user_ids: osuTypes.i32_list
+@register(ClientPackets.USER_PRESENCE_REQUEST)
+class UserPresenceRequest(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        self.user_ids = reader.read_i32_list_i16l()
 
     async def handle(self, p: Player) -> None:
         for pid in self.user_ids:
             if t := glob.players.get(id=pid):
                 p.enqueue(packets.userPresence(t))
 
-
-@register
-class UserPresenceRequestAll(BanchoPacket, type=ClientPackets.USER_PRESENCE_REQUEST_ALL):
-    ingame_time: osuTypes.i32 # TODO: should probably ratelimit with this (300k s)
+@register(ClientPackets.USER_PRESENCE_REQUEST_ALL)
+class UserPresenceRequestAll(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        # TODO: should probably ratelimit with this (300k s)
+        self.ingame_time = reader.read_i32()
 
     async def handle(self, p: Player) -> None:
         # NOTE: this packet is only used when there
@@ -1718,10 +1704,10 @@ class UserPresenceRequestAll(BanchoPacket, type=ClientPackets.USER_PRESENCE_REQU
 
         p.enqueue(b''.join(map(packets.userPresence, glob.players.unrestricted)))
 
-
-@register
-class ToggleBlockingDMs(BanchoPacket, type=ClientPackets.TOGGLE_BLOCK_NON_FRIEND_DMS):
-    value: osuTypes.i32
+@register(ClientPackets.TOGGLE_BLOCK_NON_FRIEND_DMS)
+class ToggleBlockingDMs(BasePacket):
+    def __init__(self, reader: BanchoPacketReader) -> None:
+        self.value = reader.read_i32()
 
     async def handle(self, p: Player) -> None:
         p.pm_private = self.value == 1

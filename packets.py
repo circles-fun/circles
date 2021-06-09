@@ -5,16 +5,15 @@
 # i'm not sure how well it works with an async setup
 # like this, but we'll see B) massive speed gains tho
 
-import random
 import struct
-from collections import namedtuple
-from dataclasses import dataclass
+import random
+from abc import ABC
 from enum import IntEnum
 from enum import unique
 from functools import cache
 from functools import lru_cache
 from typing import Iterator
-from typing import Optional
+from typing import NamedTuple
 from typing import Sequence
 from typing import TYPE_CHECKING
 from typing import Union
@@ -23,10 +22,10 @@ from constants.gamemodes import GameMode
 from constants.mods import Mods
 from constants.types import osuTypes
 from objects import glob
-# from objects.beatmap import BeatmapInfo
+#from objects.beatmap import BeatmapInfo
 from objects.match import Match
-from objects.match import MatchTeamTypes
 from objects.match import MatchTeams
+from objects.match import MatchTeamTypes
 from objects.match import MatchWinConditions
 from objects.match import ScoreFrame
 from objects.match import SlotStatus
@@ -161,26 +160,16 @@ class ServerPackets(IntEnum):
     def __repr__(self) -> str:
         return f'<{self.name} ({self.value})>'
 
-class BanchoPacket:
-    """Abstract base class for bancho packets."""
-    type: Optional[ClientPackets] = None
-    args: Optional[tuple[osuTypes]] = None
-    length: Optional[int] = None
+class Message(NamedTuple):
+    sender: str
+    text: str
+    recipient: str
+    sender_id: int
 
-    def __init_subclass__(cls, type: ClientPackets) -> None:
-        super().__init_subclass__()
-
-        cls.type = type
-        cls.args = cls.__annotations__
-
-        for x in ('type', 'args', 'length'):
-            if x in cls.args:
-                del cls.args[x]
-
-    async def handle(self, p: 'Player') -> None: ...
-
-Message = namedtuple('Message', ['sender', 'msg', 'recipient', 'sender_id'])
-Channel = namedtuple('Channel', ['name', 'topic', 'players'])
+class Channel(NamedTuple):
+    name: str
+    topic: str
+    players: int
 
 class ReplayAction(IntEnum):
     Standard = 0
@@ -193,16 +182,14 @@ class ReplayAction(IntEnum):
     SongSelect = 7
     WatchingOther = 8
 
-@dataclass
-class ReplayFrame:
+class ReplayFrame(NamedTuple):
     button_state: int
     taiko_byte: int # pre-taiko support (<=2008)
     x: float
     y: float
     time: int
 
-@dataclass
-class ReplayFrameBundle:
+class ReplayFrameBundle(NamedTuple):
     replay_frames: list[ReplayFrame]
     score_frame: ScoreFrame
     action: ReplayAction
@@ -211,20 +198,25 @@ class ReplayFrameBundle:
 
     raw_data: memoryview # readonly
 
+class BasePacket(ABC):
+    def __init__(self, reader: 'BanchoPacketReader') -> None: ...
+    async def handle(self, p: 'Player') -> None: ...
+
 class BanchoPacketReader:
     """\
-    A class for reading bancho packets sequentially.
+    A class for reading bancho packets
+    from the osu! client's request body.
 
     Attributes
     -----------
-    view: `memoryview`
-        A low-level view to the underlying buffer passed in.
+    body_view: `memoryview`
+        A readonly view of the request's body.
 
-    packet_map: `dict[Packets (packet id), BanchoPacket (handler)]`
-        The map of packets the packet reader will handle.
+    packet_map: `dict[ClientPackets, BasePacket]`
+        The map of registered packets the reader may handle.
 
-    _current: Optional[`BanchoPacket`]
-        The current packet being read by the reader, if any.
+    current_length: int
+        The length in bytes of the packet currently being handled.
 
     Intended Usage:
     ```
@@ -234,187 +226,136 @@ class BanchoPacketReader:
           await packet.handle()
     ```
     """
-    __slots__ = ('view', 'packet_map', '_current', '_readers')
-    def __init__(self, data: bytes, packet_map: dict) -> None:
-        self.view = memoryview(data).toreadonly()
+    __slots__ = ('body_view', 'packet_map', 'current_len')
+
+    def __init__(self, body_view: memoryview, packet_map: dict) -> None:
+        self.body_view = body_view # readonly
         self.packet_map = packet_map
 
-        self._current: Optional[BanchoPacket] = None
+        self.current_len = 0 # last read packet's length
 
-        self._readers = {
-            # integral types
-            osuTypes.i8: self.read_i8,
-            osuTypes.u8: self.read_u8,
-            osuTypes.i16: self.read_i16,
-            osuTypes.u16: self.read_u16,
-            osuTypes.i32: self.read_i32,
-            osuTypes.u32: self.read_u32,
-            osuTypes.i64: self.read_i64,
-            osuTypes.u64: self.read_u64,
-
-            # floating point
-            #osuTypes.f16: self.read_f16, # futureproofing
-            osuTypes.f32: self.read_f32,
-            osuTypes.f64: self.read_f64,
-
-            # special normal types
-            osuTypes.string: self.read_string,
-            osuTypes.i32_list: self.read_i32_list_i16l,
-            osuTypes.i32_list4l: self.read_i32_list_i32l,
-
-            # osu! types
-            osuTypes.message: self.read_message,
-            osuTypes.channel: self.read_channel,
-            osuTypes.match: self.read_match,
-            osuTypes.scoreframe: self.read_scoreframe,
-            osuTypes.replayFrameBundle: self.read_replayframe_bundle,
-        }
-
-    def __iter__(self) -> Iterator[BanchoPacket]:
+    def __iter__(self) -> Iterator[BasePacket]:
         return self
 
     def __next__(self):
         # do not break until we've read the
         # header of a packet we can handle.
-        while True:
-            p_type, p_len = self.read_header()
+        while self.body_view: # len(self.view) < 7?
+            p_type, p_len = self._read_header()
 
             if p_type not in self.packet_map:
                 # packet type not handled, remove
                 # from internal buffer and continue.
                 if p_len != 0:
-                    self.view = self.view[p_len:]
+                    self.body_view = self.body_view[p_len:]
             else:
                 # we can handle this one.
                 break
-
-        # we have a packet handler for this.
-        self._current = self.packet_map[p_type]()
-        self._current.length = p_len
-
-        if self._current.args:
-            self.read_arguments()
-
-        return self._current
-
-    def read_arguments(self) -> None:
-        """Read all arguments from the internal buffer."""
-        for arg_name, arg_type in self._current.args.items():
-            # read value from buffer
-            val: object = None
-
-            if arg_type in self._readers:
-                val = self._readers[arg_type]()
-            elif arg_type == osuTypes.raw:
-                # return all packet data raw.
-                val = self.view[:self._current.length]
-                self.view = self.view[self._current.length:]
-            else:
-                # should never happen?
-                raise ValueError
-
-            # add to our packet object
-            setattr(self._current, arg_name, val)
-
-    def read_header(self) -> tuple[int, int]:
-        """Read the header of an osu! packet (id & length)."""
-        if len(self.view) < 7:
-            # not even minimal data
-            # remaining in buffer.
+        else:
             raise StopIteration
 
+        # we have a packet handler for this.
+        packet_cls = self.packet_map[p_type]
+        self.current_len = p_len
+
+        return packet_cls(self)
+
+    def _read_header(self) -> tuple[int, int]:
+        """Read the header of an osu! packet (id & length)."""
         # read type & length from the body
-        data = struct.unpack('<HxI', self.view[:7])
-        self.view = self.view[7:]
+        data = struct.unpack('<HxI', self.body_view[:7])
+        self.body_view = self.body_view[7:]
         return ClientPackets(data[0]), data[1]
 
-    def ignore_packet(self) -> None:
-        """Skip the current packet in the buffer."""
-        self.view = self.view[self._current.length:]
-        self._current = None
+    """ public API (exposed for packet handler's __init__ methods) """
 
-    """ type readers (functions to read different types from buf) """
+    def read_raw(self) -> memoryview:
+        val = self.body_view[:self.current_len]
+        self.body_view = self.body_view[self.current_len:]
+        return val
 
-    """ basic integral types (signed & unsigned) """
+    # integral types
+
     def read_i8(self) -> int:
-        val = self.view[0]
-        self.view = self.view[1:]
+        val = self.body_view[0]
+        self.body_view = self.body_view[1:]
         return val - 256 if val > 127 else val
 
     def read_u8(self) -> int:
-        val = self.view[0]
-        self.view = self.view[1:]
+        val = self.body_view[0]
+        self.body_view = self.body_view[1:]
         return val
 
     def read_i16(self) -> int:
-        val = int.from_bytes(self.view[:2], 'little', signed=True)
-        self.view = self.view[2:]
+        val = int.from_bytes(self.body_view[:2], 'little', signed=True)
+        self.body_view = self.body_view[2:]
         return val
 
     def read_u16(self) -> int:
-        val = int.from_bytes(self.view[:2], 'little', signed=False)
-        self.view = self.view[2:]
+        val = int.from_bytes(self.body_view[:2], 'little', signed=False)
+        self.body_view = self.body_view[2:]
         return val
 
     def read_i32(self) -> int:
-        val = int.from_bytes(self.view[:4], 'little', signed=True)
-        self.view = self.view[4:]
+        val = int.from_bytes(self.body_view[:4], 'little', signed=True)
+        self.body_view = self.body_view[4:]
         return val
 
     def read_u32(self) -> int:
-        val = int.from_bytes(self.view[:4], 'little', signed=False)
-        self.view = self.view[4:]
+        val = int.from_bytes(self.body_view[:4], 'little', signed=False)
+        self.body_view = self.body_view[4:]
         return val
 
     def read_i64(self) -> int:
-        val = int.from_bytes(self.view[:8], 'little', signed=True)
-        self.view = self.view[8:]
+        val = int.from_bytes(self.body_view[:8], 'little', signed=True)
+        self.body_view = self.body_view[8:]
         return val
 
     def read_u64(self) -> int:
-        val = int.from_bytes(self.view[:8], 'little', signed=False)
-        self.view = self.view[8:]
+        val = int.from_bytes(self.body_view[:8], 'little', signed=False)
+        self.body_view = self.body_view[8:]
         return val
 
-    """ floating point types """
+    # floating-point types
+
     def read_f16(self) -> float:
-        val, = struct.unpack_from('<e', self.view[:2])
-        self.view = self.view[2:]
+        val, = struct.unpack_from('<e', self.body_view[:2])
+        self.body_view = self.body_view[2:]
         return val
 
     def read_f32(self) -> float:
-        val, = struct.unpack_from('<f', self.view[:4])
-        self.view = self.view[4:]
+        val, = struct.unpack_from('<f', self.body_view[:4])
+        self.body_view = self.body_view[4:]
         return val
 
     def read_f64(self) -> float:
-        val, = struct.unpack_from('<d', self.view[:8])
-        self.view = self.view[8:]
+        val, = struct.unpack_from('<d', self.body_view[:8])
+        self.body_view = self.body_view[8:]
         return val
 
-    """ integral list types """
+    # complex types
+
     # XXX: some osu! packets use i16 for
     # array length, while others use i32
     def read_i32_list_i16l(self) -> tuple[int]:
-        length = int.from_bytes(self.view[:2], 'little')
-        self.view = self.view[2:]
+        length = int.from_bytes(self.body_view[:2], 'little')
+        self.body_view = self.body_view[2:]
 
-        val = struct.unpack(f'<{"I" * length}', self.view[:length * 4])
-        self.view = self.view[length * 4:]
+        val = struct.unpack(f'<{"I" * length}', self.body_view[:length * 4])
+        self.body_view = self.body_view[length * 4:]
         return val
 
     def read_i32_list_i32l(self) -> tuple[int]:
-        length = int.from_bytes(self.view[:4], 'little')
-        self.view = self.view[4:]
+        length = int.from_bytes(self.body_view[:4], 'little')
+        self.body_view = self.body_view[4:]
 
-        val = struct.unpack(f'<{"I" * length}', self.view[:length * 4])
-        self.view = self.view[length * 4:]
+        val = struct.unpack(f'<{"I" * length}', self.body_view[:length * 4])
+        self.body_view = self.body_view[length * 4:]
         return val
 
-    """ string type (variable length encoding w/ uleb128) """
     def read_string(self) -> str:
-        exists = self.view[0] == 0x0b
-        self.view = self.view[1:]
+        exists = self.body_view[0] == 0x0b
+        self.body_view = self.body_view[1:]
 
         if not exists:
             # no string sent.
@@ -424,8 +365,8 @@ class BanchoPacketReader:
         length = shift = 0
 
         while True:
-            b = self.view[0]
-            self.view = self.view[1:]
+            b = self.body_view[0]
+            self.body_view = self.body_view[1:]
 
             length |= (b & 0b01111111) << shift
             if (b & 0b10000000) == 0:
@@ -433,22 +374,22 @@ class BanchoPacketReader:
 
             shift += 7
 
-        val = self.view[:length].tobytes().decode() # copy
-        self.view = self.view[length:]
+        val = self.body_view[:length].tobytes().decode() # copy
+        self.body_view = self.body_view[length:]
         return val
 
-    """ custom osu! types """
+    # custom osu! types
 
-    def read_message(self) -> Message: # namedtuple
+    def read_message(self) -> Message:
         """Read an osu! message from the internal buffer."""
         return Message(
             sender=self.read_string(),
-            msg=self.read_string(),
+            text=self.read_string(),
             recipient=self.read_string(),
             sender_id=self.read_i32()
         )
 
-    def read_channel(self) -> Channel: # namedtuple
+    def read_channel(self) -> Channel:
         """Read an osu! channel from the internal buffer."""
         return Channel(
             name=self.read_string(),
@@ -461,7 +402,7 @@ class BanchoPacketReader:
         m = Match()
 
         # ignore match id (i16) and inprogress (i8).
-        self.view = self.view[3:]
+        self.body_view = self.body_view[3:]
 
         self.read_i8() # powerplay unused
 
@@ -483,7 +424,7 @@ class BanchoPacketReader:
         for slot in m.slots:
             if slot.status & SlotStatus.has_player:
                 # we don't need this, ignore it.
-                self.view = self.view[4:]
+                self.body_view = self.body_view[4:]
 
         host_id = self.read_i32()
         m.host = glob.players.get(id=host_id)
@@ -505,8 +446,8 @@ class BanchoPacketReader:
         return m
 
     def read_scoreframe(self) -> ScoreFrame:
-        sf = ScoreFrame(*SCOREFRAME_FMT.unpack_from(self.view[:29]))
-        self.view = self.view[29:]
+        sf = ScoreFrame(*SCOREFRAME_FMT.unpack_from(self.body_view[:29]))
+        self.body_view = self.body_view[29:]
 
         if sf.score_v2:
             sf.combo_portion = self.read_f64()
@@ -525,7 +466,7 @@ class BanchoPacketReader:
 
     def read_replayframe_bundle(self) -> ReplayFrameBundle:
         # save raw format to distribute to the other clients
-        raw_data = self.view[:self._current.length]
+        raw_data = self.body_view[:self.current_len]
 
         extra = self.read_i32() # bancho proto >= 18
         framecount = self.read_u16()
@@ -538,6 +479,8 @@ class BanchoPacketReader:
             frames, scoreframe, action,
             extra, sequence, raw_data
         )
+
+# write functions
 
 def write_uleb128(num: int) -> Union[bytes, bytearray]:
     """ Write `num` into an unsigned LEB128. """
@@ -611,16 +554,19 @@ def write_channel(name: str, topic: str,
 
 def write_match(m: Match, send_pw: bool = True) -> bytearray:
     """ Write `m` into bytes (osu! match). """
-    if m.passwd:
-        passwd = (write_string(m.passwd) if send_pw else
-                  b'\x0b\x00')
-    else:
-        passwd = b'\x00'
-
     # 0 is for match type
     ret = bytearray(struct.pack('<HbbI', m.id, m.in_progress, 0, m.mods))
     ret += write_string(m.name)
-    ret += passwd
+
+    # osu expects \x0b\x00 if there's a password but it's
+    # not being sent, and \x00 if there's no password.
+    if m.passwd:
+        if send_pw:
+            ret += write_string(m.passwd)
+        else:
+            ret += b'\x0b\x00'
+    else:
+        ret += b'\x00'
 
     ret += write_string(m.map_name)
     ret += m.map_id.to_bytes(4, 'little', signed=True)
@@ -1109,7 +1055,7 @@ def restartServer(ms: int) -> bytes:
 
 # packet id: 88
 def matchInvite(p: 'Player', t_name: str) -> bytes:
-    msg = f'Come join my lobby: {p.match.embed}.'
+    msg = f'Come join my game: {p.match.embed}.'
     return write(
         ServerPackets.MATCH_INVITE,
         ((p.name, msg, t_name, p.id), osuTypes.message)
@@ -1142,7 +1088,7 @@ def userSilenced(pid: int) -> bytes:
         (pid, osuTypes.i32)
     )
 
-""" not sure why 95 & 96 exist? unused incircles"""
+""" not sure why 95 & 96 exist? unused in gulag """
 
 # packet id: 95
 @cache
