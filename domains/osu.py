@@ -407,7 +407,7 @@ DIRECT_SET_INFO_FMTSTR = (
 
 DIRECT_MAP_INFO_FMTSTR = (
     '[{DifficultyRating:.2f}⭐] {DiffName} '
-    '{{CS{CS} OD{OD} AR{AR} HP{HP}}}@{Mode}'
+    '{{cs: {CS} / od: {OD} / ar: {AR} / hp: {HP}}}@{Mode}'
 )
 
 @domain.route('/web/osu-search.php')
@@ -427,7 +427,7 @@ async def osuSearchHandler(p: 'Player', conn: Connection) -> Optional[bytes]:
 
     params = {
         'amount': 100,
-        'offset': conn.args['p']
+        'offset': int(conn.args['p']) * 100
     }
 
     # eventually we could try supporting these,
@@ -451,9 +451,12 @@ async def osuSearchHandler(p: 'Player', conn: Connection) -> Optional[bytes]:
         if USING_CHIMU: # error handling varies
             if resp.status == 404:
                 return b'0' # no maps found
+            elif resp.status == 502: # bad gateway, happens a lot with chimu :/
+                return b'-1\nFailed to retrieve data from the beatmap mirror.'
             elif resp.status != 200:
                 stacktrace = utils.misc.get_appropriate_stacktrace()
                 await utils.misc.log_strange_occurrence(stacktrace)
+                return b'-1\nFailed to retrieve data from the beatmap mirror.'
         else: # cheesegull
             if resp.status != 200:
                 return b'-1\nFailed to retrieve data from the beatmap mirror.'
@@ -1117,7 +1120,7 @@ async def getScores(
 
         if (
             has_set_id and
-            map_set_id not in glob.cache['beatmapsets']
+            map_set_id not in glob.cache['beatmapset']
         ):
             # set not cached, it doesn't exist
             glob.cache['unsubmitted'].add(map_md5)
@@ -1138,7 +1141,7 @@ async def getScores(
             # from our api requests.
             if has_set_id:
                 # we can look it up in the specific set from cache
-                bmap_list = glob.cache['beatmapsets'][map_set_id].maps
+                bmap_list = glob.cache['beatmapset'][map_set_id].maps
             else:
                 # look it up in our cache the painfully slow way
                 bmap_list = glob.cache['beatmap'].values()

@@ -668,9 +668,9 @@ class Player:
     def join_channel(self, c: Channel) -> bool:
         """Attempt to add `self` to `c`."""
         if (
-            self in c or  # player already in channel
-            self.priv & c.read_priv != c.read_priv or  # no read privs
-            c._name == '#lobby' and not self.in_lobby  # not in mp lobby
+            self in c or # player already in channel
+            not c.can_read(self.priv) or # no read privs
+            c._name == '#lobby' and not self.in_lobby # not in mp lobby
         ):
             return False
 
@@ -689,8 +689,8 @@ class Player:
         else:
             # normal channel, send to all players who
             # have access to see the channel's usercount.
-            for p in glob.players[1:]:
-                if p.priv & c.read_priv != c.read_priv:
+            for p in glob.players:
+                if c.can_read(p.priv):
                     p.enqueue(chan_info_packet)
 
         if glob.app.debug:
@@ -721,7 +721,7 @@ class Player:
             # normal channel, send to all players who
             # have access to see the channel's usercount.
             for p in glob.players:
-                if p.priv & c.read_priv != c.read_priv:
+                if c.can_read(p.priv):
                     p.enqueue(chan_info_packet)
 
         if glob.app.debug:
