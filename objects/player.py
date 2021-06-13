@@ -679,7 +679,9 @@ class Player:
 
         self.enqueue(packets.channelJoin(c.name))
 
-        chan_info_packet = packets.channelInfo(c.name, c.topic, len(c.players))
+        chan_info_packet = packets.channelInfo(
+            c.name, c.topic, len(c.players)
+        )
 
         if c.instance:
             # instanced channel, only send the players
@@ -710,7 +712,9 @@ class Player:
         if kick:
             self.enqueue(packets.channelKick(c.name))
 
-        chan_info_packet = packets.channelInfo(c.name, c.topic, len(c.players))
+        chan_info_packet = packets.channelInfo(
+            c.name, c.topic, len(c.players)
+        )
 
         if c.instance:
             # instanced channel, only send the players

@@ -222,6 +222,10 @@ class SendMessage(BasePacket):
             log(f'{p} wrote to non-existent {recipient}.', Ansi.LYELLOW)
             return
 
+        if p not in t_chan:
+            log(f'{p} wrote to {recipient} without being in it.')
+            return
+
         if not t_chan.can_write(p.priv):
             log(f'{p} wrote to {recipient} with insufficient privileges.')
             return
@@ -601,10 +605,8 @@ async def login(body_view: memoryview, ip: str, db_cursor: aiomysql.DictCursor) 
     if not glob.has_internet:
         data += OFFLINE_NOTIFICATION
 
-    # send all channel related info to the client,
-    # and update channel playercounts for all users.
-    # TODO: refactor stuff like Player.join_channel
-    # to be usable here without being disgusting?
+    # send all appropriate channel info to our player.
+    # the osu! client will attempt to join the channels.
     for c in glob.channels:
         if (
             not c.auto_join or
@@ -612,9 +614,6 @@ async def login(body_view: memoryview, ip: str, db_cursor: aiomysql.DictCursor) 
             c._name == '#lobby' # (can't be in mp lobby @ login)
         ):
             continue
-
-        c.append(p)
-        p.channels.append(c)
 
         # send chan info to all players who can see
         # the channel (to update their playercounts)
@@ -627,8 +626,6 @@ async def login(body_view: memoryview, ip: str, db_cursor: aiomysql.DictCursor) 
         for o in glob.players:
             if c.can_read(o.priv):
                 o.enqueue(chan_info_packet)
-
-        data += packets.channelJoin(c._name)
 
     # tells osu! to reorder channels based on config.
     data += packets.channelInfoEnd()
