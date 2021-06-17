@@ -668,9 +668,9 @@ class Player:
     def join_channel(self, c: Channel) -> bool:
         """Attempt to add `self` to `c`."""
         if (
-            self in c or # player already in channel
-            not c.can_read(self.priv) or # no read privs
-            c._name == '#lobby' and not self.in_lobby # not in mp lobby
+            self in c or  # player already in channel
+            not c.can_read(self.priv) or  # no read privs
+            c._name == '#lobby' and not self.in_lobby  # not in mp lobby
         ):
             return False
 

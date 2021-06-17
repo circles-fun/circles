@@ -25,6 +25,7 @@ SQL_UPDATES_FILE = Path.cwd() / 'ext/updates.sql'
 
 VERSION_RGX = re.compile(r'^# v(?P<ver>\d+\.\d+\.\d+)$')
 
+
 class Updater:
     def __init__(self, version: Version) -> None:
         self.version = version

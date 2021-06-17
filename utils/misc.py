@@ -83,6 +83,7 @@ def make_safe_name(name: str) -> str:
     """Return a name safe for usage in sql."""
     return name.lower().replace(' ', '_')
 
+
 async def fetch_bot_name(db_cursor: aiomysql.DictCursor) -> str:
     """Fetch the bot's name from the database, if available."""
     await db_cursor.execute(
@@ -97,6 +98,7 @@ async def fetch_bot_name(db_cursor: aiomysql.DictCursor) -> str:
         return 'BanchoBot'
 
     return (await db_cursor.fetchone())['name']
+
 
 def _download_achievement_images_mirror(achievements_path: Path) -> bool:
     """Download all used achievement images (using mirror's zip)."""

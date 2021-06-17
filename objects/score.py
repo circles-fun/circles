@@ -169,7 +169,7 @@ class Score:
 
         self.prev_best: Optional[Score] = None
 
-    def __repr__(self) -> str: # maybe shouldn't be so long?
+    def __repr__(self) -> str:  # maybe shouldn't be so long?
         return (f'<{self.acc:.2f}% {self.max_combo}x {self.nmiss}M '
                 f'#{self.rank} on {self.bmap.full} for {self.pp:,.2f}pp>')
 
