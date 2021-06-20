@@ -57,8 +57,6 @@ BEATMAPS_PATH = Path.cwd() / '.data/osu'
 SCREENSHOTS_PATH = Path.cwd() / '.data/ss'
 AVATARS_PATH = Path.cwd() / '.data/avatars'
 
-IGNORED_BEATMAP_CHARS = dict.fromkeys(map(ord, r':\/*<>?"|'), None)
-
 """ Some helper decorators (used for /web/ connections) """
 
 def _required_args(req_args: set[str], argset: str) -> Callable:
@@ -242,23 +240,13 @@ async def osuGetBeatmapInfo(
 
     ret = []
 
-    for idx, fname in enumerate(data['Filenames']):
-        # Attempt to regex pattern match the filename.
-        # If there is no match, simply ignore this map.
-        # XXX: Sometimes a map will be requested without a
-        # diff name, not really sure how to handle this? lol
-        if not (r_match := regexes.mapfile.match(fname)):
-            continue
-
+    for idx, map_filename in enumerate(data['Filenames']):
         # try getting the map from sql
         await db_cursor.execute(
             'SELECT id, set_id, status, md5 '
-            'FROM maps WHERE artist = %s AND '
-            'title = %s AND creator = %s AND '
-            'version = %s', [
-                r_match['artist'], r_match['title'],
-                r_match['creator'], r_match['version']
-            ]
+            'FROM maps '
+            'WHERE filename = %s',
+            [map_filename]
         )
 
         if db_cursor.rowcount == 0:
@@ -1128,50 +1116,32 @@ async def getScores(
 
         map_filename = unquote(conn.args['f'].replace('+', ' '))
 
-        if r_match := regexes.mapfile.match(map_filename):
-            # filename syntax is correct. gulag's beatmap system caches
-            # the whole set when you call one of the higher level
-            # functions lke `from_md5` like we just did, so we can
-            # tell if the map needs an update by seeing if a matching
-            # filename is present in our cache.
-
-            # TODO: think of a clean way to get the
-            # set id back here in all cases, since
-            # we would have got it in the background
-            # from our api requests.
-            if has_set_id:
-                # we can look it up in the specific set from cache
-                bmap_list = glob.cache['beatmapset'][map_set_id].maps
-            else:
-                # look it up in our cache the painfully slow way
-                bmap_list = glob.cache['beatmap'].values()
-
-            for bmap in bmap_list:
-                if (
-                    bmap.creator == r_match['creator'] and
-                    bmap.artist == r_match['artist'] and
-                    bmap.title.translate(IGNORED_BEATMAP_CHARS) == r_match['title'] and
-                    bmap.version.translate(IGNORED_BEATMAP_CHARS) == r_match['version']
-                ):
+        if has_set_id:
+            # we can look it up in the specific set from cache
+            for bmap in glob.cache['beatmapset'][map_set_id].maps:
+                if map_filename == bmap.filename:
                     map_exists = True
                     break
             else:
                 map_exists = False
-
-            if map_exists:
-                # map can be updated.
-                glob.cache['needs_update'].add(map_md5)
-                return b'1|false'
-            else:
-                # map is unsubmitted.
-                # add this map to the unsubmitted cache, so
-                # that we don't have to make this request again.
-                glob.cache['unsubmitted'].add(map_md5)
-                return b'-1|false'
         else:
-            # if the mapfile has an invalid syntax, it's probably
-            # some cursed abomination made by the user themselves.
-            log(f'{p} sent invalid map filename: {map_filename}.', Ansi.LYELLOW)
+            # we can't find it on the osu!api by md5,
+            # and we don't have the set id, so we must
+            # look it up in sql from the filename.
+            map_exists = await glob.db.fetch(
+                'SELECT 1 FROM maps '
+                'WHERE filename = %s',
+                [map_filename]
+            ) is not None
+
+        if map_exists:
+            # map can be updated.
+            glob.cache['needs_update'].add(map_md5)
+            return b'1|false'
+        else:
+            # map is unsubmitted.
+            # add this map to the unsubmitted cache, so
+            # that we don't have to make this request again.
             glob.cache['unsubmitted'].add(map_md5)
             return b'-1|false'
 
@@ -2324,17 +2294,13 @@ async def get_updated_beatmap(conn: Connection) -> Optional[bytes]:
     """Send the latest .osu file the server has for a given map."""
     if conn.headers['Host'] == 'osu.ppy.sh':
         # server switcher, use old method
-        if not (r_match := regexes.mapfile.match(unquote(conn.path[10:]))):
-            log(f'Requested invalid map update {conn.path}.', Ansi.LRED)
-            return (400, b'Invalid map file syntax.')
+        map_filename = unquote(conn.path[10:])
 
         if not (res := await glob.db.fetch(
-            'SELECT id, md5 FROM maps WHERE '
-            'artist = %s AND title = %s '
-            'AND creator = %s AND version = %s', [
-                r_match['artist'], r_match['title'],
-                r_match['creator'], r_match['version']
-            ]
+            'SELECT id, md5 '
+            'FROM maps '
+            'WHERE filename = %s',
+            [map_filename]
         )):
             return (404, b'') # map not found in sql
 

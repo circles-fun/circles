@@ -30,6 +30,8 @@ OSUAPI_GET_BEATMAPS = 'https://old.ppy.sh/api/get_beatmaps'
 DEFAULT_LAST_UPDATE = datetime(1970, 1, 1)
 MAP_CACHE_TIMEOUT = timedelta(hours=4)
 
+IGNORED_BEATMAP_CHARS = dict.fromkeys(map(ord, r':\/*<>?"|'), None)
+
 # for some ungodly reason, different values are used to
 # represent different ranked statuses all throughout osu!
 # This drives me and probably everyone else pretty insane,
@@ -176,9 +178,10 @@ class Beatmap:
     """
     __slots__ = ('set', 'md5', 'id', 'set_id',
                  'artist', 'title', 'version', 'creator',
-                 'last_update', 'total_length', 'max_combo',
-                 'status', 'frozen', 'plays', 'passes',
-                 'mode', 'bpm', 'cs', 'od', 'ar', 'hp',
+                 'filename', 'last_update', 'total_length',
+                 'max_combo', 'status', 'frozen',
+                 'plays', 'passes', 'mode', 'bpm',
+                 'cs', 'od', 'ar', 'hp',
                  'diff', 'pp_cache')
 
     def __init__(self, **kwargs) -> None:
@@ -192,6 +195,8 @@ class Beatmap:
         self.title = kwargs.get('title', '')
         self.version = kwargs.get('version', '')  # diff name
         self.creator = kwargs.get('creator', '')
+
+        self.filename = kwargs.get('filename', '')
 
         self.last_update = kwargs.get('last_update', DEFAULT_LAST_UPDATE)
         self.total_length = kwargs.get('total_length', 0)
@@ -216,11 +221,6 @@ class Beatmap:
 
     def __repr__(self) -> str:
         return self.full
-
-    @property
-    def filename(self) -> str:
-        """The name of `self`'s .osu file."""
-        return f'{self.id}.osu'
 
     @property
     def full(self) -> str:
@@ -381,7 +381,11 @@ class Beatmap:
             osuapi_resp['version'], osuapi_resp['creator']
         )
 
-        # quite a bit faster than using date.strptime.
+        self.filename = (
+            '{artist} - {title} ({creator}) [{version}].osu'
+        ).format(**osuapi_resp).translate(IGNORED_BEATMAP_CHARS)
+
+        # quite a bit faster than using dt.strptime.
         _last_update = osuapi_resp['last_update']
         self.last_update = datetime(
             year=int(_last_update[0:4]),
@@ -459,20 +463,35 @@ class BeatmapSet:
         return f'https://osu.{BASE_DOMAIN}/beatmapsets/{self.id}'
 
     @functools.cache
-    def all_ranked_or_approved(self) -> bool:
-        return all([bmap.status in (RankedStatus.Ranked, RankedStatus.Approved)
-                    for bmap in self.maps])
+    def all_officially_ranked_or_approved(self) -> bool:
+        """Whether all of the maps in the set are
+           ranked or approved on official servers."""
+        for bmap in self.maps:
+            if (
+                bmap.status not in (RankedStatus.Ranked,
+                                    RankedStatus.Approved) or
+                bmap.frozen # ranked/approved, but only on gulag
+            ):
+                return False
+        return True
 
     @functools.cache
-    def all_loved(self) -> bool:
-        return all([bmap.status == RankedStatus.Loved
-                    for bmap in self.maps])
+    def all_officially_loved(self) -> bool:
+        """Whether all of the maps in the set are
+           loved on official servers."""
+        for bmap in self.maps:
+            if (
+                bmap.status != RankedStatus.Loved or
+                bmap.frozen # loved, but only on gulag
+            ):
+                return False
+        return True
 
     def cache_expired(self) -> bool:
         """Whether the cached version of the set is
            expired and needs an update from the osu!api."""
         # ranked & approved maps are update-locked.
-        if self.all_ranked_or_approved():
+        if self.all_officially_ranked_or_approved():
             return False
 
         # TODO: check for further patterns to signify that maps could be
@@ -482,7 +501,7 @@ class BeatmapSet:
 
         # loved maps may be updated, but it's less
         # likely for a mapper to remove a leaderboard.
-        if self.all_loved():
+        if self.all_officially_loved():
             timeout *= 4
 
         return datetime.now() > (self.last_osuapi_check + timeout)
@@ -528,7 +547,7 @@ class BeatmapSet:
             async with db_conn.cursor() as db_cursor:
                 await db_cursor.execute(
                     'REPLACE INTO mapsets '
-                    '(server, id, last_osuapi_check)'
+                    '(server, id, last_osuapi_check) '
                     'VALUES ("osu!", %s, %s)',
                     [self.id, self.last_osuapi_check]
                 )
@@ -537,24 +556,24 @@ class BeatmapSet:
                     'REPLACE INTO maps ('
                         'server, md5, id, set_id, '
                         'artist, title, version, creator, '
-                        'last_update, total_length, max_combo, '
-                        'status, frozen, plays, passes, '
-                        'mode, bpm, cs, od, '
-                        'ar, hp, diff'
+                        'filename, last_update, total_length, '
+                        'max_combo, status, frozen, '
+                        'plays, passes, mode, bpm, '
+                        'cs, od, ar, hp, diff'
                     ') VALUES ('
                         '"osu!", %s, %s, %s, '
                         '%s, %s, %s, %s, '
                         '%s, %s, %s, '
+                        '%s, %s, %s, '
                         '%s, %s, %s, %s, '
-                        '%s, %s, %s, %s, '
-                        '%s, %s, %s'
+                        '%s, %s, %s, %s, %s'
                     ')', [(
                         bmap.md5, bmap.id, bmap.set_id,
                         bmap.artist, bmap.title, bmap.version, bmap.creator,
-                        bmap.last_update, bmap.total_length, bmap.max_combo,
-                        bmap.status, bmap.frozen, bmap.plays, bmap.passes,
-                        bmap.mode, bmap.bpm, bmap.cs, bmap.od,
-                        bmap.ar, bmap.hp, bmap.diff
+                        bmap.filename, bmap.last_update, bmap.total_length,
+                        bmap.max_combo, bmap.status, bmap.frozen,
+                        bmap.plays, bmap.passes, bmap.mode, bmap.bpm,
+                        bmap.cs, bmap.od, bmap.ar, bmap.hp, bmap.diff
                     ) for bmap in self.maps]
                 )
 
@@ -589,9 +608,10 @@ class BeatmapSet:
                 await db_cursor.execute(
                     'SELECT md5, id, set_id, '
                     'artist, title, version, creator, '
-                    'last_update, total_length, max_combo, '
-                    'status, frozen, plays, passes, mode, '
-                    'bpm, cs, od, ar, hp, diff '
+                    'filename, last_update, total_length, '
+                    'max_combo, status, frozen, '
+                    'plays, passes, mode, bpm, '
+                    'cs, od, ar, hp, diff '
                     'FROM maps '
                     'WHERE set_id = %s',
                     [bsid]
@@ -661,9 +681,6 @@ class BeatmapSet:
     async def from_bsid(cls, bsid: int) -> Optional['Beatmap']:
         """Cache all maps in a set from the osuapi, optionally
            returning beatmaps by their md5 or id."""
-        if bsid == 93655:
-            return # what the fuck is this map
-
         bmap_set = await cls._from_bsid_cache(bsid)
         did_api_request = False
 
