@@ -201,6 +201,10 @@ class SendMessage(BasePacket):
 
         # remove leading/trailing whitespace
         msg = self.msg.text.strip()
+
+        if not msg:
+            return
+
         recipient = self.msg.recipient
 
         if recipient in IGNORED_CHANNELS:
@@ -839,6 +843,10 @@ class SendPrivateMessage(BasePacket):
 
         # remove leading/trailing whitespace
         msg = self.msg.text.strip()
+
+        if not msg:
+            return
+
         t_name = self.msg.recipient
 
         # allow this to get from sql - players can receive

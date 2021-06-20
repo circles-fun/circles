@@ -138,10 +138,9 @@ def command(priv: Privileges, aliases: list[str] = [],
 # and are granted to any unbanned players.
 """
 
-
-@command(Privileges.Normal, aliases=['h'], hidden=True)
+@command(Privileges.Normal, aliases=['', 'h'], hidden=True)
 async def _help(ctx: Context) -> str:
-    """Show all documented commands the play can access."""
+    """Show all documented commands the player can access."""
     prefix = glob.config.command_prefix
     l = ['Individual commands',
          '-----------']
@@ -232,7 +231,7 @@ async def reconnect(ctx: Context) -> str:
 @command(Privileges.Normal)
 async def changename(ctx: Context) -> str:
     """Change your username."""
-    name = ' '.join(ctx.args)
+    name = ' '.join(ctx.args).strip()
 
     if not regexes.username.match(name):
         return 'Must be 2-15 characters in length.'
@@ -280,7 +279,9 @@ async def maplink(ctx: Context) -> str:
     else:
         return 'No map found!'
 
-    return f'[https://chimu.moe/d/{bmap.set_id} {bmap.full}]'
+    # gatari.pw & nerina.pw are pretty much the only
+    # reliable mirrors i know of? perhaps beatconnect
+    return f'[https://osu.gatari.pw/d/{bmap.set_id} {bmap.full}]'
 
 
 @command(Privileges.Normal, aliases=['last', 'r'])
