@@ -357,3 +357,6 @@ create table mapsets
 	constraint nmapsets_id_uindex
 		unique (id)
 );
+
+# v3.4.1
+alter table maps add filename varchar(256) charset utf8 not null after creator;
