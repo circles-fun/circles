@@ -1511,7 +1511,7 @@ async def api_get_player_rank(conn: Connection) -> Optional[bytes]:
     ):
         return (400, JSON({'status': 'Must provide mod (vn/rx/ap).'}))
 
-    res = await glob.db.fetchall(f"SELECT `id`, `pp_{conn.args['mods']}_{conn.args['mode']}`  from `stats` JOIN users "
+    res = await glob.db.fetchall(f"SELECT `id` from `stats` JOIN users "
                                  f"u using(id) WHERE u.priv & 1 "
                                  f"ORDER BY pp_{conn.args['mods']}_{conn.args['mode']} DESC")
 
@@ -1519,13 +1519,12 @@ async def api_get_player_rank(conn: Connection) -> Optional[bytes]:
     # for the sql injections.
     # ok bud
 
+
     users_array = []
     for i in range(len(res)):
-        users_array.append([res[i]['id']])
-
-    users_array.sort()
+        users_array.append(res[i]['id'])
     
-    rank = users_array[2]
+    rank = res
 
     return (418, JSON({
          "status": "success",
