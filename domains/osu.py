@@ -1511,12 +1511,9 @@ async def api_get_player_rank(conn: Connection) -> Optional[bytes]:
     ):
         return (400, JSON({'status': 'Must provide mod (vn/rx/ap).'}))
 
-    res = await glob.db.fetchall(
-        "SELECT `id`, `pp_%s_%s`  from `stats` "
-        "JOIN users u using(id) WHERE u.priv & 1 "
-        "ORDER BY pp_%s_%s DESC",
-        [conn.args['mods'], conn.args['mode'], conn.args['mods'], conn.args['mode']]
-    )
+    res = await glob.db.fetchall(f"SELECT `id`, `pp_{conn.args['mods']}_{conn.args['mode']}`  from `stats` JOIN users "
+                                 f"u using(id) WHERE u.priv & 1 "
+                                 f"ORDER BY pp_{conn.args['mods']}_{conn.args['mode']} DESC")
 
     return (400, JSON({'end-me-please': res}))
 
