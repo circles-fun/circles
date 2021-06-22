@@ -1515,7 +1515,7 @@ async def api_get_player_rank(conn: Connection) -> Optional[bytes]:
                                  f"u using(id) WHERE u.priv & 1 "
                                  f"ORDER BY pp_{conn.args['mods']}_{conn.args['mode']} DESC")
 
-    rank = res.index([0])
+    rank = res[0]
 
     return (418, JSON({
          "status": "success",
