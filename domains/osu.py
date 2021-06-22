@@ -1533,26 +1533,26 @@ async def api_get_player_count(conn: Connection) -> Optional[bytes]:
 
 
 @domain.route('/api/get_player_rank')
-async def api_get_player_rank(conn: Connection) -> Optional[bytes]:
+async def api_get_player_rank(conn: Connection) -> tuple[int, bytes]:
     """Return the ranking of a given player."""
     conn.resp_headers['Content-Type'] = f'application/json'
     if 'id' not in conn.args:
-        return (400, JSON({'status': 'Must provide player id!'}))
+        return 418, JSON({'status': 'Must provide player id!'})
 
     if not conn.args['id'].isdecimal():
-        return (400, JSON({'status': 'Invalid player id.'}))
+        return 418, JSON({'status': 'Invalid player id.'})
 
     if (
             'mode' not in conn.args or
             conn.args['mode'] not in ('std', 'taiko', 'mania')
     ):
-        return (400, JSON({'status': 'Must provide mode (std/taiko/mania).'}))
+        return 418, JSON({'status': 'Must provide mode (std/taiko/mania).'})
 
     if (
             'mods' not in conn.args or
             conn.args['mods'] not in ('vn', 'rx', 'ap')
     ):
-        return (400, JSON({'status': 'Must provide mod (vn/rx/ap).'}))
+        return 418, JSON({'status': 'Must provide mod (vn/rx/ap).'})
 
     res = await glob.db.fetchall(f"SELECT `id` from `stats` JOIN users "
                                  f"u using(id) WHERE u.priv & 1 "
@@ -1571,7 +1571,7 @@ async def api_get_player_rank(conn: Connection) -> Optional[bytes]:
     # cm, if ur reading this, owo the fuck out of coli.
     rank = users_array.index(search_id) + 1  # why in gods name is there a one here
 
-    return (418, JSON({
+    return (200, JSON({
         "status": "success",
         "global_rank": rank,
         "country_rank": "soon",
