@@ -32,6 +32,7 @@ MAP_CACHE_TIMEOUT = timedelta(hours=4)
 
 IGNORED_BEATMAP_CHARS = dict.fromkeys(map(ord, r':\/*<>?"|'), None)
 
+
 # for some ungodly reason, different values are used to
 # represent different ranked statuses all throughout osu!
 # This drives me and probably everyone else pretty insane,
@@ -81,11 +82,11 @@ osu2gulagstatus_dict = defaultdict(
     lambda: RankedStatus.UpdateAvailable, {
         -2: RankedStatus.Pending,  # graveyard
         -1: RankedStatus.Pending,  # wip
-        0:  RankedStatus.Pending,
-        1:  RankedStatus.Ranked,
-        2:  RankedStatus.Approved,
-        3:  RankedStatus.Qualified,
-        4:  RankedStatus.Loved
+        0: RankedStatus.Pending,
+        1: RankedStatus.Ranked,
+        2: RankedStatus.Approved,
+        3: RankedStatus.Qualified,
+        4: RankedStatus.Loved
     }
 )
 
@@ -129,6 +130,7 @@ gulagstatus2str_dict = {
     RankedStatus.Loved: 'Loved'
 }
 
+
 async def osuapiv1_getbeatmaps(**params) -> Optional[dict[str, object]]:
     """Fetch data from the osu!api with a beatmap's md5."""
     if glob.app.debug:
@@ -138,13 +140,14 @@ async def osuapiv1_getbeatmaps(**params) -> Optional[dict[str, object]]:
 
     async with glob.http.get(OSUAPI_GET_BEATMAPS, params=params) as resp:
         if (
-            resp and resp.status == 200 and
-            resp.content.total_bytes != 2 # b'[]'
+                resp and resp.status == 200 and
+                resp.content.total_bytes != 2  # b'[]'
         ):
             return await resp.json()
 
-#@dataclass
-#class BeatmapInfoRequest:
+
+# @dataclass
+# class BeatmapInfoRequest:
 #    filenames: Sequence[str]
 #    ids: Sequence[int]
 
@@ -246,6 +249,7 @@ class Beatmap:
     # TODO: implement some locking for the map fetch methods
 
     """ High level API """
+
     # There are three levels of storage used for beatmaps,
     # the cache (ram), the db (disk), and the osu!api (web).
     # Going down this list gets exponentially slower, so
@@ -347,15 +351,15 @@ class Beatmap:
         if not ppcalc:
             return
 
-        if mode_vn in (0, 1): # std/taiko, use acc
+        if mode_vn in (0, 1):  # std/taiko, use acc
             for idx, acc in enumerate(glob.config.pp_cached_accs):
                 ppcalc.pp_attrs['acc'] = acc
 
-                pp, _ = await ppcalc.perform() # don't need sr
+                pp, _ = await ppcalc.perform()  # don't need sr
                 self.pp_cache[mode_vn][mods][idx] = pp
         elif mode_vn == 2:
-            return # unsupported gm
-        elif mode_vn == 3: # mania, use score
+            return  # unsupported gm
+        elif mode_vn == 3:  # mania, use score
             for idx, score in enumerate(glob.config.pp_cached_scores):
                 ppcalc.pp_attrs['score'] = score
 
@@ -363,6 +367,7 @@ class Beatmap:
                 self.pp_cache[mode_vn][mods][idx] = pp
 
     """ Lower level API """
+
     # These functions are meant for internal use under
     # all normal circumstances and should only be used
     # if you're really modifying gulag by adding new
@@ -373,7 +378,7 @@ class Beatmap:
         # NOTE: `self` is not guaranteed to have any attributes
         #       initialized when this is called.
         self.md5 = osuapi_resp['file_md5']
-        #self.id = int(osuapi_resp['beatmap_id'])
+        # self.id = int(osuapi_resp['beatmap_id'])
         self.set_id = int(osuapi_resp['beatmapset_id'])
 
         self.artist, self.title, self.version, self.creator = (
@@ -439,6 +444,7 @@ class Beatmap:
 
             return bmap
 
+
 class BeatmapSet:
     __slots__ = ('id', 'last_osuapi_check', 'maps')
 
@@ -458,7 +464,7 @@ class BeatmapSet:
         return ', '.join(map_names)
 
     @property
-    def url(self) -> str: # same as above, just no beatmap id
+    def url(self) -> str:  # same as above, just no beatmap id
         """The online url for this beatmap set."""
         return f'https://osu.{BASE_DOMAIN}/beatmapsets/{self.id}'
 
@@ -468,9 +474,9 @@ class BeatmapSet:
            ranked or approved on official servers."""
         for bmap in self.maps:
             if (
-                bmap.status not in (RankedStatus.Ranked,
-                                    RankedStatus.Approved) or
-                bmap.frozen # ranked/approved, but only on gulag
+                    bmap.status not in (RankedStatus.Ranked,
+                                        RankedStatus.Approved) or
+                    bmap.frozen  # ranked/approved, but only on gulag
             ):
                 return False
         return True
@@ -481,8 +487,8 @@ class BeatmapSet:
            loved on official servers."""
         for bmap in self.maps:
             if (
-                bmap.status != RankedStatus.Loved or
-                bmap.frozen # loved, but only on gulag
+                    bmap.status != RankedStatus.Loved or
+                    bmap.frozen  # loved, but only on gulag
             ):
                 return False
         return True
@@ -554,19 +560,19 @@ class BeatmapSet:
 
                 await db_cursor.executemany(
                     'REPLACE INTO maps ('
-                        'server, md5, id, set_id, '
-                        'artist, title, version, creator, '
-                        'filename, last_update, total_length, '
-                        'max_combo, status, frozen, '
-                        'plays, passes, mode, bpm, '
-                        'cs, od, ar, hp, diff'
+                    'server, md5, id, set_id, '
+                    'artist, title, version, creator, '
+                    'filename, last_update, total_length, '
+                    'max_combo, status, frozen, '
+                    'plays, passes, mode, bpm, '
+                    'cs, od, ar, hp, diff'
                     ') VALUES ('
-                        '"osu!", %s, %s, %s, '
-                        '%s, %s, %s, %s, '
-                        '%s, %s, %s, '
-                        '%s, %s, %s, '
-                        '%s, %s, %s, %s, '
-                        '%s, %s, %s, %s, %s'
+                    '"osu!", %s, %s, %s, '
+                    '%s, %s, %s, %s, '
+                    '%s, %s, %s, '
+                    '%s, %s, %s, '
+                    '%s, %s, %s, %s, '
+                    '%s, %s, %s, %s, %s'
                     ')', [(
                         bmap.md5, bmap.id, bmap.set_id,
                         bmap.artist, bmap.title, bmap.version, bmap.creator,

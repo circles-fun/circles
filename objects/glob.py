@@ -1,11 +1,9 @@
 # -*- coding: utf-8 -*-
 
-import config  # export
-
 # this file contains no actualy definitions
 if __import__('typing').TYPE_CHECKING:
     from asyncio import AbstractEventLoop
-    #from asyncio import Queue
+    # from asyncio import Queue
     from typing import Optional
 
     from aiohttp.client import ClientSession
@@ -22,7 +20,7 @@ if __import__('typing').TYPE_CHECKING:
     from objects.collections import Clans
     from objects.collections import MapPools
     from objects.player import Player
-    #from objects.score import Score
+    # from objects.score import Score
     from packets import BasePacket
     from packets import ClientPackets
 

@@ -91,8 +91,8 @@ class Channel:
 
         for p in self.players:
             if (
-                sender.id not in p.blocks and
-                (to_self or p.id != sender.id)
+                    sender.id not in p.blocks and
+                    (to_self or p.id != sender.id)
             ):
                 p.enqueue(data)
 

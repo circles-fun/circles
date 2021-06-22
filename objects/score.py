@@ -218,8 +218,8 @@ class Score:
 
     @classmethod
     async def from_submission(
-        cls, data_b64: str, iv_b64: str,
-        osu_ver: str, pw_md5: str
+            cls, data_b64: str, iv_b64: str,
+            osu_ver: str, pw_md5: str
     ) -> Optional['Score']:
         """Create a score object from an osu! submission string."""
         iv = b64decode(iv_b64).decode('latin_1')

@@ -32,8 +32,8 @@ from objects import glob
 from objects.beatmap import Beatmap
 from objects.channel import Channel
 from objects.clan import ClanPrivileges
-from objects.match import MatchTeams
 from objects.match import MatchTeamTypes
+from objects.match import MatchTeams
 from objects.match import Slot
 from objects.match import SlotStatus
 from objects.player import Action
@@ -78,8 +78,8 @@ async def bancho_handler(conn: Connection) -> bytes:
             ip = conn.headers['X-Real-IP']
 
     if (
-        'User-Agent' not in conn.headers or
-        conn.headers['User-Agent'] != 'osu!'
+            'User-Agent' not in conn.headers or
+            conn.headers['User-Agent'] != 'osu!'
     ):
         url = f'{conn.cmd} {conn.headers["Host"]}{conn.path}'
         log(f'[{ip}] {url} missing user-agent.', Ansi.LRED)
@@ -132,6 +132,7 @@ async def bancho_handler(conn: Connection) -> bytes:
     conn.resp_headers['Content-Type'] = 'text/html; charset=UTF-8'
     return player.dequeue() or b''
 
+
 """ Packet logic """
 
 # restricted users are able to
@@ -143,10 +144,11 @@ glob.bancho_packets = {
 
 
 def register(
-    packet: ClientPackets,
-    restricted: Union[bool, Callable] = False
+        packet: ClientPackets,
+        restricted: Union[bool, Callable] = False
 ) -> Callable:
     """Register a handler in `glob.bancho_packets`."""
+
     def wrapper(cls) -> Callable:
         new_entry = {packet: cls}
 
@@ -155,6 +157,7 @@ def register(
         if restricted:
             glob.bancho_packets['restricted'] |= new_entry
         return cls
+
     return wrapper
 
 
@@ -441,7 +444,7 @@ async def login(body_view: memoryview, ip: str, db_cursor: aiomysql.DictCursor) 
         return  # invalid request
 
     utc_offset = int(client_info[1])
-    #display_city = client_info[2] == '1'
+    # display_city = client_info[2] == '1'
 
     # Client hashes contain a few values useful to us.
     # TODO: store these correctly in the db
@@ -482,7 +485,7 @@ async def login(body_view: memoryview, ip: str, db_cursor: aiomysql.DictCursor) 
                 else:
                     # the user is currently online, send back failure.
                     data = packets.userID(-1) + \
-                        packets.notification('User already logged in.')
+                           packets.notification('User already logged in.')
 
                     return data, 'no'
 
@@ -500,11 +503,11 @@ async def login(body_view: memoryview, ip: str, db_cursor: aiomysql.DictCursor) 
                 packets.userID(-1)), 'no'
 
     if (
-        using_tourney_client and
-        not (
-            user_info['priv'] & Privileges.Donator and
-            user_info['priv'] & Privileges.Normal
-        )
+            using_tourney_client and
+            not (
+                    user_info['priv'] & Privileges.Donator and
+                    user_info['priv'] & Privileges.Normal
+            )
     ):
         # trying to use tourney client with insufficient privileges.
         return packets.userID(-1), 'no'
@@ -643,9 +646,9 @@ async def login(body_view: memoryview, ip: str, db_cursor: aiomysql.DictCursor) 
     # the osu! client will attempt to join the channels.
     for c in glob.channels:
         if (
-            not c.auto_join or
-            not c.can_read(p.priv) or
-            c._name == '#lobby'  # (can't be in mp lobby @ login)
+                not c.auto_join or
+                not c.can_read(p.priv) or
+                c._name == '#lobby'  # (can't be in mp lobby @ login)
         ):
             continue
 
@@ -824,10 +827,10 @@ class SpectateFrames(BasePacket):
 
     async def handle(self, p: Player) -> None:
         # packing this manually is about ~3x faster
-        #data = packets.spectateFrames(self.frame_bundle.raw_data)
+        # data = packets.spectateFrames(self.frame_bundle.raw_data)
         data = (
-            struct.pack('<HxI', 15, len(self.frame_bundle.raw_data)) +
-            self.frame_bundle.raw_data
+                struct.pack('<HxI', 15, len(self.frame_bundle.raw_data)) +
+                self.frame_bundle.raw_data
         )
 
         # enqueue the data
@@ -1430,8 +1433,8 @@ class MatchChangeMods(BasePacket):
 
 def is_playing(slot: Slot) -> bool:
     return (
-        slot.status == SlotStatus.playing and
-        not slot.loaded
+            slot.status == SlotStatus.playing and
+            not slot.loaded
     )
 
 
@@ -1718,7 +1721,9 @@ class StatsRequest(BasePacket):
 
     async def handle(self, p: Player) -> None:
         unrestrcted_ids = [p.id for p in glob.players.unrestricted]
-        def is_online(o): return o in unrestrcted_ids and o != p.id
+
+        def is_online(o):
+            return o in unrestrcted_ids and o != p.id
 
         for online in filter(is_online, self.user_ids):
             if t := glob.players.get(id=online):
