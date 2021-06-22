@@ -1540,10 +1540,10 @@ async def api_get_player_rank(conn: Connection) -> tuple[int, bytes]:
     conn.resp_headers['Access-Control-Allow-Origin'] = "*"
     conn.resp_headers['Access-Control-Allow-Headers'] = "Content-Type"
 
-    if 'id' not in conn.args:
+    if 'userid' not in conn.args:
         return 418, JSON({'status': 'Must provide player id!'})
 
-    if not conn.args['id'].isdecimal():
+    if not conn.args['userid'].isdecimal():
         return 418, JSON({'status': 'Invalid player id.'})
 
     if (
@@ -1566,11 +1566,11 @@ async def api_get_player_rank(conn: Connection) -> tuple[int, bytes]:
     # for the sql injections.
     # ok bud
 
-    search_id = int(conn.args['id'])  # fuckin' owo m8
+    search_id = int(conn.args['userid'])  # fuckin' owo m8
 
     users_array = []
     for i in range(len(res)):
-        users_array.append(res[i]['id'])
+        users_array.append(res[i]['userid'])
 
     # cm, if ur reading this, owo the fuck out of coli.
     rank = users_array.index(search_id) + 1  # why in gods name is there a one here
