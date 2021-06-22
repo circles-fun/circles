@@ -1515,15 +1515,13 @@ async def api_get_player_rank(conn: Connection) -> Optional[bytes]:
                                  f"u using(id) WHERE u.priv & 1 "
                                  f"ORDER BY pp_{conn.args['mods']}_{conn.args['mode']} DESC")
 
-    return (400, JSON({'end-me-please': res}))
+    rank = res.index([0])
 
-    # fucking end me now
-
-    # return (200, JSON({
-    #     "status": "success",
-    #     "global_rank": rank,
-    #     "country_rank": "soon",
-    # }))
+    return (418, JSON({
+         "status": "success",
+         "global_rank": rank,
+         "country_rank": "soon",
+    }))
 
 
 @domain.route('/api/get_player_info')
