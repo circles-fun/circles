@@ -47,7 +47,7 @@ async def get_avatar(conn: Connection) -> Optional[bytes]:
     
 @domain.route(re.compile(r'\/banners\/(?:\d{1,10}(?:.(?:jpg|jpeg|png))?|favicon.ico)?$'))
 async def get_banner(conn: Connection) -> Optional[bytes]:
-    filename = conn.path[1:]
+    filename = conn.path[2:] #? no clue what this does.
 
     if '.' in filename:
         # user id & file extension provided
