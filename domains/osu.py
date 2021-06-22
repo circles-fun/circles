@@ -1525,7 +1525,7 @@ async def api_get_player_rank(conn: Connection) -> Optional[bytes]:
 
     users_array.sort()
     
-    rank = users_array
+    rank = users_array[2]
 
     return (418, JSON({
          "status": "success",
