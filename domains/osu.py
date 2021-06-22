@@ -1534,8 +1534,12 @@ async def api_get_player_count(conn: Connection) -> Optional[bytes]:
 
 @domain.route('/api/get_player_rank')
 async def api_get_player_rank(conn: Connection) -> tuple[int, bytes]:
+
     """Return the ranking of a given player."""
     conn.resp_headers['Content-Type'] = f'application/json'
+    conn.resp_headers['Access-Control-Allow-Origin'] = "*"
+    conn.resp_headers['Access-Control-Allow-Headers'] = "Content-Type"
+
     if 'id' not in conn.args:
         return 418, JSON({'status': 'Must provide player id!'})
 
