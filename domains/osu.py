@@ -1523,6 +1523,8 @@ async def api_get_player_rank(conn: Connection) -> Optional[bytes]:
     for i in range(len(res)):
         users_array.append([res[i]['id']])
 
+    users_array.sort()
+    
     rank = users_array
 
     return (418, JSON({
