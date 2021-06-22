@@ -1569,7 +1569,7 @@ async def api_get_player_rank(conn: Connection) -> Optional[bytes]:
         users_array.append(res[i]['id'])
 
     # cm, if ur reading this, owo the fuck out of coli.
-    rank = users_array.index(search_id)
+    rank = users_array.index(search_id) + 1  # why in gods name is there a one here
 
     return (418, JSON({
         "status": "success",
