@@ -62,10 +62,10 @@ async def get_banner(conn: Connection) -> Optional[bytes]:
                 break
         else:
             # no file exists
-            path = BANNERS_PATH
+            path = DEFAULT_BANNER
     else:
         # empty path or favicon, serve default avatar
-        path = BANNERS_PATH
+        path = DEFAULT_BANNER
 
     ext = 'png' if path.suffix == '.png' else 'jpeg'
     conn.resp_headers['Content-Type'] = f'image/{ext}'
