@@ -58,7 +58,6 @@ if TYPE_CHECKING:
 Messageable = Union['Channel', Player]
 CommandResponse = dict[str, str]
 
-
 @dataclass
 class Context:
     player: Player
@@ -68,14 +67,12 @@ class Context:
     recipient: Optional[Messageable] = None
     match: Optional[Match] = None
 
-
 class Command(NamedTuple):
     triggers: list[str]
     callback: Callable[[Context], str]
     priv: Privileges
     hidden: bool
     doc: str
-
 
 class CommandSet:
     __slots__ = ('trigger', 'doc', 'commands')
@@ -93,17 +90,15 @@ class CommandSet:
                 # NOTE: this method assumes that functions without any
                 # triggers will be named like '{self.trigger}_{trigger}'.
                 triggers=(
-                        [f.__name__.removeprefix(f'{self.trigger}_').strip()] +
-                        aliases
+                    [f.__name__.removeprefix(f'{self.trigger}_').strip()] +
+                    aliases
                 ),
                 callback=f, priv=priv,
                 hidden=hidden, doc=f.__doc__
             ))
 
             return f
-
         return wrapper
-
 
 # TODO: refactor help commands into some base ver
 #       since they're all the same anyways lol.
@@ -136,7 +131,6 @@ def command(priv: Privileges, aliases: list[str] = [],
         ))
 
         return f
-
     return wrapper
 
 
@@ -144,7 +138,6 @@ def command(priv: Privileges, aliases: list[str] = [],
 # The commands below are not considered dangerous,
 # and are granted to any unbanned players.
 """
-
 
 @command(Privileges.Normal, aliases=['', 'h'], hidden=True)
 async def _help(ctx: Context) -> str:
@@ -194,8 +187,8 @@ async def block(ctx: Context) -> str:
         return 'User not found.'
 
     if (
-            target is glob.bot or
-            target is ctx.player
+        target is glob.bot or
+        target is ctx.player
     ):
         return 'What?'
 
@@ -218,8 +211,8 @@ async def unblock(ctx: Context) -> str:
         return 'User not found.'
 
     if (
-            target is glob.bot or
-            target is ctx.player
+        target is glob.bot or
+        target is ctx.player
     ):
         return 'What?'
 
@@ -327,7 +320,6 @@ async def recent(ctx: Context) -> str:
 
     return ' | '.join(l)
 
-
 # TODO: !top (get top #1 score)
 # TODO: !compare (compare to previous !last/!top post's map)
 
@@ -355,7 +347,7 @@ async def _with(ctx: Context) -> str:
         mods = key_value = None
 
         for param in (p.strip('+%') for p in ctx.args):
-            if cmyui.utils._isdecimal(param, _float=True):  # acc
+            if cmyui.utils._isdecimal(param, _float=True): # acc
                 if not 0 <= (key_value := float(param)) <= 100:
                     return 'Invalid accuracy.'
                 pp_attrs['acc'] = key_value
@@ -476,7 +468,6 @@ async def get_apikey(ctx: Context) -> str:
         '/savelog & click popup for an easy copy.'))
     return f'Your API key is now: {ctx.player.api_key}'
 
-
 """ Nominator commands
 # The commands below allow users to
 # manage  the server's state of beatmaps.
@@ -514,7 +505,6 @@ async def requests(ctx: Context) -> str:
 
     return '\n'.join(l)
 
-
 _status_str_to_int_map = {
     'unrank': 0,
     'rank': 2,
@@ -530,9 +520,9 @@ def status_to_id(s: str) -> int:
 async def _map(ctx: Context) -> str:
     """Changes the ranked status of the most recently /np'ed map."""
     if (
-            len(ctx.args) != 2 or
-            ctx.args[0] not in ('rank', 'unrank', 'love') or
-            ctx.args[1] not in ('set', 'map')
+        len(ctx.args) != 2 or
+        ctx.args[0] not in ('rank', 'unrank', 'love') or
+        ctx.args[1] not in ('set', 'map')
     ):
         return 'Invalid syntax: !map <rank/unrank/love> <map/set>'
 
@@ -595,7 +585,6 @@ async def _map(ctx: Context) -> str:
 
     return f'{bmap.embed} updated to {new_status!s}.'
 
-
 """ Mod commands
 # The commands below are somewhat dangerous,
 # and are generally for managing players.
@@ -652,7 +641,6 @@ async def addnote(ctx: Context) -> str:
 
     return f'Added note to {t}.'
 
-
 # some shorthands that can be used as
 # reasons in many moderative commands.
 SHORTHAND_REASONS = {
@@ -680,8 +668,8 @@ async def silence(ctx: Context) -> str:
         return f'"{ctx.args[0]}" not found.'
 
     if (
-            t.priv & Privileges.Staff and
-            not ctx.player.priv & Privileges.Dangerous
+        t.priv & Privileges.Staff and
+        not ctx.player.priv & Privileges.Dangerous
     ):
         return 'Only developers can manage staff members.'
 
@@ -713,14 +701,13 @@ async def unsilence(ctx: Context) -> str:
         return f'{t} is not silenced.'
 
     if (
-            t.priv & Privileges.Staff and
-            not ctx.player.priv & Privileges.Dangerous
+        t.priv & Privileges.Staff and
+        not ctx.player.priv & Privileges.Dangerous
     ):
         return 'Only developers can manage staff members.'
 
     await t.unsilence(ctx.player)
     return f'{t} was unsilenced.'
-
 
 """ Admin commands
 # The commands below are relatively dangerous,
@@ -739,14 +726,14 @@ async def resetpassword(ctx: Context) -> str:
 
     if not ctx.args[0].isdecimal():
         return 'Please specify a players ID!'
-
+    
     # find any user matching (including offline).
     if not (t := await glob.players.get_ensure(id=ctx.args[0])):
         return f'"{ctx.args[0]}" not found.'
 
     if (
-            t.priv & Privileges.Staff and
-            not ctx.player.priv & Privileges.Dangerous
+        t.priv & Privileges.Staff and
+        not ctx.player.priv & Privileges.Dangerous
     ):
         return 'Only developers can manage staff members.'
 
@@ -755,17 +742,17 @@ async def resetpassword(ctx: Context) -> str:
     length = 8
     password = ""
 
-    for i in range(length + 1):
+    for i in range(length+1):
         password += random.choice(characters)
 
     pw_md5 = hashlib.md5(password.encode()).hexdigest().encode()
     pw_bcrypt = bcrypt.hashpw(pw_md5, bcrypt.gensalt())
 
     user = await glob.db.fetch(
-        'SELECT * '
-        'FROM users '
-        'WHERE id = %s',
-        [int(ctx.args[0])])
+    'SELECT * '
+    'FROM users ' 
+    'WHERE id = %s',
+    [int(ctx.args[0])])
     name = user['name']
 
     await glob.db.execute(
@@ -795,10 +782,10 @@ async def getemail(ctx: Context) -> str:
         return f'"{ctx.args[0]}" not found.'
 
     user = await glob.db.fetch(
-        'SELECT * '
-        'FROM users '
-        'WHERE id = %s',
-        [int(ctx.args[0])])
+    'SELECT * '
+    'FROM users ' 
+    'WHERE id = %s',
+    [int(ctx.args[0])])
     name = user['name']
     email = user['email']
 
@@ -844,7 +831,6 @@ async def user(ctx: Context) -> str:
         f'Spectators: {p.spectators}'
     ))
 
-
 @command(Privileges.Admin, hidden=True)
 async def restrict(ctx: Context) -> str:
     """Restrict a specified player's account, with a reason."""
@@ -856,8 +842,8 @@ async def restrict(ctx: Context) -> str:
         return f'"{ctx.args[0]}" not found.'
 
     if (
-            t.priv & Privileges.Staff and
-            not ctx.player.priv & Privileges.Dangerous
+        t.priv & Privileges.Staff and
+        not ctx.player.priv & Privileges.Dangerous
     ):
         return 'Only developers can manage staff members.'
 
@@ -885,8 +871,8 @@ async def unrestrict(ctx: Context) -> str:
         return f'"{ctx.args[0]}" not found.'
 
     if (
-            t.priv & Privileges.Staff and
-            not ctx.player.priv & Privileges.Dangerous
+        t.priv & Privileges.Staff and
+        not ctx.player.priv & Privileges.Dangerous
     ):
         return 'Only developers can manage staff members.'
 
@@ -928,7 +914,6 @@ async def alertuser(ctx: Context) -> str:
 
     t.enqueue(packets.notification(notif_txt))
     return 'Alert sent.'
-
 
 # NOTE: this is pretty useless since it doesn't switch anything other
 # than the c[e4-6].ppy.sh domains; it exists on bancho as a tournament
@@ -978,7 +963,6 @@ async def shutdown(ctx: Context) -> str:
     else:  # shutdown immediately
         os.kill(os.getpid(), _signal)
 
-
 """ Developer commands
 # The commands below are either dangerous or
 # simply not useful for any other roles.
@@ -994,9 +978,9 @@ async def fakeusers(ctx: Context) -> str:
     # regarding presences/stats. it's implementation is
     # indeed quite cursed, but rather efficient.
     if (
-            len(ctx.args) != 2 or
-            ctx.args[0] not in ('add', 'rm') or
-            not ctx.args[1].isdecimal()
+        len(ctx.args) != 2 or
+        ctx.args[0] not in ('add', 'rm') or
+        not ctx.args[1].isdecimal()
     ):
         return 'Invalid syntax: !fakeusers <add/rm> <amount>'
 
@@ -1194,7 +1178,6 @@ async def debug(ctx: Context) -> str:
     glob.app.debug = not glob.app.debug
     return f"Toggled {'on' if glob.app.debug else 'off'}."
 
-
 # NOTE: these commands will likely be removed
 #       with the addition of a good frontend.
 str_priv_dict = {
@@ -1276,7 +1259,6 @@ async def wipemap(ctx: Context) -> str:
 
     return 'Scores wiped.'
 
-
 # @command(Privileges.Dangerous, aliases=['men'], hidden=True)
 # async def menu_preview(ctx: Context) -> str:
 #    """Temporary command to illustrate the menu option idea."""
@@ -1354,7 +1336,7 @@ async def server(ctx: Context) -> str:
     # maniera v1.0.0 | mysql-connector-python v8.0.23 | orjson v3.5.1
     # psutil v5.8.0 | py3rijndael v0.3.3 | uvloop v0.15.2
     reqs = (Path.cwd() / 'ext/requirements.txt').read_text().splitlines()
-    pkg_sections = [reqs[i:i + 3] for i in range(0, len(reqs), 3)]
+    pkg_sections = [reqs[i:i+3] for i in range(0, len(reqs), 3)]
 
     mirror_url = glob.config.mirror
     using_osuapi = glob.config.osu_api_key != ''
@@ -1375,7 +1357,6 @@ async def server(ctx: Context) -> str:
         ]) for section in pkg_sections])
     ])
 
-
 """ Advanced commands (only allowed with `advanced = True` in config) """
 
 # NOTE: some of these commands are potentially dangerous, and only
@@ -1393,7 +1374,6 @@ if glob.config.advanced:
             'importlib'
         ) if mod in installed_mods
     }
-
 
     @command(Privileges.Dangerous)
     async def py(ctx: Context) -> str:
@@ -1767,8 +1747,8 @@ async def mp_teams(ctx: Context) -> str:
     # find the new appropriate default team.
     # defaults are (ffa: neutral, teams: red).
     if ctx.match.team_type in (
-            MatchTeamTypes.head_to_head,
-            MatchTeamTypes.tag_coop
+        MatchTeamTypes.head_to_head,
+        MatchTeamTypes.tag_coop
     ):
         new_t = MatchTeams.neutral
     else:
@@ -1829,8 +1809,8 @@ async def mp_condition(ctx: Context) -> str:
 async def mp_scrim(ctx: Context) -> str:
     """Start a scrim in the current match."""
     if (
-            len(ctx.args) != 1 or
-            not (r_match := re.fullmatch(r'^(?:bo)?(\d{1,2})$', ctx.args[0]))
+        len(ctx.args) != 1 or
+        not (r_match := re.fullmatch(r'^(?:bo)?(\d{1,2})$', ctx.args[0]))
     ):
         return 'Invalid syntax: !mp scrim <bo#>'
 
@@ -1921,7 +1901,6 @@ async def mp_force(ctx: Context) -> str:
 
     t.join_match(ctx.match, ctx.match.passwd)
     return 'Welcome.'
-
 
 # mappool-related mp commands
 
@@ -2068,7 +2047,6 @@ async def mp_pick(ctx: Context) -> str:
     ctx.match.enqueue_state()
 
     return f'Picked {bmap.embed}. ({mods_slot})'
-
 
 """ Mappool management commands
 # The commands below are for event managers
@@ -2268,7 +2246,6 @@ async def pool_info(ctx: Context) -> str:
 
     return '\n'.join(l)
 
-
 """ Clan managment commands
 # The commands below are for managing circles
 # clans, for users, clan staff, and server staff.
@@ -2435,7 +2412,6 @@ async def clan_info(ctx: Context) -> str:
 
     return '\n'.join(msg)
 
-
 # TODO: !clan inv, !clan join, !clan leave
 
 
@@ -2511,8 +2487,8 @@ async def process_commands(p: Player, t: Messageable,
 
     for cmd in commands:
         if (
-                trigger in cmd.triggers and
-                p.priv & cmd.priv == cmd.priv
+            trigger in cmd.triggers and
+            p.priv & cmd.priv == cmd.priv
         ):
             # found matching trigger with sufficient privs
             ctx = Context(player=p, trigger=trigger, args=args)

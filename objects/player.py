@@ -554,8 +554,8 @@ class Player:
             # NOTE: staff members have override to pw and can
             # simply use any to join a pw protected match.
             if (
-                    passwd != m.passwd and
-                    self not in glob.players.staff
+                passwd != m.passwd and
+                self not in glob.players.staff
             ):
                 log(f'{self} tried to join {m} w/ incorrect pw.', Ansi.LYELLOW)
                 self.enqueue(packets.matchJoinFail())
@@ -673,9 +673,9 @@ class Player:
     def join_channel(self, c: Channel) -> bool:
         """Attempt to add `self` to `c`."""
         if (
-                self in c or  # player already in channel
-                not c.can_read(self.priv) or  # no read privs
-                c._name == '#lobby' and not self.in_lobby  # not in mp lobby
+            self in c or  # player already in channel
+            not c.can_read(self.priv) or  # no read privs
+            c._name == '#lobby' and not self.in_lobby  # not in mp lobby
         ):
             return False
 
@@ -944,9 +944,9 @@ class Player:
             )
 
     async def add_to_menu(
-            self, coroutine: Coroutine,
-            timeout: int = -1,
-            reusable: bool = False
+        self, coroutine: Coroutine,
+        timeout: int = -1,
+        reusable: bool = False
     ) -> int:
         """Add a valid callback to the user's osu! chat options."""
         # generate random negative number in int32 space as the key.

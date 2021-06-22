@@ -9,7 +9,6 @@ from utils.misc import pymysql_encode
 
 __all__ = ('Mods',)
 
-
 # NOTE: the order of some of these = stupid
 
 
@@ -134,7 +133,7 @@ class Mods(IntFlag):
         _dict = modstr2mod_dict  # global
 
         # split into 2 character chunks
-        mod_strs = [s[idx:idx + 2].upper()
+        mod_strs = [s[idx:idx+2].upper()
                     for idx in range(0, len(s), 2)]
 
         # find matching mods
@@ -278,9 +277,9 @@ mod2modstr_dict = {
 }
 
 KEY_MODS = (
-        Mods.KEY1 | Mods.KEY2 | Mods.KEY3 |
-        Mods.KEY4 | Mods.KEY5 | Mods.KEY6 |
-        Mods.KEY7 | Mods.KEY8 | Mods.KEY9
+    Mods.KEY1 | Mods.KEY2 | Mods.KEY3 |
+    Mods.KEY4 | Mods.KEY5 | Mods.KEY6 |
+    Mods.KEY7 | Mods.KEY8 | Mods.KEY9
 )
 
 # FREE_MOD_ALLOWED = (
@@ -290,8 +289,8 @@ KEY_MODS = (
 # )
 
 SCORE_INCREASE_MODS = (
-        Mods.HIDDEN | Mods.HARDROCK | Mods.FADEIN |
-        Mods.DOUBLETIME | Mods.FLASHLIGHT
+    Mods.HIDDEN | Mods.HARDROCK | Mods.FADEIN |
+    Mods.DOUBLETIME | Mods.FLASHLIGHT
 )
 
 SPEED_CHANGING_MODS = Mods.DOUBLETIME | Mods.NIGHTCORE | Mods.HALFTIME
