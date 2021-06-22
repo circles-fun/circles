@@ -14,12 +14,13 @@ from objects import glob
 BASE_DOMAIN = glob.config.domain
 domain = Domain({f'a.{BASE_DOMAIN}', 'a.ppy.sh'})
 
+
+# Avatar handling
 AVATARS_PATH = Path.cwd() / '.data/avatars'
-BANNERS_PATH = Path.cwd() / '.data/banners'
-DEFAULT_BANNER = BANNERS_PATH / 'default.jpg'
 DEFAULT_AVATAR = AVATARS_PATH / 'default.jpg'
 
-@domain.route(re.compile(r'^/(?:\d{1,10}(?:\.(?:jpg|jpeg|png))?|favicon\.ico)?$'))
+
+@domain.route(re.compile(r'^/(?:\d{1,10}(?:\.(?:jpg|jpeg|png|gif))?|favicon\.ico)?$'))
 async def get_avatar(conn: Connection) -> Optional[bytes]:
     filename = conn.path[1:]
 
@@ -44,10 +45,16 @@ async def get_avatar(conn: Connection) -> Optional[bytes]:
     ext = 'png' if path.suffix == '.png' else 'jpeg'
     conn.resp_headers['Content-Type'] = f'image/{ext}'
     return path.read_bytes()
-    
+
+
+# Banner handling
+BANNERS_PATH = Path.cwd() / '.data/banners'
+DEFAULT_BANNER = BANNERS_PATH / 'default.jpg'
+
+
 @domain.route(re.compile(r'\/banners\/(?:\d{1,10}(?:.(?:jpg|jpeg|png))?|favicon.ico)?$'))
 async def get_banner(conn: Connection) -> Optional[bytes]:
-    filename = conn.path[2:] #? no clue what this does.
+    filename = conn.path[9:]
 
     if '.' in filename:
         # user id & file extension provided
