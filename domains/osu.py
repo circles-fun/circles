@@ -1488,6 +1488,47 @@ async def api_get_player_count(conn: Connection) -> Optional[bytes]:
         }
     })
 
+
+@domain.route('/api/get_player_rank')
+async def api_get_player_rank(conn: Connection) -> Optional[bytes]:
+    """Return the ranking of a given player."""
+    conn.resp_headers['Content-Type'] = f'application/json'
+    if 'id' not in conn.args:
+        return (400, JSON({'status': 'Must provide player id!'}))
+
+    if not conn.args['id'].isdecimal():
+        return (400, JSON({'status': 'Invalid player id.'}))
+
+    if (
+            'mode' not in conn.args or
+            conn.args['mode'] not in ('std', 'taiko', 'mania')
+    ):
+        return (400, JSON({'status': 'Must provide mode (std/taiko/mania).'}))
+
+    if (
+            'mods' not in conn.args or
+            conn.args['mods'] not in ('vn', 'rx', 'ap')
+    ):
+        return (400, JSON({'status': 'Must provide mod (vn/rx/ap).'}))
+
+    res = await glob.db.fetchall(
+        "SELECT row['id'], row['pp'] from `stats` "
+        "JOIN users u using(id) WHERE u.priv & 1 "
+        "ORDER BY pp_%s_%s DESC",
+        [conn.args['mods'], conn.args['mode']]
+    )
+
+    return (400, JSON({'end-me-please': res}))
+
+    # fucking end me now
+
+    # return (200, JSON({
+    #     "status": "success",
+    #     "global_rank": rank,
+    #     "country_rank": "soon",
+    # }))
+
+
 @domain.route('/api/get_player_info')
 async def api_get_player_info(conn: Connection) -> Optional[bytes]:
     """Return information about a given player."""
