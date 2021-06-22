@@ -1515,7 +1515,15 @@ async def api_get_player_rank(conn: Connection) -> Optional[bytes]:
                                  f"u using(id) WHERE u.priv & 1 "
                                  f"ORDER BY pp_{conn.args['mods']}_{conn.args['mode']} DESC")
 
-    rank = res[0]
+    # this code was made by sargon, and i take responsibility.
+    # for the sql injections.
+    # ok bud
+
+    users_array = []
+    for i in range(len(res)):
+        users_array.append([0])
+
+    rank = users_array.index(f'{conn.args["id"]}')
 
     return (418, JSON({
          "status": "success",
