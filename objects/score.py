@@ -22,7 +22,6 @@ from objects.beatmap import ensure_local_osu_file
 from objects.beatmap import Beatmap
 from utils.misc import escape_enum
 from utils.misc import pymysql_encode
-from utils.recalculator import PPCalculator
 from utils.oppai_api import OppaiWrapper
 
 if TYPE_CHECKING:
