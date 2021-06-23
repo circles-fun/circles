@@ -42,7 +42,6 @@ from objects.score import Score
 from objects.score import SubmissionStatus
 from utils.misc import escape_enum
 from utils.misc import pymysql_encode
-from utils.recalculator import PPCalculator
 
 if TYPE_CHECKING:
     from objects.player import Player
@@ -1483,6 +1482,7 @@ async def checkUpdates(conn: Connection) -> Optional[bytes]:
 # Unauthorized (no api key required)
 # GET /api/get_player_count: return total registered & online player counts.
 # GET /api/get_player_info: return info or stats for a given player.
+# GET /api/get_player_ran: return global ranking and country ranking for a given player.
 # GET /api/get_player_status: return a player's current status, if online.
 # GET /api/get_player_scores: return a list of best or recent scores for a given player.
 # GET /api/get_player_most_played: return a list of maps most played by a given player.
@@ -1534,7 +1534,6 @@ async def api_get_player_count(conn: Connection) -> Optional[bytes]:
 
 @domain.route('/api/get_player_rank')
 async def api_get_player_rank(conn: Connection) -> tuple[int, bytes]:
-
     """Return the ranking of a given player."""
     conn.resp_headers['Content-Type'] = f'application/json'
     conn.resp_headers['Access-Control-Allow-Origin'] = "*"
@@ -1562,18 +1561,13 @@ async def api_get_player_rank(conn: Connection) -> tuple[int, bytes]:
                                  f"u using(id) WHERE u.priv & 1 "
                                  f"ORDER BY pp_{conn.args['mods']}_{conn.args['mode']} DESC")
 
-    # this code was made by sargon, and i take responsibility.
-    # for the sql injections.
-    # ok bud
-
-    search_id = int(conn.args['userid'])  # fuckin' owo m8
+    search_id = int(conn.args['userid'])
 
     users_array = []
     for i in range(len(res)):
         users_array.append(res[i]['id'])
 
-    # cm, if ur reading this, owo the fuck out of coli.
-    rank = users_array.index(search_id) + 1  # why in gods name is there a one here
+    rank = users_array.index(search_id) + 1
 
     return (200, JSON({
         "status": "success",
@@ -2275,61 +2269,6 @@ def requires_api_key(f: Callable) -> Callable:
 # NOTE: `Content-Type = application/json` is applied in the above decorator
 #                                         for the following api handlers.
 
-# TODO: mania support (and ctb later)
-@domain.route('/api/calculate_pp')
-@requires_api_key
-async def api_calculate_pp(conn: Connection, p: 'Player') -> Optional[bytes]:
-    """Calculate and return pp & sr for a given map."""
-    if 'md5' in conn.args:
-        # get id from md5
-        bmap = await Beatmap.from_md5(md5=conn.args['md5'])
-    elif 'id' in conn.args:
-        if not conn.args['id'].isdecimal():
-            return (400, JSON({'status': 'Failed: invalid map id'}))
-
-        bmap = await Beatmap.from_md5(md5=conn.args['md5'])
-    else:
-        return (400, JSON({'status': 'Failed: Must provide map md5 or id'}))
-
-    if not bmap:
-        return JSON({'status': 'Failed: map not found'})
-
-    pp_kwargs = {}
-    valid_kwargs = (
-        ('mods', int),
-        ('combo', int),
-        ('nmiss', int),
-        ('mode_vn', int),
-        ('acc', float)
-    )
-
-    # ignore any invalid args
-    for n, t in valid_kwargs:
-        if n in conn.args:
-            val = conn.args[n]
-
-            if not _isdecimal(val, _float=t is float):
-                continue
-
-            pp_kwargs[n] = t(val)
-
-    if pp_kwargs.get('mode_vn', 0) not in (0, 1):
-        return (503, JSON({'status': 'Failed: unsupported mode'}))
-
-    ppcalc = await PPCalculator.from_map(bmap, **pp_kwargs)
-
-    if not ppcalc:
-        return JSON({'status': 'Failed: could not retrieve map'})
-
-    pp, sr = await ppcalc.perform()
-
-    return JSON({
-        'status': 'Success',
-        'pp': pp,
-        'sr': sr
-    })
-
-
 @domain.route('/api/set_avatar', methods=['POST', 'PUT'])
 @requires_api_key
 async def api_set_avatar(conn: Connection, p: 'Player') -> Optional[bytes]:
@@ -2539,7 +2478,7 @@ async def register_account(
             if 'CF-IPCountry' in conn.headers:
                 # best case, dev has enabled ip geolocation in the
                 # network tab of cloudflare, so it sends the iso code.
-                country = conn.headers['CF-IPCountry']
+                country_iso_code = conn.headers['CF-IPCountry']
             else:
                 # backup method, get the user's ip and
                 # do a db lookup to get their country.
@@ -2564,17 +2503,17 @@ async def register_account(
                         # using a public api. (depends, `ping ip-api.com`)
                         geoloc = await utils.misc.fetch_geoloc_web(ip)
 
-                    country = geoloc['country']
+                    country_iso_code = geoloc['country']['iso_code']
                 else:
                     # localhost, unknown country
-                    country = 'XX'
+                    country_iso_code = 'XX'
 
             # add to `users` table.
             await db_cursor.execute(
                 'INSERT INTO users '
                 '(name, safe_name, email, pw_bcrypt, country, creation_time, latest_activity) '
                 'VALUES (%s, %s, %s, %s, %s, UNIX_TIMESTAMP(), UNIX_TIMESTAMP())',
-                [name, safe_name, email, pw_bcrypt, country]
+                [name, safe_name, email, pw_bcrypt, country_iso_code]
             )
             user_id = db_cursor.lastrowid
 
