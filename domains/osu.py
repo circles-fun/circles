@@ -29,7 +29,7 @@ from cmyui.web import Domain
 from cmyui.web import ratelimit
 
 import packets
-import utils.cm_dm
+# import utils.cm_dm
 import utils.misc
 from constants import regexes
 from constants.clientflags import ClientFlags
