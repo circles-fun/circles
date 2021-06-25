@@ -867,12 +867,11 @@ async def osuSubmitModularSelector(
             )
             rank = 1 + (await db_cursor.fetchone())['higher_pp_players']
 
+            mods, mode = mode_sql.split("_")
+
             await db_cursor.execute('INSERT INTO `circles_ranking`(`id`, `rank`, `mode`, `mods`) '
                                     'VALUES (%s,%s,"%s","%s")',
-                                    [score.player.id, rank, mode_sql, score.mods])
-            print(score.mods)
-            print(score.mode)
-            print(mode_sql)
+                                    [score.player.id, rank, mode, mods])
             stats.rank = rank
 
     # construct the sql query of any stat changes
