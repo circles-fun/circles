@@ -1494,6 +1494,7 @@ async def checkUpdates(conn: Connection) -> Optional[bytes]:
 # GET /api/get_player_count: return total registered & online player counts.
 # GET /api/get_player_info: return info or stats for a given player.
 # GET /api/get_player_rank: return global ranking and country ranking for a given player.
+# GET /api/get_player_rank_history: return ranking history for a given player.
 # GET /api/get_player_status: return a player's current status, if online.
 # GET /api/get_player_scores: return a list of best or recent scores for a given player.
 # GET /api/get_player_most_played: return a list of maps most played by a given player.
@@ -1611,7 +1612,7 @@ async def api_get_player_rank(conn: Connection) -> tuple[int, bytes]:
     ):
         return 418, JSON({'status': 'Must provide mod (vn/rx/ap).'})
 
-    output = await glob.db.fetchall(f"SELECT `rank`, `time` FROM `circles_ranking` "
+    output = await glob.db.fetchall(f"SELECT * FROM `circles_ranking` "
                                     f"WHERE `id` = {conn.args['userid']} AND "
                                     f"`mode` = {conn.args['mode']} AND "
                                     f"`mods` = {conn.args['mods']};")
