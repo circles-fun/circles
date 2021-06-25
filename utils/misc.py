@@ -35,6 +35,7 @@ __all__ = (
     'get_press_times',
     'make_safe_name',
     'fetch_bot_name',
+    'update_rank_history',
     'download_achievement_images',
     'seconds_readable',
     'check_connection',
@@ -87,6 +88,15 @@ def get_press_times(frames: Sequence[ReplayFrame]) -> dict[Keys, float]:
 def make_safe_name(name: str) -> str:
     """Return a name safe for usage in sql."""
     return name.lower().replace(' ', '_')
+
+
+async def update_rank_history(db, player, rank, mode_sql):
+    mods, mode = mode_sql.split("_")
+
+    res = await db.execute('INSERT INTO `circles_ranking`(`id`, `rank`, `mode`, `mods`) '
+                           'VALUES (%s,%s,%s,%s)',
+                           [player, rank, mode, mods])
+    return res
 
 
 async def fetch_bot_name(db_cursor: aiomysql.DictCursor) -> str:
@@ -211,16 +221,16 @@ def install_excepthook() -> None:
     sys._excepthook = sys.excepthook  # backup
 
     def _excepthook(
-        type_: Type[BaseException],
-        value: BaseException,
-        traceback: types.TracebackType
+            type_: Type[BaseException],
+            value: BaseException,
+            traceback: types.TracebackType
     ):
         if type_ is KeyboardInterrupt:
             print('\33[2K\r', end='Aborted startup.')
             return
         elif (
-            type_ is AttributeError and
-            value.args[0].startswith("module 'config' has no attribute")
+                type_ is AttributeError and
+                value.args[0].startswith("module 'config' has no attribute")
         ):
             attr_name = value.args[0][34:-1]
             log("circles's config has been updated, and has "
@@ -232,6 +242,7 @@ def install_excepthook() -> None:
         print('\x1b[0;31mgulag ran into an issue '
               'before starting up :(\x1b[0m')
         sys._excepthook(type_, value, traceback)
+
     sys.excepthook = _excepthook
 
 
@@ -266,14 +277,14 @@ async def log_strange_occurrence(obj: object) -> None:
     if glob.config.automatically_report_problems:
         # automatically reporting problems to cmyui's server
         async with glob.http.post(
-            url='https://log.cmyui.xyz/',
-            headers={'Gulag-Version': repr(glob.version),
-                     'Gulag-Domain': glob.config.domain},
-            data=pickled_obj,
+                url='https://log.cmyui.xyz/',
+                headers={'Gulag-Version': repr(glob.version),
+                         'Gulag-Domain': glob.config.domain},
+                data=pickled_obj,
         ) as resp:
             if (
-                resp.status == 200 and
-                (await resp.read()) == b'ok'
+                    resp.status == 200 and
+                    (await resp.read()) == b'ok'
             ):
                 uploaded = True
                 log("Logged strange occurrence to cmyui's server.", Ansi.LBLUE)
@@ -314,9 +325,10 @@ def fetch_geoloc_db(ip: str) -> dict[str, Union[str, float]]:
         }
     }
 
+
 async def fetch_geoloc_web(ip: str) -> dict[str, Union[str, float]]:
     """Fetch geolocation data based on ip (using ip-api)."""
-    if not glob.has_internet: # requires internet connection
+    if not glob.has_internet:  # requires internet connection
         return
 
     url = f'http://ip-api.com/line/{ip}'
@@ -347,11 +359,14 @@ async def fetch_geoloc_web(ip: str) -> dict[str, Union[str, float]]:
         }
     }
 
+
 def pymysql_encode(conv: Callable) -> Callable:
     """Decorator to allow for adding to pymysql's encoders."""
+
     def wrapper(cls):
         pymysql.converters.encoders[cls] = conv
         return cls
+
     return wrapper
 
 

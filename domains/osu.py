@@ -29,7 +29,6 @@ from cmyui.web import Domain
 from cmyui.web import ratelimit
 
 import packets
-# import utils.cm_dm
 import utils.misc
 from constants import regexes
 from constants.clientflags import ClientFlags
@@ -43,6 +42,7 @@ from objects.score import Score
 from objects.score import SubmissionStatus
 from utils.misc import escape_enum
 from utils.misc import pymysql_encode
+from utils.misc import update_rank_history
 
 if TYPE_CHECKING:
     from objects.player import Player
@@ -867,11 +867,9 @@ async def osuSubmitModularSelector(
             )
             rank = 1 + (await db_cursor.fetchone())['higher_pp_players']
 
-            mods, mode = mode_sql.split("_")
+            # TODO: Fix this function so it updates all players rank on change so the time is accurate. (@sargon64)?
+            await update_rank_history(db_cursor, score.player.id, rank, mode_sql)
 
-            await db_cursor.execute('INSERT INTO `circles_ranking`(`id`, `rank`, `mode`, `mods`) '
-                                    'VALUES (%s,%s,%s,%s)',
-                                    [score.player.id, rank, mode, mods])
             stats.rank = rank
 
     # construct the sql query of any stat changes
