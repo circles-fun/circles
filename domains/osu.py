@@ -30,6 +30,7 @@ from cmyui.web import ratelimit
 
 import packets
 import utils.misc
+import utils.cm_dm
 from constants import regexes
 from constants.clientflags import ClientFlags
 from constants.gamemodes import GameMode
@@ -864,7 +865,12 @@ async def osuSubmitModularSelector(
                 'AND u.priv & 1 and u.id != %s',
                 [stats.pp, score.player.id]
             )
-            stats.rank = 1 + (await db_cursor.fetchone())['higher_pp_players']
+            rank = 1 + (await db_cursor.fetchone())['higher_pp_players']
+
+            await db_cursor.execute('INSERT INTO `circles_ranking`(`id`, `rank`, `mode`, `mods`) '
+                                    'VALUES (%s,%s,"%s","%s")',
+                                    [score.player.id, rank, score.mode, score.mods])
+            stats.rank = rank
 
     # construct the sql query of any stat changes
     stats_query = f"{','.join(stats_query).format(mode=mode_sql)} WHERE id = %s"
@@ -1482,7 +1488,7 @@ async def checkUpdates(conn: Connection) -> Optional[bytes]:
 # Unauthorized (no api key required)
 # GET /api/get_player_count: return total registered & online player counts.
 # GET /api/get_player_info: return info or stats for a given player.
-# GET /api/get_player_ran: return global ranking and country ranking for a given player.
+# GET /api/get_player_rank: return global ranking and country ranking for a given player.
 # GET /api/get_player_status: return a player's current status, if online.
 # GET /api/get_player_scores: return a list of best or recent scores for a given player.
 # GET /api/get_player_most_played: return a list of maps most played by a given player.
@@ -1557,23 +1563,37 @@ async def api_get_player_rank(conn: Connection) -> tuple[int, bytes]:
     ):
         return 418, JSON({'status': 'Must provide mod (vn/rx/ap).'})
 
-    res = await glob.db.fetchall(f"SELECT `id` from `stats` JOIN users "
-                                 f"u using(id) WHERE u.priv & 1 "
-                                 f"ORDER BY pp_{conn.args['mods']}_{conn.args['mode']} DESC")
+    gamemode = utils.cm_dm(conn.args['mode'], conn.args['mods'])
 
-    search_id = int(conn.args['userid'])
+    player = glob.players.get(id=conn.args['userid'])
 
-    users_array = []
-    for i in range(len(res)):
-        users_array.append(res[i]['id'])
+    if player:
+        r = player.stats.get(gamemode).rank
+        res = (200, JSON({
+            "status": "success",
+            "global_rank": r,
+            "country_rank": "soon",
+        }))
 
-    rank = users_array.index(search_id) + 1
+    else:
+        dboutput = await glob.db.fetchall(f"SELECT `id` from `stats` JOIN users "
+                                          f"u using(id) WHERE u.priv & 1 "
+                                          f"ORDER BY pp_{conn.args['mods']}_{conn.args['mode']} DESC")
 
-    return (200, JSON({
-        "status": "success",
-        "global_rank": rank,
-        "country_rank": "soon",
-    }))
+        search_id = int(conn.args['userid'])
+
+        users_array = []
+        for i in range(len(dboutput)):
+            users_array.append(dboutput[i]['id'])
+
+        rank = users_array.index(search_id) + 1
+
+        res = (200, JSON({
+            "status": "success",
+            "global_rank": rank,
+            "country_rank": "soon",
+        }))
+    return res
 
 
 @domain.route('/api/get_player_info')
