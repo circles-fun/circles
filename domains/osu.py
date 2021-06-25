@@ -1612,10 +1612,12 @@ async def api_get_player_rank(conn: Connection) -> tuple[int, bytes]:
     ):
         return 418, JSON({'status': 'Must provide mod (vn/rx/ap).'})
 
-    output = await glob.db.fetchall(f"SELECT * FROM `circles_ranking` "
-                                    f"WHERE `id` = {conn.args['userid']} AND "
-                                    f"`mode` = {conn.args['mode']} AND "
-                                    f"`mods` = {conn.args['mods']};")
+    # output = await glob.db.fetchall(f"SELECT `rank`, `time` FROM `circles_ranking` "
+    #                                 f"WHERE `id` = {conn.args['userid']} AND "
+    #                                 f"`mode` = {conn.args['mode']} AND "
+    #                                 f"`mods` = {conn.args['mods']};")
+
+    output = await glob.db.fetchall(f"SELECT * FROM `circles_ranking`")
 
     return (200, JSON({
         "status": "success",
