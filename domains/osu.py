@@ -1612,7 +1612,7 @@ async def api_get_player_rank(conn: Connection) -> tuple[int, bytes]:
 
     return (200, JSON({
         "status": "success",
-        "history": JSON(output),
+        "history": output,
     }))
 
 
