@@ -2,6 +2,7 @@
 
 import inspect
 import io
+import requests
 import secrets
 import socket
 import sys
@@ -13,17 +14,21 @@ from typing import Sequence
 from typing import Type
 from typing import Union
 
-import aiomysql
 import dill as pickle
 import pymysql
 import requests
+import aiomysql
+import dill as pickle
+import pymysql
+
+from objects import glob
+from constants.countries import country_codes
 from cmyui.logging import Ansi
 from cmyui.logging import log
 from cmyui.logging import printc
 from cmyui.osu.replay import Keys
 from cmyui.osu.replay import ReplayFrame
 
-from constants.countries import country_codes
 from objects import glob
 
 __all__ = (

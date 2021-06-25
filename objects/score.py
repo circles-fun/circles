@@ -18,8 +18,8 @@ from constants.clientflags import ClientFlags
 from constants.gamemodes import GameMode
 from constants.mods import Mods
 from objects import glob
-from objects.beatmap import Beatmap
 from objects.beatmap import ensure_local_osu_file
+from objects.beatmap import Beatmap
 from utils.misc import escape_enum
 from utils.misc import pymysql_encode
 from utils.oppai_api import OppaiWrapper
@@ -34,7 +34,6 @@ __all__ = (
 )
 
 BEATMAPS_PATH = Path.cwd() / '.data/osu'
-
 
 @unique
 @pymysql_encode(escape_enum)
@@ -223,8 +222,8 @@ class Score:
 
     @classmethod
     async def from_submission(
-            cls, data_b64: str, iv_b64: str,
-            osu_ver: str, pw_md5: str
+        cls, data_b64: str, iv_b64: str,
+        osu_ver: str, pw_md5: str
     ) -> Optional['Score']:
         """Create a score object from an osu! submission string."""
         iv = b64decode(iv_b64).decode('latin_1')
@@ -333,7 +332,7 @@ class Score:
         """Calculate PP and star rating for our score."""
         mode_vn = self.mode.as_vanilla
 
-        if mode_vn in (0, 1):  # osu, taiko
+        if mode_vn in (0, 1): # osu, taiko
             with OppaiWrapper(self.bmap.id) as ez:
                 ez.set_accuracy_percent(self.acc)
                 ez.set_combo(self.max_combo)
@@ -348,9 +347,9 @@ class Score:
                 ez.calculate()
 
                 return (ez.get_pp(), ez.get_sr())
-        elif mode_vn == 2:  # catch
+        elif mode_vn == 2: # catch
             return (0.0, 0.0)
-        else:  # mania
+        else: # mania
             if self.bmap.mode.as_vanilla != 3:
                 return (0.0, 0.0)  # maniera has no convert support
 

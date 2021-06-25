@@ -264,7 +264,7 @@ class Match:
         self.chat: Optional['Channel'] = None  # multiplayer
         self.slots = [Slot() for _ in range(16)]
 
-        # self.type = MatchTypes.standard
+        #self.type = MatchTypes.standard
         self.team_type = MatchTeamTypes.head_to_head
         self.win_condition = MatchWinConditions.score
 
@@ -343,8 +343,8 @@ class Match:
         """Return the slot containing the host."""
         for s in self.slots:
             if (
-                    s.status & SlotStatus.has_player and
-                    s.player is self.host
+                s.status & SlotStatus.has_player and
+                s.player is self.host
             ):
                 return s
 
@@ -407,7 +407,7 @@ class Match:
         self.bans.clear()
 
     async def await_submissions(
-            self, was_playing: Sequence['Player']
+        self, was_playing: Sequence['Player']
     ) -> tuple[dict[str, Union[int, float]], list['Player']]:
         """Await score submissions from all players in completed state."""
         scores = defaultdict(int)
@@ -431,12 +431,12 @@ class Match:
             while True:
                 rc_score = s.player.recent_score
                 max_age = datetime.now() - timedelta(seconds=bmap.total_length +
-                                                             time_waited + 0.5)
+                                                     time_waited + 0.5)
 
                 if (
-                        rc_score and
-                        rc_score.bmap.md5 == self.map_md5 and
-                        rc_score.play_time > max_age
+                    rc_score and
+                    rc_score.bmap.md5 == self.map_md5 and
+                    rc_score.play_time > max_age
                 ):
                     # score found, add to our scores dict if != 0.
                     if score := getattr(rc_score, win_cond):

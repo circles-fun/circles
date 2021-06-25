@@ -31,7 +31,6 @@ __all__ = (
     'Clans'
 )
 
-
 # TODO: decorator for these collections which automatically
 # adds debugging to their append/remove/insert/extend methods.
 

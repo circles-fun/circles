@@ -274,10 +274,9 @@ ezpp_set_accuracy = _oppai_ng_lib['ezpp_set_accuracy']
 ezpp_set_accuracy.argtypes = (ctypes.c_int, ctypes.c_int, ctypes.c_int)
 ezpp_set_accuracy.restype = ctypes.c_void_p
 
-
 class OppaiWrapper:
     """Lightweight wrapper around oppai-ng's C library."""
-    __slots__ = ('_ez', 'bmap_id')
+    __slots__  = ('_ez', 'bmap_id')
 
     def __init__(self, bmap_id: Beatmap) -> None:
         self._ez: Optional[int] = None
