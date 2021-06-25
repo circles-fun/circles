@@ -16,10 +16,12 @@ import bcrypt
 from cmyui.logging import Ansi
 from cmyui.logging import AnsiRGB
 from cmyui.logging import log
+from cmyui.osu.oppai_ng import OppaiWrapper
 from cmyui.utils import magnitude_fmt_time
 from cmyui.utils import _isdecimal
 from cmyui.web import Connection
 from cmyui.web import Domain
+from maniera.calculator import Maniera
 
 import packets
 import utils.misc
@@ -45,7 +47,6 @@ from objects.player import PresenceFilter
 from packets import BanchoPacketReader
 from packets import BasePacket
 from packets import ClientPackets
-from utils.oppai_api import OppaiWrapper
 
 """ Bancho: handle connections from the osu! client """
 
@@ -136,6 +137,7 @@ async def bancho_handler(conn: Connection) -> bytes:
 
     player.last_recv_time = time.time()
     conn.resp_headers['Content-Type'] = 'text/html; charset=UTF-8'
+
     return player.dequeue() or b''
 
 """ Packet logic """
@@ -293,20 +295,20 @@ class SendMessage(BasePacket):
             # check if the user is /np'ing a map.
             # even though this is a public channel,
             # we'll update the player's last np stored.
-            if match := regexes.now_playing.match(msg):
+            if r_match := regexes.now_playing.match(msg):
                 # the player is /np'ing a map.
                 # save it to their player instance
                 # so we can use this elsewhere owo..
-                bmap = await Beatmap.from_bid(int(match['bid']))
+                bmap = await Beatmap.from_bid(int(r_match['bid']))
 
                 if bmap:
                     # parse mode_vn int from regex
-                    if match['mode_vn'] is not None:
+                    if r_match['mode_vn'] is not None:
                         mode_vn = {
                             'Taiko': 1,
                             'CatchTheBeat': 2,
                             'osu!mania': 3
-                        }[match['mode_vn']]
+                        }[r_match['mode_vn']]
                     else:
                         # use player mode if not specified
                         mode_vn = p.status.mode.as_vanilla
@@ -920,8 +922,27 @@ class SendPrivateMessage(BasePacket):
             # send away message if target is afk and has one set.
             p.send(t.away_msg, sender=t)
 
-        if t is glob.bot:
-            # may have a command in the message.
+        if t is not glob.bot:
+            # target is not bot, send the message normally if online
+            if t.online:
+                t.send(msg, sender=p)
+            else:
+                # inform user they're offline, but
+                # will receive the mail @ next login.
+                p.enqueue(packets.notification(
+                    f'{t.name} is currently offline, but will '
+                    'receive your messsage on their next login.'
+                ))
+
+            # insert mail into db, marked as unread.
+            await glob.db.execute(
+                'INSERT INTO `mail` '
+                '(`from_id`, `to_id`, `msg`, `time`) '
+                'VALUES (%s, %s, %s, UNIX_TIMESTAMP())',
+                [p.id, t.id, msg]
+            )
+        else:
+            # messaging the bot, check for commands & /np.
             cmd = (msg.startswith(glob.config.command_prefix) and
                    await commands.process_commands(p, t, msg))
 
@@ -931,20 +952,20 @@ class SendPrivateMessage(BasePacket):
                     p.send(cmd['resp'], sender=t)
             else:
                 # no commands triggered.
-                if match := regexes.now_playing.match(msg):
+                if r_match := regexes.now_playing.match(msg):
                     # user is /np'ing a map.
                     # save it to their player instance
                     # so we can use this elsewhere owo..
-                    bmap = await Beatmap.from_bid(int(match['bid']))
+                    bmap = await Beatmap.from_bid(int(r_match['bid']))
 
                     if bmap:
                         # parse mode_vn int from regex
-                        if match['mode_vn'] is not None:
+                        if r_match['mode_vn'] is not None:
                             mode_vn = {
                                 'Taiko': 1,
                                 'CatchTheBeat': 2,
                                 'osu!mania': 3
-                            }[match['mode_vn']]
+                            }[r_match['mode_vn']]
                         else:
                             # use player mode if not specified
                             mode_vn = p.status.mode.as_vanilla
@@ -957,90 +978,73 @@ class SendPrivateMessage(BasePacket):
 
                         # calculate generic pp values from their /np
 
-                        if not await ensure_local_osu_file(bmap.id, bmap.md5):
-                            msg = ('Mapfile could not be found; '
-                                   'this incident has been reported.')
+                        osu_file_path = BEATMAPS_PATH / f'{bmap.id}.osu'
+                        if not await ensure_local_osu_file(osu_file_path, bmap.id, bmap.md5):
+                            resp_msg = ('Mapfile could not be found; '
+                                        'this incident has been reported.')
                         else:
                             # calculate pp for common generic values
                             pp_calc_st = time.time_ns()
 
                             if mode_vn in (0, 1): # osu, taiko
-                                with OppaiWrapper(bmap.id) as ez:
+                                with OppaiWrapper('oppai-ng/liboppai.so') as ezpp:
                                     # std & taiko, use oppai-ng to calc pp
-                                    if match['mods'] is not None:
+                                    if r_match['mods'] is not None:
                                         # [1:] to remove leading whitespace
-                                        ez.set_mods(Mods.from_np(match['mods'][1:], mode_vn))
+                                        mods_str = r_match['mods'][1:]
+                                        mods = Mods.from_np(mods_str, mode_vn)
+                                        ezpp.set_mods(int(mods))
 
                                     pp_values = [] # [(acc, pp), ...]
 
                                     for acc in glob.config.pp_cached_accs:
-                                        ez.set_accuracy_percent(acc)
-                                        ez.calculate()
+                                        ezpp.set_accuracy_percent(acc)
 
-                                        pp_values.append((acc, ez.get_pp()))
+                                        ezpp.calculate(osu_file_path)
 
-                                    msg = ' | '.join([
-                                        f'{acc:.2f}%: {pp:,.2f}pp'
+                                        pp_values.append((acc, ezpp.get_pp()))
+
+                                    resp_msg = ' | '.join([
+                                        f'{acc}%: {pp:,.2f}pp'
                                         for acc, pp in pp_values
                                     ])
                             elif mode_vn == 2: # catch
-                                msg = 'Gamemode not yet supported.'
+                                resp_msg = 'Gamemode not yet supported.'
                             else: # mania
-                                msg = 'Gamemode not yet supported.'
-
-                                """ https://github.com/NiceAesth/maniera/pull/1
-                                if match['mods'] is not None:
-                                    # [1:] to remove leading whitespace
-                                    mods = int(Mods.from_np(match['mods'][1:], mode_vn))
+                                if bmap.mode.as_vanilla != 3:
+                                    resp_msg = 'Mania converts not currently supported.'
                                 else:
-                                    mods = 0
+                                    if r_match['mods'] is not None:
+                                        # [1:] to remove leading whitespace
+                                        mods_str = r_match['mods'][1:]
+                                        mods = int(Mods.from_np(mods_str, mode_vn))
+                                    else:
+                                        mods = 0
 
-                                path = BEATMAPS_PATH / f'{bmap.id}.osu'
+                                    calc = Maniera(str(osu_file_path), mods, 0)
+                                    calc.sr = calc._calculateStars()
+                                    pp_values = []
 
-                                calc = Maniera(path, mods, 0)
-                                calc.sr = calc._calculateStars()
-                                pp_values = []
+                                    for score in glob.config.pp_cached_scores:
+                                        calc.score = score
+                                        pp = calc._calculatePP()
 
-                                for score in glob.config.pp_cached_scores:
-                                    calc.score = score
-                                    pp_values.append((score, calc._calculatePP()))
+                                        pp_values.append((score, pp))
 
-                                msg = ' | '.join([
-                                    f'{score // 1000:.0f}k: {pp:,.2f}pp'
-                                    for score, pp in pp_values
-                                ])
-                                """
+                                    resp_msg = ' | '.join([
+                                        f'{score // 1000:.0f}k: {pp:,.2f}pp'
+                                        for score, pp in pp_values
+                                    ])
 
-                            elapsed = time.time_ns() - pp_calc_st
-                            msg += f' | Elapsed: {magnitude_fmt_time(elapsed)}'
+                                elapsed = time.time_ns() - pp_calc_st
+                                resp_msg += f' | Elapsed: {magnitude_fmt_time(elapsed)}'
                     else:
-                        msg = 'Could not find map.'
+                        resp_msg = 'Could not find map.'
 
                         # time out their previous /np
                         p.last_np['timeout'] = 0
 
-                    p.send(msg, sender=t)
-
-        else:
-            # target is not bot, send the message normally if online
-            if t.online:
-                t.send(msg, sender=p)
-            else:
-                # inform user they're offline, but
-                # will receive the mail @ next login.
-                p.enqueue(packets.notification(
-                    f'{t.name} is currently offline, but will '
-                    'receive your messsage on their next login.'
-                ))
-
-            # insert mail into db,
-            # marked as unread.
-            await glob.db.execute(
-                'INSERT INTO `mail` '
-                '(`from_id`, `to_id`, `msg`, `time`) '
-                'VALUES (%s, %s, %s, UNIX_TIMESTAMP())',
-                [p.id, t.id, msg]
-            )
+                    p.send(resp_msg, sender=t)
 
         p.update_latest_activity()
         log(f'{p} @ {t}: {msg}', Ansi.LCYAN, fd='.data/logs/chat.log')
@@ -1072,18 +1076,14 @@ class MatchCreate(BasePacket):
         if p.restricted:
             p.enqueue(
                 packets.matchJoinFail() +
-                packets.notification(
-                    'Multiplayer is not available while restricted.'
-                )
+                packets.notification('Multiplayer is not available while restricted.')
             )
             return
 
         if p.silenced:
             p.enqueue(
                 packets.matchJoinFail() +
-                packets.notification(
-                    'Multiplayer is not available while silenced.'
-                )
+                packets.notification('Multiplayer is not available while silenced.')
             )
             return
 

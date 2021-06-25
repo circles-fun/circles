@@ -2,11 +2,14 @@
 
 import re
 from typing import Optional
+from typing import Union
 
 from cmyui.web import Connection
 from cmyui.web import Domain
 
 from objects import glob
+
+HTTPResponse = Optional[Union[bytes, tuple[int, bytes]]]
 
 """ bmap: static beatmap info (thumbnails, previews, etc.) """
 
@@ -18,6 +21,6 @@ domain = Domain({f'b.{BASE_DOMAIN}', 'b.ppy.sh'})
 
 
 @domain.route(re.compile(r'^.+$'))
-async def everything(conn: Connection) -> Optional[bytes]:
+async def everything(conn: Connection) -> HTTPResponse:
     conn.resp_headers['Location'] = f'https://b.ppy.sh{conn.path}'
     return (301, b'')
