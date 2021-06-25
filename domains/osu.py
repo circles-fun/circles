@@ -29,8 +29,8 @@ from cmyui.web import Domain
 from cmyui.web import ratelimit
 
 import packets
-import utils.misc
 import utils.cm_dm
+import utils.misc
 from constants import regexes
 from constants.clientflags import ClientFlags
 from constants.gamemodes import GameMode
@@ -1565,37 +1565,55 @@ async def api_get_player_rank(conn: Connection) -> tuple[int, bytes]:
     ):
         return 418, JSON({'status': 'Must provide mod (vn/rx/ap).'})
 
-    gamemode = utils.cm_dm(conn.args['mode'], conn.args['mods'])
+    output = await glob.db.fetchall(f"SELECT `id` from `stats` JOIN users "
+                                    f"u using(id) WHERE u.priv & 1 "
+                                    f"ORDER BY pp_{conn.args['mods']}_{conn.args['mode']} DESC")
 
-    player = glob.players.get(id=conn.args['userid'])
+    search_id = int(conn.args['userid'])
 
-    if player:
-        r = player.stats.get(gamemode).rank
-        res = (200, JSON({
-            "status": "success",
-            "global_rank": r,
-            "country_rank": "soon",
-        }))
+    users_array = []
+    for i in range(len(output)):
+        users_array.append(output[i]['id'])
 
-    else:
-        dboutput = await glob.db.fetchall(f"SELECT `id` from `stats` JOIN users "
-                                          f"u using(id) WHERE u.priv & 1 "
-                                          f"ORDER BY pp_{conn.args['mods']}_{conn.args['mode']} DESC")
+    rank = users_array.index(search_id) + 1
+    return (200, JSON({
+        "status": "success",
+        "global_rank": rank,
+        "country_rank": "soon",
+    }))
 
-        search_id = int(conn.args['userid'])
 
-        users_array = []
-        for i in range(len(dboutput)):
-            users_array.append(dboutput[i]['id'])
+@domain.route('/api/get_player_rank_history')
+async def api_get_player_rank(conn: Connection) -> tuple[int, bytes]:
+    """Return the ranking history of a given player."""
+    conn.resp_headers['Content-Type'] = f'application/json'
+    conn.resp_headers['Access-Control-Allow-Origin'] = "*"
+    conn.resp_headers['Access-Control-Allow-Headers'] = "Content-Type"
 
-        rank = users_array.index(search_id) + 1
+    if 'userid' not in conn.args:
+        return 418, JSON({'status': 'Must provide player id!'})
 
-        res = (200, JSON({
-            "status": "success",
-            "global_rank": rank,
-            "country_rank": "soon",
-        }))
-    return res
+    if not conn.args['userid'].isdecimal():
+        return 418, JSON({'status': 'Invalid player id.'})
+
+    if (
+            'mode' not in conn.args or
+            conn.args['mode'] not in ('std', 'taiko', 'mania')
+    ):
+        return 418, JSON({'status': 'Must provide mode (std/taiko/mania).'})
+
+    if (
+            'mods' not in conn.args or
+            conn.args['mods'] not in ('vn', 'rx', 'ap')
+    ):
+        return 418, JSON({'status': 'Must provide mod (vn/rx/ap).'})
+
+    output = await glob.db.fetchall(f"SELECT `rank`, `time` FROM `circles_ranking` WHERE `id` & {conn.args['userid']}")
+
+    return (200, JSON({
+        "status": "success",
+        "history": JSON(output),
+    }))
 
 
 @domain.route('/api/get_player_info')
