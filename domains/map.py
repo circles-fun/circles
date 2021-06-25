@@ -13,6 +13,7 @@ from objects import glob
 BASE_DOMAIN = glob.config.domain
 domain = Domain({f'b.{BASE_DOMAIN}', 'b.ppy.sh'})
 
+
 # for now, just send everything to osu!
 # eventually if we do bmap submission, we'll need this.
 
