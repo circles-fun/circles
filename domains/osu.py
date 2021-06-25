@@ -871,7 +871,7 @@ async def osuSubmitModularSelector(
 
             await db_cursor.execute('INSERT INTO `circles_ranking`(`id`, `rank`, `mode`, `mods`) '
                                     'VALUES (%s,%s,"%s","%s")',
-                                    [score.player.id, rank, mode.strip(), mods.strip()])
+                                    [score.player.id, rank, mode.replace("'", ""), mods.replace("'", "")])
             stats.rank = rank
 
     # construct the sql query of any stat changes
@@ -1608,7 +1608,10 @@ async def api_get_player_rank(conn: Connection) -> tuple[int, bytes]:
     ):
         return 418, JSON({'status': 'Must provide mod (vn/rx/ap).'})
 
-    output = await glob.db.fetchall(f"SELECT `rank`, `time` FROM `circles_ranking` WHERE `id` & {conn.args['userid']}")
+    output = await glob.db.fetchall(f"SELECT `rank`, `time` FROM `circles_ranking` "
+                                    f"WHERE `id` = {conn.args['userid']} AND "
+                                    f"`mode` = {conn.args['mode']} AND "
+                                    f"`mods` = {conn.args['mods']};")
 
     return (200, JSON({
         "status": "success",
