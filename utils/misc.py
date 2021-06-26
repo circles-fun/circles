@@ -54,15 +54,13 @@ useful_keys = (Keys.M1, Keys.M2,
 
 async def run_circleguard(score, replay):
     cg = CircleGuard.Circleguard(config.osu_api_key)
-    cg_replay = cg.ReplayPath(f"{replay}")
+    cg_replay = cg.ReplayPath(replay)
 
     print(f"CG | Information for replay {score.id} submitted by {score.player.name} (ID: {score.player.id})")
 
     print(f"CG | UR: {cg.ur(cg_replay)}")  # unstable rate
     print(f"CG | Average frame time: {cg.frametime(cg_replay)}")  # average frametime
     print(f"CG | Snaps {cg.snaps(cg_replay)}")  # any jerky/suspicious movement
-
-    return True
 
 
 def get_press_times(frames: Sequence[ReplayFrame]) -> dict[Keys, float]:
