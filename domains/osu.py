@@ -776,7 +776,7 @@ async def osuSubmitModularSelector(
             replay_file = REPLAYS_PATH / f'{score.id}.osr'
             replay_file.write_bytes(conn.files['score'])
 
-            await run_circleguard(score, replay_file)
+            glob.loop.create_task(run_circleguard(score, replay_file))
 
             # await glob.sketchy_queue.put(s)
 
