@@ -47,7 +47,6 @@ from objects.score import SubmissionStatus
 from utils.misc import escape_enum
 from utils.misc import pymysql_encode
 from utils.misc import update_rank_history
-cg = Circleguard(config.osu_api_key)
 
 if TYPE_CHECKING:
     from objects.player import Player
@@ -778,7 +777,8 @@ async def osuSubmitModularSelector(
             replay_file = REPLAYS_PATH / f'{score.id}.osr'
             replay_file.write_bytes(conn.files['score'])
 
-            cg_replay = circleguard.ReplayPath(replay_file)
+            cg = Circleguard(config.osu_api_key)
+            cg_replay = circleguard.ReplayPath(f"{replay_file}")
 
             print(f"CG | Information for replay {score.id} submitted by {score.player.name} (ID: {score.player.id})")
 
