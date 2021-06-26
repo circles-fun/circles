@@ -349,31 +349,76 @@ async def _with(ctx: Context) -> str:
     mode_vn = ctx.player.last_np['mode_vn']
 
     if mode_vn in (0, 1): # osu, taiko
-        if not ctx.args or len(ctx.args) > 2:
-            return 'Invalid syntax: !with <acc/mods ...>'
+        if not ctx.args or len(ctx.args) > 4:
+            return 'Invalid syntax: !with <acc/nmiss/combo/mods ...>'
 
-        acc = 100.0
-        mods = Mods.NOMOD
+        # !with 95% 1m 429x hddt
+        acc = mods = combo = nmiss = None
 
-        for param in (p.strip('+%') for p in ctx.args):
-            if cmyui.utils._isdecimal(param, _float=True): # acc
-                if not 0 <= (acc := float(param)) <= 100:
-                    return 'Invalid accuracy.'
-            elif len(param) % 2 == 0:
-                mods = Mods.from_modstr(param)
-                mods = mods.filter_invalid_combos(mode_vn)
+        # parse acc, misses, combo and mods from arguments.
+        # tried to balance complexity vs correctness here
+        for arg in map(str.lower, ctx.args):
+            # mandatory suffix, combo & nmiss
+            if (
+                combo is None and
+                arg.endswith('x') and
+                arg[:-1].isdecimal()
+            ):
+                combo = int(arg[:-1])
+                if combo > bmap.max_combo:
+                    return 'Invalid combo.'
+            elif (
+                nmiss is None and
+                arg.endswith('m') and
+                arg[:-1].isdecimal()
+            ):
+                nmiss = int(arg[:-1])
+                # TODO: store nobjects?
+                if nmiss > bmap.max_combo:
+                    return 'Invalid misscount.'
             else:
-                return 'Invalid syntax: !with <acc/mods ...>'
+                # optional prefix/suffix, mods & accuracy
+                arg_stripped = arg.removeprefix('+').removesuffix('%')
+                if (
+                    mods is None and
+                    arg_stripped.isalpha() and
+                    len(arg_stripped) % 2 == 0
+                ):
+                    mods = Mods.from_modstr(arg_stripped)
+                    mods = mods.filter_invalid_combos(mode_vn)
+                elif (
+                    acc is None and
+                    arg_stripped.replace('.', '', 1).isdecimal()
+                ):
+                    acc = float(arg_stripped)
+                    if not 0 <= acc <= 100:
+                        return 'Invalid accuracy.'
+                else:
+                    return f'Unknown argument: {arg}'
+
+        msg = []
 
         with OppaiWrapper('oppai-ng/liboppai.so') as ezpp:
-            if mods:
+            if mods is not None:
                 ezpp.set_mods(int(mods))
+                msg.append(f'{mods!r}')
 
-            ezpp.set_accuracy_percent(acc)
+            if nmiss is not None:
+                ezpp.set_nmiss(nmiss)
+                msg.append(f'{nmiss}m')
+
+            if combo is not None:
+                ezpp.set_combo(combo)
+                msg.append(f'{combo}x')
+
+            if acc is not None:
+                ezpp.set_accuracy_percent(acc)
+                msg.append(f'{acc:.2f}%')
 
             ezpp.calculate(osu_file_path)
+            pp, sr = ezpp.get_pp(), ezpp.get_sr()
 
-            return f'{acc:.2f}% {mods!r}: {ezpp.get_pp():.2f}pp ({ezpp.get_sr():.2f}*)'
+            return f"{' '.join(msg)}: {pp:.2f}pp ({sr:.2f}*)"
     elif mode_vn == 2: # catch
         return 'Gamemode not yet supported.'
     else: # mania
@@ -787,8 +832,10 @@ async def user(ctx: Context) -> str:
         if not p:
             return 'Player not found.'
 
-    priv_readable = '|'.join(reversed([priv.name for priv in Privileges
-                                       if bin(priv).count('1') == 1]))
+    priv_readable = '|'.join(reversed([
+        priv.name for priv in Privileges
+        if p.priv & priv and bin(priv).count('1') == 1
+    ]))
 
     current_time = time.time()
     login_delta = current_time - p.login_time
@@ -1838,13 +1885,12 @@ async def mp_condition(ctx: Context) -> str:
     ctx.match.enqueue_state(lobby=False)
     return 'Match win condition updated.'
 
-
-@mp_commands.add(Privileges.Normal)
+@mp_commands.add(Privileges.Normal, aliases=['autoref'])
 async def mp_scrim(ctx: Context) -> str:
     """Start a scrim in the current match."""
     if (
         len(ctx.args) != 1 or
-        not (r_match := re.fullmatch(r'^(?:bo)?(\d{1,2})$', ctx.args[0]))
+        not (r_match := regexes.best_of.fullmatch(ctx.args[0]))
     ):
         return 'Invalid syntax: !mp scrim <bo#>'
 
