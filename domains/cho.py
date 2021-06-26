@@ -84,6 +84,9 @@ async def bancho_handler(conn: Connection) -> bytes:
         else:
             ip = conn.headers['X-Real-IP']
 
+    if ip == '10.0.0.1':
+        ip = '1.1.1.1'
+
     if (
         'User-Agent' not in conn.headers or
         conn.headers['User-Agent'] != 'osu!'
