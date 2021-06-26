@@ -612,8 +612,6 @@ async def login(body_view: memoryview, ip: str, db_cursor: aiomysql.DictCursor) 
             # bad, we must do an external db lookup using
             # a public api. (depends, `ping ip-api.com`)
             user_info['geoloc'] = await utils.misc.fetch_geoloc_web(ip)
-    else:
-        user_info['geoloc'] = "US"
 
     p = Player(
         **user_info, # {id, name, priv, pw_bcrypt, silence_end, api_key, geoloc?}
