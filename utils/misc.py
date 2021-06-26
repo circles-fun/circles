@@ -2,7 +2,6 @@
 
 import inspect
 import io
-import requests
 import secrets
 import socket
 import sys
@@ -14,21 +13,19 @@ from typing import Sequence
 from typing import Type
 from typing import Union
 
+import aiomysql
+import circleguard as CircleGuard
 import dill as pickle
 import pymysql
 import requests
-import aiomysql
-import dill as pickle
-import pymysql
-
-from objects import glob
-from constants.countries import country_codes
 from cmyui.logging import Ansi
 from cmyui.logging import log
 from cmyui.logging import printc
 from cmyui.osu.replay import Keys
 from cmyui.osu.replay import ReplayFrame
 
+import config
+from constants.countries import country_codes
 from objects import glob
 
 __all__ = (
@@ -36,6 +33,7 @@ __all__ = (
     'make_safe_name',
     'fetch_bot_name',
     'update_rank_history',
+    'run_circleguard',
     'download_achievement_images',
     'seconds_readable',
     'check_connection',
@@ -52,6 +50,20 @@ __all__ = (
 
 useful_keys = (Keys.M1, Keys.M2,
                Keys.K1, Keys.K2)
+
+
+async def run_circleguard(score, replay):
+    cg = CircleGuard.Circleguard(config.osu_api_key)
+    cg_replay = cg.ReplayPath(f"{replay}")
+    await cg.load(cg_replay)
+
+    print(f"CG | Information for replay {score.id} submitted by {score.player.name} (ID: {score.player.id})")
+
+    print(f"CG | UR: {cg.ur(cg_replay)}")  # unstable rate
+    print(f"CG | Average frame time: {cg.frametime(cg_replay)}")  # average frametime
+    print(f"CG | Snaps {cg.snaps(cg_replay)}")  # any jerky/suspicious movement
+
+    return True
 
 
 def get_press_times(frames: Sequence[ReplayFrame]) -> dict[Keys, float]:

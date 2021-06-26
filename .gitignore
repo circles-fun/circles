@@ -5,4 +5,3 @@ __pycache__/
 _testing/
 *.lprof
 ext/GeoLite2-City.mmdb
-.idea/discord.xml

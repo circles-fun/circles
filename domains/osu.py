@@ -20,9 +20,7 @@ from urllib.parse import unquote
 
 import aiomysql
 import bcrypt
-import circleguard
 import orjson
-from circleguard import Circleguard
 from cmyui.logging import Ansi
 from cmyui.logging import log
 from cmyui.logging import printc
@@ -47,6 +45,7 @@ from objects.score import SubmissionStatus
 from utils.misc import escape_enum
 from utils.misc import pymysql_encode
 from utils.misc import update_rank_history
+from utils.misc import run_circleguard
 
 if TYPE_CHECKING:
     from objects.player import Player
@@ -777,14 +776,7 @@ async def osuSubmitModularSelector(
             replay_file = REPLAYS_PATH / f'{score.id}.osr'
             replay_file.write_bytes(conn.files['score'])
 
-            cg = Circleguard(config.osu_api_key)
-            cg_replay = circleguard.ReplayPath(f"{replay_file}")
-
-            print(f"CG | Information for replay {score.id} submitted by {score.player.name} (ID: {score.player.id})")
-
-            print(f"CG | UR: {cg.ur(cg_replay)}")  # unstable rate
-            print(f"CG | Average frame time: {cg.frametime(cg_replay)}")  # average frametime
-            print(f"CG | Snaps {cg.snaps(cg_replay)}")  # any jerky/suspicious movement
+            await run_circleguard(score, replay_file)
 
             # await glob.sketchy_queue.put(s)
 
