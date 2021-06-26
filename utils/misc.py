@@ -55,7 +55,6 @@ useful_keys = (Keys.M1, Keys.M2,
 async def run_circleguard(score, replay):
     cg = CircleGuard.Circleguard(config.osu_api_key)
     cg_replay = cg.ReplayPath(f"{replay}")
-    await cg.load(cg_replay)
 
     print(f"CG | Information for replay {score.id} submitted by {score.player.name} (ID: {score.player.id})")
 
