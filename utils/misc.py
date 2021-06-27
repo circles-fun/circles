@@ -57,10 +57,13 @@ async def run_circleguard(score, replay):
     cg_replay = cg.ReplayPath(replay)
 
     print(f"CG | Information for replay {score.id} submitted by {score.player.name} (ID: {score.player.id})")
-
     print(f"CG | UR: {cg.ur(cg_replay)}")  # unstable rate
     print(f"CG | Average frame time: {cg.frametime(cg_replay)}")  # average frametime
     print(f"CG | Snaps {cg.snaps(cg_replay)}")  # any jerky/suspicious movement
+
+
+# async def save_circleguard():
+#    return True
 
 
 def get_press_times(frames: Sequence[ReplayFrame]) -> dict[Keys, float]:

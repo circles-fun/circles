@@ -778,8 +778,6 @@ async def osuSubmitModularSelector(
 
             glob.loop.create_task(run_circleguard(score, replay_file))
 
-            # await glob.sketchy_queue.put(s)
-
     """ Update the user's & beatmap's stats """
 
     # get the current stats, and take a

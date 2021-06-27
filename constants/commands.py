@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+import asyncio
 import copy
 import hashlib
 import importlib
@@ -72,7 +72,6 @@ class Context:
     args: Sequence[str]
 
     recipient: Optional[Messageable] = None
-    match:
     Optional[Match] = None
 
 
