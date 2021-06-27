@@ -256,9 +256,9 @@ def gulag_to_osuapi_status(s: int) -> int:
 @get_login(name_p='u', pass_p='h')
 @acquire_db_conn(aiomysql.DictCursor)
 async def osuGetBeatmapInfo(
-    p: 'Player',
-    conn: Connection,
-    db_cursor: aiomysql.DictCursor
+        p: 'Player',
+        conn: Connection,
+        db_cursor: aiomysql.DictCursor
 ) -> HTTPResponse:
     data = orjson.loads(conn.body)
 
@@ -588,8 +588,8 @@ def chart_entry(name: str, before: Optional[object], after: object) -> str:
                   'c1', 'st', 'pass', 'osuver', 's'})
 @acquire_db_conn(aiomysql.DictCursor)
 async def osuSubmitModularSelector(
-    conn: Connection,
-    db_cursor: aiomysql.DictCursor
+        conn: Connection,
+        db_cursor: aiomysql.DictCursor
 ) -> HTTPResponse:
     mp_args = conn.multipart_args
 
@@ -1033,9 +1033,9 @@ async def getReplay(p: 'Player', conn: Connection) -> HTTPResponse:
 @get_login(name_p='u', pass_p='p', auth_error=b'auth fail')
 @acquire_db_conn(aiomysql.Cursor)
 async def osuRate(
-    p: 'Player',
-    conn: Connection,
-    db_cursor: aiomysql.Cursor
+        p: 'Player',
+        conn: Connection,
+        db_cursor: aiomysql.Cursor
 ) -> HTTPResponse:
     map_md5 = conn.args['c']
 
@@ -1108,11 +1108,11 @@ SCORE_LISTING_FMTSTR = (
 @get_login(name_p='us', pass_p='ha')
 @acquire_db_conn(aiomysql.DictCursor)
 async def getScores(
-    p: 'Player',
-    conn: Connection,
-    db_cursor: aiomysql.DictCursor
+        p: 'Player',
+        conn: Connection,
+        db_cursor: aiomysql.DictCursor
 ) -> HTTPResponse:
-    if not all([ # make sure all int args are integral
+    if not all([  # make sure all int args are integral
         _isdecimal(conn.args[k], _negative=True)
         for k in ('mods', 'v', 'm', 'i')
     ]):
@@ -2343,8 +2343,8 @@ async def get_updated_beatmap(conn: Connection) -> HTTPResponse:
         osu_file_path = BEATMAPS_PATH / f'{res["id"]}.osu'
 
         if (
-            osu_file_path.exists() and
-            res['md5'] == hashlib.md5(osu_file_path.read_bytes()).hexdigest()
+                osu_file_path.exists() and
+                res['md5'] == hashlib.md5(osu_file_path.read_bytes()).hexdigest()
         ):
             # up to date map found on disk.
             content = osu_file_path.read_bytes()
@@ -2358,7 +2358,7 @@ async def get_updated_beatmap(conn: Connection) -> HTTPResponse:
             async with glob.http.get(url) as resp:
                 if not resp or resp.status != 200:
                     log(f'Could not find map {osu_file_path}!', Ansi.LRED)
-                    return (404, b'') # couldn't find on osu!'s server
+                    return (404, b'')  # couldn't find on osu!'s server
 
                 content = await resp.read()
 
@@ -2387,8 +2387,8 @@ async def peppyDMHandler(conn: Connection) -> HTTPResponse:
 @ratelimit(period=300, max_count=15)  # 15 registrations / 5mins
 @acquire_db_conn(aiomysql.Cursor)
 async def register_account(
-    conn: Connection,
-    db_cursor: aiomysql.Cursor
+        conn: Connection,
+        db_cursor: aiomysql.Cursor
 ) -> HTTPResponse:
     mp_args = conn.multipart_args
 

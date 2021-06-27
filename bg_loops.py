@@ -20,15 +20,17 @@ from objects import glob
 # from typing import TYPE_CHECKING
 # from cmyui.osu import ReplayFrame
 
-#if TYPE_CHECKING:
+# if TYPE_CHECKING:
 #    from objects.score import Score
 
 __all__ = ('donor_expiry', 'disconnect_ghosts',
-           #'replay_detections',
+           # 'replay_detections',
            'reroll_bot_status')
+
 
 async def donor_expiry() -> list[Coroutine]:
     """Add new donation ranks & enqueue tasks to remove current ones."""
+
     # TODO: this system can get quite a bit better; rather than just
     # removing, it should rather update with the new perks (potentially
     # a different tier, enqueued after their current perks).
@@ -59,8 +61,8 @@ async def donor_expiry() -> list[Coroutine]:
     query = (
         'SELECT id, donor_end FROM users '
         'WHERE donor_end <= UNIX_TIMESTAMP() + (60 * 60 * 24 * 7 * 4) '
-        #'WHERE donor_end < DATE_ADD(NOW(), INTERVAL 30 DAY) '
-        'AND priv & 48' # 48 = Supporter | Premium
+        # 'WHERE donor_end < DATE_ADD(NOW(), INTERVAL 30 DAY) '
+        'AND priv & 48'  # 48 = Supporter | Premium
     )
 
     coros = []
@@ -70,7 +72,10 @@ async def donor_expiry() -> list[Coroutine]:
 
     return coros
 
-PING_TIMEOUT = 300000 // 1000 # defined by osu!
+
+PING_TIMEOUT = 300000 // 1000  # defined by osu!
+
+
 async def disconnect_ghosts() -> None:
     """Actively disconnect users above the
        disconnection time threshold on the osu! server."""
@@ -84,6 +89,7 @@ async def disconnect_ghosts() -> None:
 
         # run this indefinitely
         await asyncio.sleep(PING_TIMEOUT // 3)
+
 
 '''
 # This function is currently pretty tiny and useless, but
@@ -154,6 +160,7 @@ async def replay_detections() -> None:
     while score := await queue.get():
         glob.loop.create_task(analyze_score(score))
 '''
+
 
 async def reroll_bot_status(interval: int) -> None:
     """Reroll the bot's status, every `interval`."""

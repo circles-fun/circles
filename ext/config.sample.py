@@ -58,12 +58,12 @@ max_multi_matches = 64
 # Values below are in form (non_fl, fl), as fl has custom
 # vals as it finds quite a few additional cheaters on the side.
 autoban_pp = (
-    (700,   600),   # vn!std
+    (700, 600),  # vn!std
     (9999, 9999),  # vn!taiko
     (9999, 9999),  # vn!catch
     (9999, 9999),  # vn!mania
 
-    (1200,  800),   # rx!std
+    (1200, 800),  # rx!std
     (9999, 9999),  # rx!taiko
     (9999, 9999),  # rx!catch
 

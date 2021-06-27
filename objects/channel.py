@@ -91,8 +91,8 @@ class Channel:
 
         for p in self.players:
             if (
-                sender.id not in p.blocks and
-                (to_self or p.id != sender.id)
+                    sender.id not in p.blocks and
+                    (to_self or p.id != sender.id)
             ):
                 p.enqueue(data)
 
@@ -102,7 +102,7 @@ class Channel:
 
         msg_len = len(msg)
 
-        if msg_len >= 31979: # TODO ??????????
+        if msg_len >= 31979:  # TODO ??????????
             msg = f'message would have crashed games ({msg_len} chars)'
 
         self.enqueue(

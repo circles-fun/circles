@@ -88,8 +88,8 @@ async def bancho_handler(conn: Connection) -> bytes:
         ip = '1.1.1.1'
 
     if (
-        'User-Agent' not in conn.headers or
-        conn.headers['User-Agent'] != 'osu!'
+            'User-Agent' not in conn.headers or
+            conn.headers['User-Agent'] != 'osu!'
     ):
         url = f'{conn.cmd} {conn.headers["Host"]}{conn.path}'
         log(f'[{ip}] {url} missing user-agent.', Ansi.LRED)
@@ -143,6 +143,7 @@ async def bancho_handler(conn: Connection) -> bytes:
 
     return player.dequeue() or b''
 
+
 """ Packet logic """
 
 # restricted users are able to
@@ -154,10 +155,11 @@ glob.bancho_packets = {
 
 
 def register(
-    packet: ClientPackets,
-    restricted: Union[bool, Callable] = False
+        packet: ClientPackets,
+        restricted: Union[bool, Callable] = False
 ) -> Callable:
     """Register a handler in `glob.bancho_packets`."""
+
     def wrapper(cls) -> Callable:
         new_entry = {packet: cls}
 
@@ -166,6 +168,7 @@ def register(
         if restricted:
             glob.bancho_packets['restricted'] |= new_entry
         return cls
+
     return wrapper
 
 
@@ -452,7 +455,7 @@ async def login(body_view: memoryview, ip: str, db_cursor: aiomysql.DictCursor) 
         return  # invalid request
 
     utc_offset = int(client_info[1])
-    #display_city = client_info[2] == '1'
+    # display_city = client_info[2] == '1'
 
     # Client hashes contain a few values useful to us.
     # TODO: store these correctly in the db
@@ -493,7 +496,7 @@ async def login(body_view: memoryview, ip: str, db_cursor: aiomysql.DictCursor) 
                 else:
                     # the user is currently online, send back failure.
                     data = packets.userID(-1) + \
-                        packets.notification('User already logged in.')
+                           packets.notification('User already logged in.')
 
                     return data, 'no'
 
@@ -511,11 +514,11 @@ async def login(body_view: memoryview, ip: str, db_cursor: aiomysql.DictCursor) 
                 packets.userID(-1)), 'no'
 
     if (
-        using_tourney_client and
-        not (
-            user_info['priv'] & Privileges.Donator and
-            user_info['priv'] & Privileges.Normal
-        )
+            using_tourney_client and
+            not (
+                    user_info['priv'] & Privileges.Donator and
+                    user_info['priv'] & Privileges.Normal
+            )
     ):
         # trying to use tourney client with insufficient privileges.
         return packets.userID(-1), 'no'
@@ -617,7 +620,7 @@ async def login(body_view: memoryview, ip: str, db_cursor: aiomysql.DictCursor) 
             user_info['geoloc'] = await utils.misc.fetch_geoloc_web(ip)
 
     p = Player(
-        **user_info, # {id, name, priv, pw_bcrypt, silence_end, api_key, geoloc?}
+        **user_info,  # {id, name, priv, pw_bcrypt, silence_end, api_key, geoloc?}
         utc_offset=utc_offset,
         osu_ver=osu_ver_date,
         pm_private=pm_private,
@@ -654,9 +657,9 @@ async def login(body_view: memoryview, ip: str, db_cursor: aiomysql.DictCursor) 
     # the osu! client will attempt to join the channels.
     for c in glob.channels:
         if (
-            not c.auto_join or
-            not c.can_read(p.priv) or
-            c._name == '#lobby'  # (can't be in mp lobby @ login)
+                not c.auto_join or
+                not c.can_read(p.priv) or
+                c._name == '#lobby'  # (can't be in mp lobby @ login)
         ):
             continue
 
@@ -835,10 +838,10 @@ class SpectateFrames(BasePacket):
 
     async def handle(self, p: Player) -> None:
         # packing this manually is about ~3x faster
-        #data = packets.spectateFrames(self.frame_bundle.raw_data)
+        # data = packets.spectateFrames(self.frame_bundle.raw_data)
         data = (
-            struct.pack('<HxI', 15, len(self.frame_bundle.raw_data)) +
-            self.frame_bundle.raw_data
+                struct.pack('<HxI', 15, len(self.frame_bundle.raw_data)) +
+                self.frame_bundle.raw_data
         )
 
         # enqueue the data
@@ -989,7 +992,7 @@ class SendPrivateMessage(BasePacket):
                             # calculate pp for common generic values
                             pp_calc_st = time.time_ns()
 
-                            if mode_vn in (0, 1): # osu, taiko
+                            if mode_vn in (0, 1):  # osu, taiko
                                 with OppaiWrapper('oppai-ng/liboppai.so') as ezpp:
                                     # std & taiko, use oppai-ng to calc pp
                                     if r_match['mods'] is not None:
@@ -998,7 +1001,7 @@ class SendPrivateMessage(BasePacket):
                                         mods = Mods.from_np(mods_str, mode_vn)
                                         ezpp.set_mods(int(mods))
 
-                                    pp_values = [] # [(acc, pp), ...]
+                                    pp_values = []  # [(acc, pp), ...]
 
                                     for acc in glob.config.pp_cached_accs:
                                         ezpp.set_accuracy_percent(acc)
@@ -1011,9 +1014,9 @@ class SendPrivateMessage(BasePacket):
                                         f'{acc}%: {pp:,.2f}pp'
                                         for acc, pp in pp_values
                                     ])
-                            elif mode_vn == 2: # catch
+                            elif mode_vn == 2:  # catch
                                 resp_msg = 'Gamemode not yet supported.'
-                            else: # mania
+                            else:  # mania
                                 if bmap.mode.as_vanilla != 3:
                                     resp_msg = 'Mania converts not currently supported.'
                                 else:
@@ -1115,6 +1118,7 @@ class MatchCreate(BasePacket):
 
         self.match.chat.send_bot(f'Match created by {p.name}.')
         log(f'{p} created a new multiplayer match.')
+
 
 async def check_menu_option(p: Player, key: int) -> None:
     if key not in p.menu_options:
@@ -1464,8 +1468,8 @@ class MatchChangeMods(BasePacket):
 
 def is_playing(slot: Slot) -> bool:
     return (
-        slot.status == SlotStatus.playing and
-        not slot.loaded
+            slot.status == SlotStatus.playing and
+            not slot.loaded
     )
 
 
@@ -1752,7 +1756,9 @@ class StatsRequest(BasePacket):
 
     async def handle(self, p: Player) -> None:
         unrestrcted_ids = [p.id for p in glob.players.unrestricted]
-        def is_online(o): return o in unrestrcted_ids and o != p.id
+
+        def is_online(o):
+            return o in unrestrcted_ids and o != p.id
 
         for online in filter(is_online, self.user_ids):
             if t := glob.players.get(id=online):

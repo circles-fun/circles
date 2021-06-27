@@ -18,7 +18,7 @@ import aiohttp
 import aiomysql
 import cmyui
 import datadog
-import orjson # go zoom
+import orjson  # go zoom
 import geoip2.database
 import subprocess
 from cmyui.logging import Ansi
@@ -50,6 +50,7 @@ try:
 except ModuleNotFoundError as exc:
     if exc.name == 'config':
         import shutil
+
         shutil.copy('ext/config.sample.py', 'config.py')
         sys.exit('\x1b[0;92mA config file has been generated, '
                  'please configure it to your needs.\x1b[0m')
@@ -66,6 +67,7 @@ glob.version = cmyui.Version(3, 4, 3)
 OPPAI_PATH = Path.cwd() / 'oppai-ng'
 GEOLOC_DB_FILE = Path.cwd() / 'ext/GeoLite2-City.mmdb'
 
+
 async def setup_collections(db_cursor: aiomysql.DictCursor) -> None:
     """Setup & cache many global collections."""
     # dynamic (active) sets, only in ram
@@ -81,7 +83,7 @@ async def setup_collections(db_cursor: aiomysql.DictCursor) -> None:
     glob.bot = Player(
         id=1,
         name=await utils.misc.fetch_bot_name(db_cursor),
-        login_time=float(0x7fffffff), # (never auto-dc)
+        login_time=float(0x7fffffff),  # (never auto-dc)
         priv=Privileges.Normal,
         bot_client=True
     )
@@ -109,13 +111,14 @@ async def setup_collections(db_cursor: aiomysql.DictCursor) -> None:
         async for row in db_cursor
     }
 
+
 async def before_serving() -> None:
     """Called before the server begins serving connections."""
     glob.loop = asyncio.get_event_loop()
 
     if glob.has_internet:
         # retrieve a client session to use for http connections.
-        glob.http = aiohttp.ClientSession(json_serialize=orjson.dumps) # type: ignore
+        glob.http = aiohttp.ClientSession(json_serialize=orjson.dumps)  # type: ignore
     else:
         glob.http = None
 
@@ -164,6 +167,7 @@ async def before_serving() -> None:
     for coro in new_coros:
         glob.app.add_pending_task(coro)
 
+
 async def after_serving() -> None:
     """Called after the server stops serving connections."""
     if hasattr(glob, 'http') and glob.http is not None:
@@ -179,6 +183,7 @@ async def after_serving() -> None:
         glob.datadog.stop()
         glob.datadog.flush()
 
+
 def detect_mysqld_running() -> bool:
     """Detect whether theres a mysql server running locally."""
     for service in ('mysqld', 'mariadb'):
@@ -187,6 +192,7 @@ def detect_mysqld_running() -> bool:
     else:
         # not found, try pgrep
         return os.system('pgrep mysqld') == 0
+
 
 def ensure_platform() -> None:
     """Ensure we're running on an appropriate platform for gulag."""
@@ -201,22 +207,25 @@ def ensure_platform() -> None:
         sys.exit('gulag uses many modern python features, '
                  'and the minimum python version is 3.9.')
 
+
 def ensure_services() -> None:
     """Ensure all required services are running in the background."""
     # make sure nginx & mysqld are running.
     if (
-        glob.config.mysql['host'] in ('localhost', '127.0.0.1') and
-        not detect_mysqld_running()
+            glob.config.mysql['host'] in ('localhost', '127.0.0.1') and
+            not detect_mysqld_running()
     ):
         sys.exit('Please start your mysqld server.')
 
     if not os.path.exists('/var/run/nginx.pid'):
         sys.exit('Please start your nginx server.')
 
+
 def _install_cmyui_dev_hooks():
     """Change internals to help with debugging & active development."""
     from _testing import runtime
     runtime.setup()
+
 
 if __name__ == '__main__':
     """Attempt to start up gulag."""
@@ -291,10 +300,11 @@ if __name__ == '__main__':
 
     # add our endpoint's domains to the server;
     # each may potentially hold many individual endpoints.
-    from domains.cho import domain as cho_domain # c[e4-6]?.ppy.sh
-    from domains.osu import domain as osu_domain # osu.ppy.sh
-    from domains.ava import domain as ava_domain # a.ppy.sh
-    from domains.map import domain as map_domain # b.ppy.sh
+    from domains.cho import domain as cho_domain  # c[e4-6]?.ppy.sh
+    from domains.osu import domain as osu_domain  # osu.ppy.sh
+    from domains.ava import domain as ava_domain  # a.ppy.sh
+    from domains.map import domain as map_domain  # b.ppy.sh
+
     app.add_domains({cho_domain, osu_domain,
                      ava_domain, map_domain})
 

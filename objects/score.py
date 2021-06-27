@@ -35,6 +35,7 @@ __all__ = (
 
 BEATMAPS_PATH = Path.cwd() / '.data/osu'
 
+
 @unique
 @pymysql_encode(escape_enum)
 class Grade(IntEnum):
@@ -222,8 +223,8 @@ class Score:
 
     @classmethod
     async def from_submission(
-        cls, data_b64: str, iv_b64: str,
-        osu_ver: str, pw_md5: str
+            cls, data_b64: str, iv_b64: str,
+            osu_ver: str, pw_md5: str
     ) -> Optional['Score']:
         """Create a score object from an osu! submission string."""
         iv = b64decode(iv_b64).decode('latin_1')
@@ -330,7 +331,7 @@ class Score:
         """Calculate PP and star rating for our score."""
         mode_vn = self.mode.as_vanilla
 
-        if mode_vn in (0, 1): # osu, taiko
+        if mode_vn in (0, 1):  # osu, taiko
             with OppaiWrapper('oppai-ng/liboppai.so') as ezpp:
                 if self.mods:
                     ezpp.set_mods(int(self.mods))
@@ -339,15 +340,15 @@ class Score:
                     ezpp.set_mode(mode_vn)
 
                 ezpp.set_combo(self.max_combo)
-                ezpp.set_nmiss(self.nmiss) # clobbers acc
+                ezpp.set_nmiss(self.nmiss)  # clobbers acc
                 ezpp.set_accuracy_percent(self.acc)
 
                 ezpp.calculate(osu_file_path)
 
                 return (ezpp.get_pp(), ezpp.get_sr())
-        elif mode_vn == 2: # catch
+        elif mode_vn == 2:  # catch
             return (0.0, 0.0)
-        else: # mania
+        else:  # mania
             if self.bmap.mode.as_vanilla != 3:
                 return (0.0, 0.0)  # maniera has no convert support
 
