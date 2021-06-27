@@ -71,7 +71,8 @@ class Context:
     trigger: str
     args: Sequence[str]
     recipient: Optional[Messageable] = None
-    match: Optional[Match] = None
+    match:
+    Optional[Match] = None
 
 
 class Command(NamedTuple):
@@ -757,11 +758,12 @@ async def unsilence(ctx: Context) -> str:
 @command(Privileges.Admin, hidden=True)
 async def resetpassword(ctx: Context) -> str:
     """Resets a players password using there id."""
-    if len(ctx.args) < 1:
-        return 'Invalid syntax: !resetpassword <id>'
 
     if ctx.recipient is not glob.bot:
         return 'This command can only be used in DMs with the bot.'
+
+    if len(ctx.args) < 1:
+        return 'Invalid syntax: !resetpassword <id>'
 
     if not ctx.args[0].isdecimal():
         return 'Please specify a players ID!'
@@ -803,14 +805,15 @@ async def resetpassword(ctx: Context) -> str:
 @command(Privileges.Admin, hidden=True)
 async def getemail(ctx: Context) -> str:
     """Retrieve a players email using there id for password reset verification."""
+
+    if ctx.recipient is not glob.bot:
+        return 'This command can only be used in DMs with the bot.'
+
     if len(ctx.args) < 1:
         return 'Invalid syntax: !getemail <id>'
 
     if not ctx.args[0].isdecimal():
         return 'Please specify a players ID!'
-
-    if ctx.recipient is not glob.bot:
-        return 'This command can only be used in DMs with the bot.'
 
     player = await glob.players.get_ensure(id=ctx.args[0])
 
