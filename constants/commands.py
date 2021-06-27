@@ -766,15 +766,11 @@ async def resetpassword(ctx: Context) -> str:
     if not ctx.args[0].isdecimal():
         return 'Please specify a players ID!'
 
-    # find any user matching (including offline).
-    if not (t := await glob.players.get_ensure(id=ctx.args[0])):
-        return f'"{ctx.args[0]}" not found.'
+    player = await glob.players.get_ensure(id=ctx.args[0])
 
-    if (
-            t.priv & Privileges.Staff and
-            not ctx.player.priv & Privileges.Dangerous
-    ):
-        return 'Only developers can manage staff members.'
+    # find any user matching (including offline).
+    if not player:
+        return f'{ctx.args[0]} not found.'
 
     # TODO: Make better password generator
     characters = "1234567890"
@@ -787,12 +783,12 @@ async def resetpassword(ctx: Context) -> str:
     pw_md5 = hashlib.md5(password.encode()).hexdigest().encode()
     pw_bcrypt = bcrypt.hashpw(pw_md5, bcrypt.gensalt())
 
-    user = await glob.db.fetch(
+    db_player = await glob.db.fetch(
         'SELECT * '
         'FROM users '
         'WHERE id = %s',
         [int(ctx.args[0])])
-    name = user['name']
+    name = db_player['name']
 
     await glob.db.execute(
         'UPDATE users '
@@ -816,17 +812,19 @@ async def getemail(ctx: Context) -> str:
     if ctx.recipient is not glob.bot:
         return 'This command can only be used in DMs with the bot.'
 
-    # find any user matching (including offline).
-    if not (t := await glob.players.get_ensure(id=ctx.args[0])):
-        return f'"{ctx.args[0]}" not found.'
+    player = await glob.players.get_ensure(id=ctx.args[0])
 
-    user = await glob.db.fetch(
+    # find any user matching (including offline).
+    if not player:
+        return f'{ctx.args[0]} not found.'
+
+    db_player = await glob.db.fetch(
         'SELECT * '
         'FROM users '
         'WHERE id = %s',
         [int(ctx.args[0])])
-    name = user['name']
-    email = user['email']
+    name = db_player['name']
+    email = db_player['email']
 
     return f'{name}\'s email: {email}'
 
