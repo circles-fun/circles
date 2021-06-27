@@ -70,9 +70,8 @@ class Context:
     player: Player
     trigger: str
     args: Sequence[str]
-
     recipient: Optional[Messageable] = None
-    Optional[Match] = None
+    match: Optional[Match] = None
 
 
 class Command(NamedTuple):
