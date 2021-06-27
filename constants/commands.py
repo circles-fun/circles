@@ -784,7 +784,7 @@ async def resetpassword(ctx: Context) -> str:
     pw_bcrypt = bcrypt.hashpw(pw_md5, bcrypt.gensalt())
 
     db_player = await glob.db.fetch(
-        'SELECT * '
+        'SELECT `name` '
         'FROM users '
         'WHERE id = %s',
         [int(ctx.args[0])])
@@ -819,7 +819,7 @@ async def getemail(ctx: Context) -> str:
         return f'{ctx.args[0]} not found.'
 
     db_player = await glob.db.fetch(
-        'SELECT * '
+        'SELECT `name`, `email` '
         'FROM users '
         'WHERE id = %s',
         [int(ctx.args[0])])
