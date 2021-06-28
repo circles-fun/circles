@@ -774,14 +774,7 @@ async def resetpassword(ctx: Context) -> str:
     if not player:
         return f'{ctx.args[0]} not found.'
 
-    # TODO: Make better password generator
-    characters = "1234567890"
-    length = 8
-    password = ""
-
-    for i in range(length + 1):
-        password += random.choice(characters)
-
+    password = secrets.token_urlsafe(8)
     pw_md5 = hashlib.md5(password.encode()).hexdigest().encode()
     pw_bcrypt = bcrypt.hashpw(pw_md5, bcrypt.gensalt())
 
