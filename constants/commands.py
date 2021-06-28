@@ -71,8 +71,7 @@ class Context:
     trigger: str
     args: Sequence[str]
     recipient: Optional[Messageable] = None
-    match:
-    Optional[Match] = None
+    match: Optional[Match] = None
 
 
 class Command(NamedTuple):
