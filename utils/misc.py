@@ -52,13 +52,17 @@ useful_keys = (Keys.M1, Keys.M2,
                Keys.K1, Keys.K2)
 
 
-async def run_circleguard(score, replay):
+async def run_circleguard(score):
     cg = CircleGuard.Circleguard(config.osu_api_key)
-    cg_replay = cg.ReplayPath(replay)
+    r = await requests.get(f"https://osu.circles.fun/api/get_replay?id={score.id}&include_headers=true")
+    if not r.status_code == 200:
+        return
+
+    cg_replay = cg.ReplayString(f"{r}")
 
     print(f"CG | Information for replay {score.id} submitted by {score.player.name} (ID: {score.player.id})")
     print(f"CG | UR: {cg.ur(cg_replay)}")  # unstable rate
-    print(f"CG | Average frame time: {cg.frametime(cg_replay)}")  # average frametime
+    print(f"CG | Average frame time: {cg.frametime(cg_replay)}")  # average frame time
     print(f"CG | Snaps {cg.snaps(cg_replay)}")  # any jerky/suspicious movement
 
 
