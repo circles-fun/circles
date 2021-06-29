@@ -59,7 +59,8 @@ async def run_circleguard(score):
         if not r or r.status != 200:
             log("[CG] Failed to get the replay for analysis", Ansi.LRED)
 
-    cg_replay = cg.ReplayString(f"{r}")
+    log(r, Ansi.LMAGENTA)
+    cg_replay = cg.ReplayString(r.content)
 
     log(f"[CG] Information for replay {score.id} submitted by {score.player.name} (ID: {score.player.id})", Ansi.LYAN)
     log(f"[CG] UR: {cg.ur(cg_replay)}", Ansi.LYAN)  # unstable rate
