@@ -54,7 +54,7 @@ useful_keys = (Keys.M1, Keys.M2,
 
 async def run_circleguard(score):
     cg = CircleGuard.Circleguard(config.osu_api_key)
-    r = await requests.get(f"https://osu.circles.fun/api/get_replay?id={score.id}&include_headers=true")
+    r = requests.get(f"https://osu.circles.fun/api/get_replay?id={score.id}&include_headers=true")
     if not r.status_code == 200:
         return
 

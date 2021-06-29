@@ -776,7 +776,7 @@ async def osuSubmitModularSelector(
             replay_file = REPLAYS_PATH / f'{score.id}.osr'
             replay_file.write_bytes(conn.files['score'])
 
-            glob.loop.create_task(run_circleguard(score))
+            # glob.loop.create_task(run_circleguard(score))
 
     """ Update the user's & beatmap's stats """
 
@@ -2176,7 +2176,7 @@ async def api_get_replay(conn: Connection) -> HTTPResponse:
         '({play_time:%Y-%m-%d}).osr"'
     ).format(**res)
 
-    return JSON({'status': 'success', 'replay': bytes(buf)})
+    return bytes(buf)
 
 
 @domain.route('/api/get_match')
