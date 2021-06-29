@@ -621,7 +621,7 @@ async def login(body_view: memoryview, ip: str, db_cursor: aiomysql.DictCursor) 
             user_info['geoloc'] = await utils.misc.fetch_geoloc_web(ip)
 
     p = Player(
-        **user_info,  # {id, name, priv, pw_bcrypt, silence_end, api_key, geoloc?}
+        **user_info, # {id, name, priv, pw_bcrypt, silence_end, api_key, geoloc?}
         utc_offset=utc_offset,
         osu_ver=osu_ver_date,
         pm_private=pm_private,
@@ -993,7 +993,7 @@ class SendPrivateMessage(BasePacket):
                             # calculate pp for common generic values
                             pp_calc_st = time.time_ns()
 
-                            if mode_vn in (0, 1):  # osu, taiko
+                            if mode_vn in (0, 1): # osu, taiko
                                 with OppaiWrapper('oppai-ng/liboppai.so') as ezpp:
                                     # std & taiko, use oppai-ng to calc pp
                                     if r_match['mods'] is not None:
@@ -1002,7 +1002,7 @@ class SendPrivateMessage(BasePacket):
                                         mods = Mods.from_np(mods_str, mode_vn)
                                         ezpp.set_mods(int(mods))
 
-                                    pp_values = []  # [(acc, pp), ...]
+                                    pp_values = [] # [(acc, pp), ...]
 
                                     for acc in glob.config.pp_cached_accs:
                                         ezpp.set_accuracy_percent(acc)
@@ -1015,9 +1015,9 @@ class SendPrivateMessage(BasePacket):
                                         f'{acc}%: {pp:,.2f}pp'
                                         for acc, pp in pp_values
                                     ])
-                            elif mode_vn == 2:  # catch
+                            elif mode_vn == 2: # catch
                                 resp_msg = 'Gamemode not yet supported.'
-                            else:  # mania
+                            else: # mania
                                 if bmap.mode.as_vanilla != 3:
                                     resp_msg = 'Mania converts not currently supported.'
                                 else:
@@ -1119,7 +1119,6 @@ class MatchCreate(BasePacket):
 
         self.match.chat.send_bot(f'Match created by {p.name}.')
         log(f'{p} created a new multiplayer match.')
-
 
 async def check_menu_option(p: Player, key: int) -> None:
     if key not in p.menu_options:

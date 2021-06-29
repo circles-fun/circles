@@ -2,6 +2,7 @@
 
 import inspect
 import io
+import requests
 import secrets
 import socket
 import sys

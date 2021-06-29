@@ -60,6 +60,8 @@ if TYPE_CHECKING:
 
 BEATMAPS_PATH = Path.cwd() / '.data/osu'
 
+BEATMAPS_PATH = Path.cwd() / '.data/osu'
+
 Messageable = Union['Channel', Player]
 CommandResponse = dict[str, str]
 
@@ -354,7 +356,7 @@ async def _with(ctx: Context) -> str:
 
     mode_vn = ctx.player.last_np['mode_vn']
 
-    if mode_vn in (0, 1):  # osu, taiko
+    if mode_vn in (0, 1): # osu, taiko
         if not ctx.args or len(ctx.args) > 4:
             return 'Invalid syntax: !with <acc/nmiss/combo/mods ...>'
 
@@ -366,17 +368,17 @@ async def _with(ctx: Context) -> str:
         for arg in map(str.lower, ctx.args):
             # mandatory suffix, combo & nmiss
             if (
-                    combo is None and
-                    arg.endswith('x') and
-                    arg[:-1].isdecimal()
+                combo is None and
+                arg.endswith('x') and
+                arg[:-1].isdecimal()
             ):
                 combo = int(arg[:-1])
                 if combo > bmap.max_combo:
                     return 'Invalid combo.'
             elif (
-                    nmiss is None and
-                    arg.endswith('m') and
-                    arg[:-1].isdecimal()
+                nmiss is None and
+                arg.endswith('m') and
+                arg[:-1].isdecimal()
             ):
                 nmiss = int(arg[:-1])
                 # TODO: store nobjects?
@@ -386,15 +388,15 @@ async def _with(ctx: Context) -> str:
                 # optional prefix/suffix, mods & accuracy
                 arg_stripped = arg.removeprefix('+').removesuffix('%')
                 if (
-                        mods is None and
-                        arg_stripped.isalpha() and
-                        len(arg_stripped) % 2 == 0
+                    mods is None and
+                    arg_stripped.isalpha() and
+                    len(arg_stripped) % 2 == 0
                 ):
                     mods = Mods.from_modstr(arg_stripped)
                     mods = mods.filter_invalid_combos(mode_vn)
                 elif (
-                        acc is None and
-                        arg_stripped.replace('.', '', 1).isdecimal()
+                    acc is None and
+                    arg_stripped.replace('.', '', 1).isdecimal()
                 ):
                     acc = float(arg_stripped)
                     if not 0 <= acc <= 100:
@@ -425,9 +427,9 @@ async def _with(ctx: Context) -> str:
             pp, sr = ezpp.get_pp(), ezpp.get_sr()
 
             return f"{' '.join(msg)}: {pp:.2f}pp ({sr:.2f}*)"
-    elif mode_vn == 2:  # catch
+    elif mode_vn == 2: # catch
         return 'Gamemode not yet supported.'
-    else:  # mania
+    else: # mania
         if not ctx.args or len(ctx.args) > 2:
             return 'Invalid syntax: !with <score/mods ...>'
 
@@ -435,7 +437,7 @@ async def _with(ctx: Context) -> str:
         mods = Mods.NOMOD
 
         for param in (p.strip('+k') for p in ctx.args):
-            if cmyui.utils._isdecimal(param):  # acc
+            if cmyui.utils._isdecimal(param): # acc
                 if not 0 <= (score := int(param)) <= 1000:
                     return 'Invalid score.'
                 if score <= 500:
@@ -450,7 +452,6 @@ async def _with(ctx: Context) -> str:
         calc.calculate()
 
         return f'{score}k {mods!r}: {calc.pp:.2f}pp ({calc.sr:.2f}*)'
-
 
 @command(Privileges.Normal, aliases=['req'])
 async def request(ctx: Context) -> str:
@@ -1162,22 +1163,22 @@ async def recalc(ctx: Context) -> str:
 
         async with glob.db.pool.acquire() as conn:
             async with (
-                    conn.cursor(aiomysql.DictCursor) as select_cursor,
-            conn.cursor(aiomysql.Cursor) as update_cursor
+                conn.cursor(aiomysql.DictCursor) as select_cursor,
+                conn.cursor(aiomysql.Cursor) as update_cursor
             ):
                 with OppaiWrapper('oppai-ng/liboppai.so') as ezpp:
-                    ezpp.set_mode(0)  # TODO: other modes
+                    ezpp.set_mode(0) # TODO: other modes
                     for table in ('scores_vn', 'scores_rx', 'scores_ap'):
                         await select_cursor.execute(
                             'SELECT id, acc, mods, max_combo, nmiss '
                             f'FROM {table} '
-                            'WHERE map_md5 = %s AND mode = 0',  # TODO: ""
+                            'WHERE map_md5 = %s AND mode = 0', # TODO: ""
                             [bmap.md5]
                         )
 
                         async for row in select_cursor:
                             ezpp.set_mods(row['mods'])
-                            ezpp.set_nmiss(row['nmiss'])  # clobbers acc
+                            ezpp.set_nmiss(row['nmiss']) # clobbers acc
                             ezpp.set_combo(row['max_combo'])
                             ezpp.set_accuracy_percent(row['acc'])
 
@@ -1193,7 +1194,7 @@ async def recalc(ctx: Context) -> str:
         return 'Map recalculated.'
     else:
         # recalc all plays on the server, on all maps
-        staff_chan = glob.channels['#staff']  # log any errs here
+        staff_chan = glob.channels['#staff'] # log any errs here
 
         async def recalc_all() -> None:
             staff_chan.send_bot(f'{ctx.player} started a full recalculation.')
@@ -1201,9 +1202,9 @@ async def recalc(ctx: Context) -> str:
 
             async with glob.db.pool.acquire() as conn:
                 async with (
-                        conn.cursor(aiomysql.Cursor) as bmap_select_cursor,
-                conn.cursor(aiomysql.DictCursor) as score_select_cursor,
-                conn.cursor(aiomysql.Cursor) as update_cursor
+                    conn.cursor(aiomysql.Cursor) as bmap_select_cursor,
+                    conn.cursor(aiomysql.DictCursor) as score_select_cursor,
+                    conn.cursor(aiomysql.Cursor) as update_cursor
                 ):
                     await bmap_select_cursor.execute(
                         'SELECT id, md5 '
@@ -1224,18 +1225,18 @@ async def recalc(ctx: Context) -> str:
                             continue
 
                         with OppaiWrapper('oppai-ng/liboppai.so') as ezpp:
-                            ezpp.set_mode(0)  # TODO: other modes
+                            ezpp.set_mode(0) # TODO: other modes
                             for table in ('scores_vn', 'scores_rx', 'scores_ap'):
                                 await score_select_cursor.execute(
                                     'SELECT id, acc, mods, max_combo, nmiss '
                                     f'FROM {table} '
-                                    'WHERE map_md5 = %s AND mode = 0',  # TODO: ""
+                                    'WHERE map_md5 = %s AND mode = 0', # TODO: ""
                                     [bmap_md5]
                                 )
 
                                 async for row in score_select_cursor:
                                     ezpp.set_mods(row['mods'])
-                                    ezpp.set_nmiss(row['nmiss'])  # clobbers acc
+                                    ezpp.set_nmiss(row['nmiss']) # clobbers acc
                                     ezpp.set_combo(row['max_combo'])
                                     ezpp.set_accuracy_percent(row['acc'])
 
@@ -1258,7 +1259,6 @@ async def recalc(ctx: Context) -> str:
         glob.loop.create_task(recalc_all())
 
         return 'Starting a full recalculation.'
-
 
 @command(Privileges.Dangerous, hidden=True)
 async def debug(ctx: Context) -> str:
@@ -1896,13 +1896,12 @@ async def mp_condition(ctx: Context) -> str:
     ctx.match.enqueue_state(lobby=False)
     return 'Match win condition updated.'
 
-
 @mp_commands.add(Privileges.Normal, aliases=['autoref'])
 async def mp_scrim(ctx: Context) -> str:
     """Start a scrim in the current match."""
     if (
-            len(ctx.args) != 1 or
-            not (r_match := regexes.best_of.fullmatch(ctx.args[0]))
+        len(ctx.args) != 1 or
+        not (r_match := regexes.best_of.fullmatch(ctx.args[0]))
     ):
         return 'Invalid syntax: !mp scrim <bo#>'
 
@@ -2452,11 +2451,12 @@ async def clan_disband(ctx: Context) -> str:
     # remove all members from the clan,
     # reset their clan privs (cache & sql).
     # NOTE: only online players need be to be uncached.
-    for m in [glob.players.get(id=p_id) for p_id in clan.members]:
-        if 'full_name' in m.__dict__:
-            del m.full_name  # wipe cached_property
-
-        m.clan = m.clan_priv = None
+    for member_id in clan.members:
+        if member := glob.players.get(id=member_id):
+            member.clan = None
+            member.clan_priv = None
+            if 'full_name' in member.__dict__:
+                del member.full_name # wipe cached_property
 
     await glob.db.execute(
         'UPDATE users '
@@ -2497,13 +2497,14 @@ async def clan_info(ctx: Context) -> str:
     res = await glob.db.fetchall(
         'SELECT name, clan_priv '
         'FROM users '
-        'WHERE clan_id = %s',
+        'WHERE clan_id = %s '
+        'ORDER BY clan_priv DESC',
         [clan.id], _dict=False
     )
 
-    for name, clan_priv in sorted(res, key=lambda row: row[1]):
+    for member_name, clan_priv in res:
         priv_str = ('Member', 'Officer', 'Owner')[clan_priv - 1]
-        msg.append(f'[{priv_str}] {name}')
+        msg.append(f'[{priv_str}] {member_name}')
 
     return '\n'.join(msg)
 
