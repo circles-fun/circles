@@ -16,7 +16,6 @@ if TYPE_CHECKING:
 
 __all__ = ('Clan', 'ClanPrivileges')
 
-
 @unique
 @pymysql_encode(escape_enum)
 class ClanPrivileges(IntEnum):
@@ -25,23 +24,22 @@ class ClanPrivileges(IntEnum):
     Officer = 2
     Owner = 3
 
-
 class Clan:
-    """A class to represent a singlecirclesclan."""
+    """A class to represent a single gulag clan."""
     __slots__ = ('id', 'name', 'tag', 'created_at',
                  'owner', 'members')
 
     def __init__(self, id: int, name: str, tag: str,
                  created_at: datetime, owner: int,
                  members: set[int] = set()) -> None:
-        """A class representing one of circles's clans."""
+        """A class representing one of gulag's clans."""
         self.id = id
         self.name = name
         self.tag = tag
         self.created_at = created_at
 
-        self.owner = owner  # userid
-        self.members = members  # userids
+        self.owner = owner # userid
+        self.members = members # userids
 
     async def add_member(self, p: 'Player') -> None:
         """Add a given player to the clan's members."""

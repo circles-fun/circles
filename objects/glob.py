@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
-import config  # export
+import config # export
 
 # this file contains no actualy definitions
 if __import__('typing').TYPE_CHECKING:
     from asyncio import AbstractEventLoop
-    # from asyncio import Queue
+    #from asyncio import Queue
     from typing import Optional
 
     from aiohttp.client import ClientSession
@@ -22,7 +22,7 @@ if __import__('typing').TYPE_CHECKING:
     from objects.collections import Clans
     from objects.collections import MapPools
     from objects.player import Player
-    # from objects.score import Score
+    #from objects.score import Score
     from packets import BasePacket
     from packets import ClientPackets
 
@@ -34,7 +34,7 @@ __all__ = (
     'bancho_packets', 'db',
     'has_internet', 'http',
     'datadog', 'cache', 'loop',
-    # 'sketchy_queue'
+    #'sketchy_queue'
 )
 
 # server object
@@ -54,7 +54,7 @@ version: 'Version'
 geoloc_db: 'Optional[geoip2.database.Reader]'
 
 # currently registered api tokens
-api_keys: dict[str, int]  # {api_key: player_id}
+api_keys: dict[str, int] # {api_key: player_id}
 
 # list of registered packets
 bancho_packets: dict['ClientPackets', 'BasePacket']
@@ -67,7 +67,7 @@ http: 'Optional[ClientSession]'
 
 datadog: 'Optional[ThreadStats]'
 
-# circles's main cache.
+# gulag's main cache.
 # the idea here is simple - keep a copy of things either from sql or
 # that take a lot of time to produce in memory for quick and easy access.
 # ideally, the cache is hidden away in methods so that developers do not
@@ -75,19 +75,19 @@ datadog: 'Optional[ThreadStats]'
 cache = {
     # algorithms like brypt these are intentionally designed to be
     # slow; we'll cache the results to speed up subsequent logins.
-    'bcrypt': {},  # {bcrypt: md5, ...}
+    'bcrypt': {}, # {bcrypt: md5, ...}
     # we'll cache results for osu! client update requests since they
     # are relatively frequently and won't change very frequently.
     # cache all beatmap data calculated while online. this way,
     # the most requested maps will inevitably always end up cached.
-    'beatmap': {},  # {md5: map, id: map, ...}
-    'beatmapset': {},  # {bsid: map_set}
+    'beatmap': {}, # {md5: map, id: map, ...}
+    'beatmapset': {}, # {bsid: map_set}
 
     # cache all beatmaps which are unsubmitted or need an update,
     # since their osu!api requests will fail and thus we'll do the
     # request multiple times which is quite slow & not great.
-    'unsubmitted': set(),  # {md5, ...}
-    'needs_update': set()  # {md5, ...}
+    'unsubmitted': set(), # {md5, ...}
+    'needs_update': set() # {md5, ...}
 }
 
 loop: 'AbstractEventLoop'
