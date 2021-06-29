@@ -3,9 +3,9 @@
 import functools
 import hashlib
 from collections import defaultdict
-from datetime import datetime
-# from dataclasses import dataclass
+#from dataclasses import dataclass
 from datetime import timedelta
+from datetime import datetime
 from enum import IntEnum
 from enum import unique
 from pathlib import Path
@@ -35,7 +35,6 @@ MAP_CACHE_TIMEOUT = timedelta(hours=4)
 
 IGNORED_BEATMAP_CHARS = dict.fromkeys(map(ord, r':\/*<>?"|'), None)
 
-
 async def osuapiv1_getbeatmaps(**params) -> Optional[dict[str, object]]:
     """Fetch data from the osu!api with a beatmap's md5."""
     if glob.app.debug:
@@ -45,21 +44,20 @@ async def osuapiv1_getbeatmaps(**params) -> Optional[dict[str, object]]:
 
     async with glob.http.get(OSUAPI_GET_BEATMAPS, params=params) as resp:
         if (
-                resp and resp.status == 200 and
-                resp.content.total_bytes != 2  # b'[]'
+            resp and resp.status == 200 and
+            resp.content.total_bytes != 2 # b'[]'
         ):
             return await resp.json()
 
-
 async def ensure_local_osu_file(
-        osu_file_path: Path,
-        bmap_id: int, bmap_md5: str
+    osu_file_path: Path,
+    bmap_id: int, bmap_md5: str
 ) -> bool:
     """Ensure we have the latest .osu file locally,
        downloading it from the osu!api if required."""
     if (
-            not osu_file_path.exists() or
-            hashlib.md5(osu_file_path.read_bytes()).hexdigest() != bmap_md5
+        not osu_file_path.exists() or
+        hashlib.md5(osu_file_path.read_bytes()).hexdigest() != bmap_md5
     ):
         # need to get the file from the osu!api
         if glob.app.debug:
@@ -77,12 +75,10 @@ async def ensure_local_osu_file(
 
     return True
 
-
 # for some ungodly reason, different values are used to
 # represent different ranked statuses all throughout osu!
 # This drives me and probably everyone else pretty insane,
 # but we have nothing to do but deal with it B).
-
 
 @unique
 @pymysql_encode(escape_enum)
@@ -119,19 +115,18 @@ class RankedStatus(IntEnum):
 
     @staticmethod
     def from_str(status_str: str) -> 'RankedStatus':
-        """Convert from string value."""  # could perhaps have `'unranked': cls.Pending`?
+        """Convert from string value.""" # could perhaps have `'unranked': cls.Pending`?
         return str2gulagstatus_dict[status_str]
-
 
 osu2gulagstatus_dict = defaultdict(
     lambda: RankedStatus.UpdateAvailable, {
-        -2: RankedStatus.Pending,  # graveyard
-        -1: RankedStatus.Pending,  # wip
-        0: RankedStatus.Pending,
-        1: RankedStatus.Ranked,
-        2: RankedStatus.Approved,
-        3: RankedStatus.Qualified,
-        4: RankedStatus.Loved
+        -2: RankedStatus.Pending, # graveyard
+        -1: RankedStatus.Pending, # wip
+        0:  RankedStatus.Pending,
+        1:  RankedStatus.Ranked,
+        2:  RankedStatus.Approved,
+        3:  RankedStatus.Qualified,
+        4:  RankedStatus.Loved
     }
 )
 
@@ -140,9 +135,9 @@ direct2gulagstatus_dict = defaultdict(
         0: RankedStatus.Ranked,
         2: RankedStatus.Pending,
         3: RankedStatus.Qualified,
-        # 4: all ranked statuses lol
-        5: RankedStatus.Pending,  # graveyard
-        7: RankedStatus.Ranked,  # played before
+        #4: all ranked statuses lol
+        5: RankedStatus.Pending, # graveyard
+        7: RankedStatus.Ranked, # played before
         8: RankedStatus.Loved
     }
 )
@@ -175,14 +170,13 @@ gulagstatus2str_dict = {
     RankedStatus.Loved: 'Loved'
 }
 
-
-# @dataclass
-# class BeatmapInfoRequest:
+#@dataclass
+#class BeatmapInfoRequest:
 #    filenames: Sequence[str]
 #    ids: Sequence[int]
 
-# @dataclass
-# class BeatmapInfo:
+#@dataclass
+#class BeatmapInfo:
 #    id: int # i16
 #    map_id: int # i32
 #    set_id: int # i32
@@ -193,7 +187,6 @@ gulagstatus2str_dict = {
 #    taiko_rank: int # u8
 #    mania_rank: int # u8
 #    map_md5: str
-
 
 class Beatmap:
     """A class representing an osu! beatmap.
@@ -226,7 +219,7 @@ class Beatmap:
 
         self.artist = kwargs.get('artist', '')
         self.title = kwargs.get('title', '')
-        self.version = kwargs.get('version', '')  # diff name
+        self.version = kwargs.get('version', '') # diff name
         self.creator = kwargs.get('creator', '')
 
         self.last_update = kwargs.get('last_update', DEFAULT_LAST_UPDATE)
@@ -249,7 +242,7 @@ class Beatmap:
         self.diff = kwargs.get('diff', 0.00)
 
         self.filename = kwargs.get('filename', '')
-        self.pp_cache = {0: {}, 1: {}, 2: {}, 3: {}}  # {mode_vn: {mods: (acc/score: pp, ...), ...}}
+        self.pp_cache = {0: {}, 1: {}, 2: {}, 3: {}} # {mode_vn: {mods: (acc/score: pp, ...), ...}}
 
     def __repr__(self) -> str:
         return self.full
@@ -269,13 +262,22 @@ class Beatmap:
         """An osu! chat embed to `self`'s osu! beatmap page."""
         return f'[{self.url} {self.full}]'
 
+    # TODO: cache these & standardize method for changing status
+
     @property
-    def awards_pp(self) -> bool:
-        """Return whether the map's status awards pp for scores."""
+    def has_leaderboard(self) -> bool:
+        """Return whether the map has a ranked leaderboard."""
+        return self.status in (RankedStatus.Ranked,
+                               RankedStatus.Approved,
+                               RankedStatus.Loved)
+
+    @property
+    def awards_ranked_pp(self) -> bool:
+        """Return whether the map's status awards ranked pp for scores."""
         return self.status in (RankedStatus.Ranked,
                                RankedStatus.Approved)
 
-    @functools.cached_property
+    @property # perhaps worth caching some of?
     def as_dict(self) -> dict[str, object]:
         return {
             'md5': self.md5,
@@ -303,7 +305,6 @@ class Beatmap:
     # TODO: implement some locking for the map fetch methods
 
     """ High level API """
-
     # There are three levels of storage used for beatmaps,
     # the cache (ram), the db (disk), and the osu!api (web).
     # Going down this list gets exponentially slower, so
@@ -396,7 +397,6 @@ class Beatmap:
         return bmap
 
     """ Lower level API """
-
     # These functions are meant for internal use under
     # all normal circumstances and should only be used
     # if you're really modifying gulag by adding new
@@ -407,7 +407,7 @@ class Beatmap:
         # NOTE: `self` is not guaranteed to have any attributes
         #       initialized when this is called.
         self.md5 = osuapi_resp['file_md5']
-        # self.id = int(osuapi_resp['beatmap_id'])
+        #self.id = int(osuapi_resp['beatmap_id'])
         self.set_id = int(osuapi_resp['beatmapset_id'])
 
         self.artist, self.title, self.version, self.creator = (
@@ -473,7 +473,6 @@ class Beatmap:
 
             return bmap
 
-
 class BeatmapSet:
     __slots__ = ('id', 'last_osuapi_check', 'maps')
 
@@ -493,7 +492,7 @@ class BeatmapSet:
         return ', '.join(map_names)
 
     @property
-    def url(self) -> str:  # same as above, just no beatmap id
+    def url(self) -> str: # same as above, just no beatmap id
         """The online url for this beatmap set."""
         return f'https://osu.{BASE_DOMAIN}/beatmapsets/{self.id}'
 
@@ -503,9 +502,9 @@ class BeatmapSet:
            ranked or approved on official servers."""
         for bmap in self.maps:
             if (
-                    bmap.status not in (RankedStatus.Ranked,
-                                        RankedStatus.Approved) or
-                    bmap.frozen  # ranked/approved, but only on gulag
+                bmap.status not in (RankedStatus.Ranked,
+                                    RankedStatus.Approved) or
+                bmap.frozen # ranked/approved, but only on gulag
             ):
                 return False
         return True
@@ -516,8 +515,8 @@ class BeatmapSet:
            loved on official servers."""
         for bmap in self.maps:
             if (
-                    bmap.status != RankedStatus.Loved or
-                    bmap.frozen  # loved, but only on gulag
+                bmap.status != RankedStatus.Loved or
+                bmap.frozen # loved, but only on gulag
             ):
                 return False
         return True
@@ -589,19 +588,19 @@ class BeatmapSet:
 
                 await db_cursor.executemany(
                     'REPLACE INTO maps ('
-                    'server, md5, id, set_id, '
-                    'artist, title, version, creator, '
-                    'filename, last_update, total_length, '
-                    'max_combo, status, frozen, '
-                    'plays, passes, mode, bpm, '
-                    'cs, od, ar, hp, diff'
+                        'server, md5, id, set_id, '
+                        'artist, title, version, creator, '
+                        'filename, last_update, total_length, '
+                        'max_combo, status, frozen, '
+                        'plays, passes, mode, bpm, '
+                        'cs, od, ar, hp, diff'
                     ') VALUES ('
-                    '"osu!", %s, %s, %s, '
-                    '%s, %s, %s, %s, '
-                    '%s, %s, %s, '
-                    '%s, %s, %s, '
-                    '%s, %s, %s, %s, '
-                    '%s, %s, %s, %s, %s'
+                        '"osu!", %s, %s, %s, '
+                        '%s, %s, %s, %s, '
+                        '%s, %s, %s, '
+                        '%s, %s, %s, '
+                        '%s, %s, %s, %s, '
+                        '%s, %s, %s, %s, %s'
                     ')', [(
                         bmap.md5, bmap.id, bmap.set_id,
                         bmap.artist, bmap.title, bmap.version, bmap.creator,

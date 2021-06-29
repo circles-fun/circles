@@ -13,7 +13,6 @@ if TYPE_CHECKING:
 
 __all__ = ('Channel',)
 
-
 class Channel:
     """An osu! chat channel.
 
@@ -40,7 +39,7 @@ class Channel:
                  auto_join: bool = True,
                  instance: bool = False) -> None:
         # TODO: think of better names than `_name` and `name`
-        self._name = name  # 'real' name ('#{multi/spec}_{id}')
+        self._name = name # 'real' name ('#{multi/spec}_{id}')
 
         if self._name.startswith('#spec_'):
             self.name = '#spectator'
@@ -91,8 +90,8 @@ class Channel:
 
         for p in self.players:
             if (
-                    sender.id not in p.blocks and
-                    (to_self or p.id != sender.id)
+                sender.id not in p.blocks and
+                (to_self or p.id != sender.id)
             ):
                 p.enqueue(data)
 
@@ -102,7 +101,7 @@ class Channel:
 
         msg_len = len(msg)
 
-        if msg_len >= 31979:  # TODO ??????????
+        if msg_len >= 31979: # TODO ??????????
             msg = f'message would have crashed games ({msg_len} chars)'
 
         self.enqueue(

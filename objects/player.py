@@ -15,9 +15,9 @@ from typing import TYPE_CHECKING
 from typing import Union
 
 import aiomysql
-from cmyui.discord import Webhook
 from cmyui.logging import Ansi
 from cmyui.logging import log
+from cmyui.discord import Webhook
 
 import packets
 from constants.gamemodes import GameMode
@@ -27,8 +27,8 @@ from constants.privileges import Privileges
 from objects import glob
 from objects.channel import Channel
 from objects.match import Match
-from objects.match import MatchTeamTypes
 from objects.match import MatchTeams
+from objects.match import MatchTeamTypes
 from objects.match import Slot
 from objects.match import SlotStatus
 from utils.misc import escape_enum
@@ -48,35 +48,32 @@ __all__ = (
 
 BASE_DOMAIN = glob.config.domain
 
-
 @unique
 @pymysql_encode(escape_enum)
 class PresenceFilter(IntEnum):
     """osu! client side filter for which users the player can see."""
-    Nil = 0
-    All = 1
+    Nil     = 0
+    All     = 1
     Friends = 2
-
 
 @unique
 @pymysql_encode(escape_enum)
 class Action(IntEnum):
     """The client's current state."""
-    Idle = 0
-    Afk = 1
-    Playing = 2
-    Editing = 3
-    Modding = 4
-    Multiplayer = 5
-    Watching = 6
-    Unknown = 7
-    Testing = 8
-    Submitting = 9
-    Paused = 10
-    Lobby = 11
+    Idle         = 0
+    Afk          = 1
+    Playing      = 2
+    Editing      = 3
+    Modding      = 4
+    Multiplayer  = 5
+    Watching     = 6
+    Unknown      = 7
+    Testing      = 8
+    Submitting   = 9
+    Paused       = 10
+    Lobby        = 11
     Multiplaying = 12
-    OsuDirect = 13
-
+    OsuDirect    = 13
 
 @dataclass
 class ModeData:
@@ -88,8 +85,7 @@ class ModeData:
     plays: int
     playtime: int
     max_combo: int
-    rank: int  # global
-
+    rank: int # global
 
 @dataclass
 class Status:
@@ -100,7 +96,6 @@ class Status:
     mods: Mods = Mods.NOMOD
     mode: GameMode = GameMode.vn_std
     map_id: int = 0
-
 
 class Player:
     """\
@@ -190,8 +185,7 @@ class Player:
         self.stealth = False
 
         self.clan: Optional['Clan'] = extras.get('clan', None)
-        self.clan_priv: Optional['ClanPrivileges'] = extras.get(
-            'clan_priv', None)
+        self.clan_priv: Optional['ClanPrivileges'] = extras.get('clan_priv', None)
 
         self.achievements: set['Achievement'] = set()
 
@@ -216,7 +210,7 @@ class Player:
         self.login_time = login_time
         self.last_recv_time = login_time
 
-        # XXX: below is mostly circles-specific & internal stuff
+        # XXX: below is mostly gulag-specific & internal stuff
 
         # store most recent score for each gamemode.
         self.recent_scores: dict[GameMode, Score] = {}
@@ -358,7 +352,7 @@ class Player:
         self.token = ''
 
         if 'online' in self.__dict__:
-            del self.online  # wipe cached_property
+            del self.online # wipe cached_property
 
         # leave multiplayer.
         if self.match:
@@ -396,7 +390,7 @@ class Player:
         )
 
         if 'bancho_priv' in self.__dict__:
-            del self.bancho_priv  # wipe cached_property
+            del self.bancho_priv # wipe cached_property
 
     async def add_privs(self, bits: Privileges) -> None:
         """Update `self`'s privileges, adding `bits`."""
@@ -410,7 +404,7 @@ class Player:
         )
 
         if 'bancho_priv' in self.__dict__:
-            del self.bancho_priv  # wipe cached_property
+            del self.bancho_priv # wipe cached_property
 
     async def remove_privs(self, bits: Privileges) -> None:
         """Update `self`'s privileges, removing `bits`."""
@@ -424,7 +418,7 @@ class Player:
         )
 
         if 'bancho_priv' in self.__dict__:
-            del self.bancho_priv  # wipe cached_property
+            del self.bancho_priv # wipe cached_property
 
     async def restrict(self, admin: 'Player', reason: str) -> None:
         """Restrict `self` for `reason`, and log to sql."""
@@ -439,7 +433,7 @@ class Player:
         )
 
         if 'restricted' in self.__dict__:
-            del self.restricted  # wipe cached_property
+            del self.restricted # wipe cached_property
 
         log_msg = f'{admin} restricted {self} for: {reason}.'
 
@@ -468,7 +462,7 @@ class Player:
         )
 
         if 'restricted' in self.__dict__:
-            del self.restricted  # wipe cached_property
+            del self.restricted # wipe cached_property
 
         log_msg = f'{admin} unrestricted {self} for: {reason}.'
 
@@ -554,8 +548,8 @@ class Player:
             # NOTE: staff members have override to pw and can
             # simply use any to join a pw protected match.
             if (
-                    passwd != m.passwd and
-                    self not in glob.players.staff
+                passwd != m.passwd and
+                self not in glob.players.staff
             ):
                 log(f'{self} tried to join {m} w/ incorrect pw.', Ansi.LYELLOW)
                 self.enqueue(packets.matchJoinFail())
@@ -644,8 +638,7 @@ class Player:
 
             if self in self.match._refs:
                 self.match._refs.remove(self)
-                self.match.chat.send_bot(
-                    f'{self.name} removed from match referees.')
+                self.match.chat.send_bot(f'{self.name} removed from match referees.')
 
             # notify others of our deprature
             self.match.enqueue_state()
@@ -657,7 +650,7 @@ class Player:
         if self.id in c.members:
             return False
 
-        if not 'invited':  # TODO
+        if not 'invited': # TODO
             return False
 
         await c.add_member(self)
@@ -673,14 +666,14 @@ class Player:
     def join_channel(self, c: Channel) -> bool:
         """Attempt to add `self` to `c`."""
         if (
-                self in c or  # player already in channel
-                not c.can_read(self.priv) or  # no read privs
-                c._name == '#lobby' and not self.in_lobby  # not in mp lobby
+            self in c or # player already in channel
+            not c.can_read(self.priv) or # no read privs
+            c._name == '#lobby' and not self.in_lobby # not in mp lobby
         ):
             return False
 
-        c.append(self)  # add to c.players
-        self.channels.append(c)  # add to p.channels
+        c.append(self) # add to c.players
+        self.channels.append(c) # add to p.channels
 
         self.enqueue(packets.channelJoin(c.name))
 
@@ -711,8 +704,8 @@ class Player:
         if self not in c:
             return
 
-        c.remove(self)  # remove from c.players
-        self.channels.remove(c)  # remove from p.channels
+        c.remove(self) # remove from c.players
+        self.channels.remove(c) # remove from p.channels
 
         if kick:
             self.enqueue(packets.channelKick(c.name))
@@ -743,10 +736,10 @@ class Player:
         if not (spec_chan := glob.channels[chan_name]):
             # spectator chan doesn't exist, create it.
             spec_chan = Channel(
-                name=chan_name,
-                topic=f"{self.name}'s spectator channel.'",
-                auto_join=False,
-                instance=True
+                name = chan_name,
+                topic = f"{self.name}'s spectator channel.'",
+                auto_join = False,
+                instance = True
             )
 
             self.join_channel(spec_chan)
@@ -943,9 +936,9 @@ class Player:
             )
 
     async def add_to_menu(
-            self, coroutine: Coroutine,
-            timeout: int = -1,
-            reusable: bool = False
+        self, coroutine: Coroutine,
+        timeout: int = -1,
+        reusable: bool = False
     ) -> int:
         """Add a valid callback to the user's osu! chat options."""
         # generate random negative number in int32 space as the key.
@@ -989,10 +982,10 @@ class Player:
         """Enqueue `sender`'s `msg` to `self`. Sent in `chan`, or dm."""
         self.enqueue(
             packets.sendMessage(
-                sender=sender.name,
-                msg=msg,
-                recipient=(chan or self).name,
-                sender_id=sender.id
+                sender = sender.name,
+                msg = msg,
+                recipient = (chan or self).name,
+                sender_id = sender.id
             )
         )
 
@@ -1002,9 +995,9 @@ class Player:
 
         self.enqueue(
             packets.sendMessage(
-                sender=bot.name,
-                msg=msg,
-                recipient=self.name,
-                sender_id=bot.id
+                sender = bot.name,
+                msg = msg,
+                recipient = self.name,
+                sender_id = bot.id
             )
         )

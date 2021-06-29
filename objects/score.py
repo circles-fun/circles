@@ -21,6 +21,7 @@ from constants.mods import Mods
 from objects import glob
 from objects.beatmap import ensure_local_osu_file
 from objects.beatmap import Beatmap
+from objects.beatmap import RankedStatus
 from utils.misc import escape_enum
 from utils.misc import pymysql_encode
 
@@ -35,20 +36,19 @@ __all__ = (
 
 BEATMAPS_PATH = Path.cwd() / '.data/osu'
 
-
 @unique
 @pymysql_encode(escape_enum)
 class Grade(IntEnum):
-    XH = 0  # HD SS
-    X = 1  # SS
-    SH = 2  # HD S
-    S = 3  # S
-    A = 4
-    B = 5
-    C = 6
-    D = 7
-    F = 8
-    N = 9
+    XH = 0 # HD SS
+    X  = 1 # SS
+    SH = 2 # HD S
+    S  = 3 # S
+    A  = 4
+    B  = 5
+    C  = 6
+    D  = 7
+    F  = 8
+    N  = 9
 
     def __str__(self) -> str:
         return {
@@ -76,7 +76,6 @@ class Grade(IntEnum):
             'N': cls.N
         }[s]
 
-
 @unique
 @pymysql_encode(escape_enum)
 class SubmissionStatus(IntEnum):
@@ -91,7 +90,6 @@ class SubmissionStatus(IntEnum):
             self.SUBMITTED: 'Submitted',
             self.BEST: 'Best'
         }[self.value]
-
 
 class Score:
     """\
@@ -153,7 +151,7 @@ class Score:
         # TODO: perhaps abstract these differently
         # since they're mode dependant? feels weird..
         self.n300: Optional[int] = None
-        self.n100: Optional[int] = None  # n150 for taiko
+        self.n100: Optional[int] = None # n150 for taiko
         self.n50: Optional[int] = None
         self.nmiss: Optional[int] = None
         self.ngeki: Optional[int] = None
@@ -174,7 +172,7 @@ class Score:
 
         self.prev_best: Optional[Score] = None
 
-    def __repr__(self) -> str:  # maybe shouldn't be so long?
+    def __repr__(self) -> str: # maybe shouldn't be so long?
         return (f'<{self.acc:.2f}% {self.max_combo}x {self.nmiss}M '
                 f'#{self.rank} on {self.bmap.full} for {self.pp:,.2f}pp>')
 
@@ -223,8 +221,8 @@ class Score:
 
     @classmethod
     async def from_submission(
-            cls, data_b64: str, iv_b64: str,
-            osu_ver: str, pw_md5: str
+        cls, data_b64: str, iv_b64: str,
+        osu_ver: str, pw_md5: str
     ) -> Optional['Score']:
         """Create a score object from an osu! submission string."""
         iv = b64decode(iv_b64).decode('latin_1')
@@ -245,7 +243,7 @@ class Score:
         if len(map_md5 := data[0]) != 32:
             return
 
-        pname = data[1].rstrip()  # why does osu! make me rstrip lol
+        pname = data[1].rstrip() # why does osu! make me rstrip lol
 
         # get the map & player for the score.
         s.bmap = await Beatmap.from_md5(map_md5)
@@ -272,12 +270,12 @@ class Score:
          s.score, s.max_combo) = map(int, data[3:11])
 
         s.perfect = data[11] == 'True'
-        _grade = data[12]  # letter grade
+        _grade = data[12] # letter grade
         s.mods = Mods(int(data[13]))
         s.passed = data[14] == 'True'
         s.mode = GameMode.from_params(int(data[15]), s.mods)
         s.play_time = datetime.now()
-        s.client_flags = data[17].count(' ')  # TODO: use osu!ver? (osuver\s+)
+        s.client_flags = data[17].count(' ') # TODO: use osu!ver? (osuver\s+)
 
         s.grade = _grade if s.passed else 'F'
 
@@ -285,16 +283,18 @@ class Score:
         # now we can calculate things based on our data.
         s.calc_accuracy()
 
-        osu_file_path = BEATMAPS_PATH / f'{s.bmap.id}.osu'
-        if s.bmap and await ensure_local_osu_file(osu_file_path, s.bmap.id, s.bmap.md5):
-            s.pp, s.sr = s.calc_diff(osu_file_path)
+        if s.bmap:
+            osu_file_path = BEATMAPS_PATH / f'{s.bmap.id}.osu'
+            if await ensure_local_osu_file(osu_file_path, s.bmap.id, s.bmap.md5):
+                s.pp, s.sr = s.calc_diff(osu_file_path)
 
-            if s.passed:
-                await s.calc_status()
-            else:
-                s.status = SubmissionStatus.FAILED
+                if s.passed:
+                    await s.calc_status()
+                else:
+                    s.status = SubmissionStatus.FAILED
 
-            s.rank = await s.calc_lb_placement()
+                if s.bmap.status != RankedStatus.Pending:
+                    s.rank = await s.calc_lb_placement()
         else:
             s.pp = s.sr = 0.0
             if s.passed:
@@ -331,7 +331,7 @@ class Score:
         """Calculate PP and star rating for our score."""
         mode_vn = self.mode.as_vanilla
 
-        if mode_vn in (0, 1):  # osu, taiko
+        if mode_vn in (0, 1): # osu, taiko
             with OppaiWrapper('oppai-ng/liboppai.so') as ezpp:
                 if self.mods:
                     ezpp.set_mods(int(self.mods))
@@ -340,17 +340,17 @@ class Score:
                     ezpp.set_mode(mode_vn)
 
                 ezpp.set_combo(self.max_combo)
-                ezpp.set_nmiss(self.nmiss)  # clobbers acc
+                ezpp.set_nmiss(self.nmiss) # clobbers acc
                 ezpp.set_accuracy_percent(self.acc)
 
                 ezpp.calculate(osu_file_path)
 
                 return (ezpp.get_pp(), ezpp.get_sr())
-        elif mode_vn == 2:  # catch
+        elif mode_vn == 2: # catch
             return (0.0, 0.0)
-        else:  # mania
+        else: # mania
             if self.bmap.mode.as_vanilla != 3:
-                return (0.0, 0.0)  # maniera has no convert support
+                return (0.0, 0.0) # maniera has no convert support
 
             if self.mods != Mods.NOMOD:
                 mods = int(self.mods)
@@ -396,58 +396,50 @@ class Score:
         """Calculate the accuracy of our score."""
         mode_vn = self.mode.as_vanilla
 
-        if mode_vn == 0:  # osu!
-            total = sum((self.n300, self.n100, self.n50, self.nmiss))
+        if mode_vn == 0: # osu!
+            total = self.n300 + self.n100 + self.n50 + self.nmiss
 
             if total == 0:
                 self.acc = 0.0
                 return
 
-            self.acc = 100.0 * sum((
-                self.n50 * 50.0,
-                self.n100 * 100.0,
-                self.n300 * 300.0
-            )) / (total * 300.0)
+            self.acc = 100.0 * (
+                (self.n300 * 300.0) +
+                (self.n100 * 100.0) +
+                (self.n50 * 50.0)
+            ) / (total * 300.0)
 
-        elif mode_vn == 1:  # osu!taiko
-            total = sum((self.n300, self.n100, self.nmiss))
+        elif mode_vn == 1: # osu!taiko
+            total = self.n300 + self.n100 + self.nmiss
 
             if total == 0:
                 self.acc = 0.0
                 return
 
-            self.acc = 100.0 * sum((
-                self.n100 * 0.5,
-                self.n300
-            )) / total
+            self.acc = 100.0 * ((self.n100 * 0.5) + self.n300) / total
 
         elif mode_vn == 2:
             # osu!catch
-            total = sum((self.n300, self.n100, self.n50,
-                         self.nkatu, self.nmiss))
+            total = self.n300 + self.n100 + self.n50 + self.nkatu + self.nmiss
 
             if total == 0:
                 self.acc = 0.0
                 return
 
-            self.acc = 100.0 * sum((
-                self.n300,
-                self.n100,
-                self.n50
-            )) / total
+            self.acc = 100.0 * (self.n300 + self.n100 + self.n50) / total
 
         elif mode_vn == 3:
             # osu!mania
-            total = sum((self.n300, self.n100, self.n50,
-                         self.ngeki, self.nkatu, self.nmiss))
+            total = (self.n300 + self.n100 + self.n50 +
+                     self.ngeki + self.nkatu + self.nmiss)
 
             if total == 0:
                 self.acc = 0.0
                 return
 
-            self.acc = 100.0 * sum((
-                self.n50 * 50.0,
-                self.n100 * 100.0,
-                self.nkatu * 200.0,
-                (self.n300 + self.ngeki) * 300.0
-            )) / (total * 300.0)
+            self.acc = 100.0 * (
+                (self.n50 * 50.0) +
+                (self.n100 * 100.0) +
+                (self.nkatu * 200.0) +
+                ((self.n300 + self.ngeki) * 300.0)
+            ) / (total * 300.0)
