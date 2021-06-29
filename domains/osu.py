@@ -776,7 +776,7 @@ async def osuSubmitModularSelector(
             replay_file = REPLAYS_PATH / f'{score.id}.osr'
             replay_file.write_bytes(conn.files['score'])
 
-            glob.loop.create_task(run_circleguard(score))
+            # glob.loop.create_task(run_circleguard(score))
 
     """ Update the user's & beatmap's stats """
 
