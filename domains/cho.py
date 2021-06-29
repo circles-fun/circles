@@ -507,6 +507,7 @@ async def login(body_view: memoryview, ip: str, db_cursor: aiomysql.DictCursor) 
         [utils.misc.make_safe_name(username)]
     )
     user_info = await db_cursor.fetchone()
+    print(user_info)
 
     if not user_info:
         # no account by this name exists.
