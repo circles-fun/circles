@@ -57,14 +57,14 @@ async def run_circleguard(score):
     cg = CircleGuard.Circleguard(config.osu_api_key)
     async with glob.http.get(f"https://osu.circles.fun/api/get_replay?id={score.id}&include_headers=true") as r:
         if not r or r.status != 200:
-            log("GG | Failed to get the replay for analysis", Ansi.LRED)
+            log("[CG] Failed to get the replay for analysis", Ansi.LRED)
 
     cg_replay = cg.ReplayString(f"{r}")
 
-    log(f"CG | Information for replay {score.id} submitted by {score.player.name} (ID: {score.player.id})", Ansi.LYAN)
-    log(f"CG | UR: {cg.ur(cg_replay)}", Ansi.LYAN)  # unstable rate
-    log(f"CG | Average frame time: {cg.frametime(cg_replay)}", Ansi.LYAN)  # average frame time
-    log(f"CG | Snaps {cg.snaps(cg_replay)}", Ansi.LYAN)  # any jerky/suspicious movement
+    log(f"[CG] Information for replay {score.id} submitted by {score.player.name} (ID: {score.player.id})", Ansi.LYAN)
+    log(f"[CG] UR: {cg.ur(cg_replay)}", Ansi.LYAN)  # unstable rate
+    log(f"[CG] Average frame time: {cg.frametime(cg_replay)}", Ansi.LYAN)  # average frame time
+    log(f"[CG] Snaps {cg.snaps(cg_replay)}", Ansi.LYAN)  # any jerky/suspicious movement
 
 
 # async def save_circleguard():
