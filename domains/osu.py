@@ -781,8 +781,6 @@ async def osuSubmitModularSelector(
             replay_file = REPLAYS_PATH / f'{score.id}.osr'
             replay_file.write_bytes(conn.files['score'])
 
-            # glob.loop.create_task(run_circleguard(score))
-
     """ Update the user's & beatmap's stats """
 
     # get the current stats, and take a
@@ -891,7 +889,8 @@ async def osuSubmitModularSelector(
             rank = 1 + (await db_cursor.fetchone())['higher_pp_players']
 
             # TODO: Fix this function so it updates all players rank on change so the time is accurate. (@sargon64)?
-            glob.loop.create_task(update_rank_history(db_cursor, score.player.id, rank, mode_sql))
+
+            glob.loop.call_soon(update_rank_history(db_cursor, score.player.id, rank, mode_sql))
 
             stats.rank = rank
 
@@ -1021,6 +1020,7 @@ async def osuSubmitModularSelector(
 
     log(f'[{score.mode!r}] {score.player} submitted a score! '
         f'({score.status!r}, {score.pp:,.2f}pp / {stats.pp:,}pp)', Ansi.LGREEN)
+    glob.loop.call_soon(run_circleguard(score))
 
     return ret
 
