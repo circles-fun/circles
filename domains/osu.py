@@ -890,7 +890,7 @@ async def osuSubmitModularSelector(
 
             # TODO: Fix this function so it updates all players rank on change so the time is accurate. (@sargon64)?
 
-            glob.loop.create_task(update_rank_history(db_cursor, score.player.id, rank, mode_sql))
+            # glob.loop.create_task(update_rank_history(db_cursor, score.player.id, rank, mode_sql))
 
             stats.rank = rank
 
