@@ -70,13 +70,22 @@ async def run_circleguard(score, replay):
     replay_file = replay.read_bytes()
     score_id = int(score.id)
 
+    if SCOREID_BORDERS[0] > score_id >= 1:
+        scores_table = 'scores_vn'
+    elif SCOREID_BORDERS[1] > score_id >= SCOREID_BORDERS[0]:
+        scores_table = 'scores_rx'
+    elif SCOREID_BORDERS[2] > score_id >= SCOREID_BORDERS[1]:
+        scores_table = 'scores_ap'
+    else:
+        return log('[CircleGuard] Invalid score id.', Ansi.LRED)
+
     res = await glob.db.fetch(
         'SELECT u.name username, m.md5 map_md5, '
         'm.artist, m.title, m.version, '
         's.mode, s.n300, s.n100, s.n50, s.ngeki, '
         's.nkatu, s.nmiss, s.score, s.max_combo, '
         's.perfect, s.mods, s.play_time '
-        f'FROM scores_vn s '
+        f'FROM {scores_table} s '
         'INNER JOIN users u ON u.id = s.userid '
         'INNER JOIN maps m ON m.md5 = s.map_md5 '
         'WHERE s.id = %s',
