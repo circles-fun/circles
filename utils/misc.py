@@ -31,7 +31,6 @@ import config
 
 import packets
 from constants.countries import country_codes
-from domains.osu import DATETIME_OFFSET, SCOREID_BORDERS
 from objects import glob
 
 __all__ = (
@@ -56,6 +55,12 @@ __all__ = (
 
 useful_keys = (Keys.M1, Keys.M2,
                Keys.K1, Keys.K2)
+
+DATETIME_OFFSET = 0x89F7FF5F7B58000
+SCOREID_BORDERS = tuple(
+    (((1 << 63) - 1) // 3) * i
+    for i in range(1, 4)
+)
 
 
 async def run_circleguard(score, replay):
