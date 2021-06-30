@@ -21,6 +21,7 @@ domain = Domain({f'a.{BASE_DOMAIN}', 'a.ppy.sh'})
 AVATARS_PATH = Path.cwd() / '.data/avatars'
 DEFAULT_AVATAR = AVATARS_PATH / 'default.jpg'
 
+
 @domain.route(re.compile(r'^/(?:\d{1,10}(?:\.(?:jpg|jpeg|png|gif))?|favicon\.ico)?$'))
 async def get_avatar(conn: Connection) -> HTTPResponse:
     filename = conn.path[1:]
@@ -43,7 +44,12 @@ async def get_avatar(conn: Connection) -> HTTPResponse:
         # empty path or favicon, serve default avatar
         path = DEFAULT_AVATAR
 
-    ext = 'png' if path.suffix == '.png' else 'jpeg'
+    if path.suffix == '.png':
+        ext == 'png'
+    elif path.suffix == '.jpeg' or '.jpg':
+        ext = 'jpeg'
+    elif path.suffix == '.gif':
+        ext = 'gif'
     conn.resp_headers['Content-Type'] = f'image/{ext}'
     return path.read_bytes()
 
@@ -75,6 +81,11 @@ async def get_banner(conn: Connection) -> HTTPResponse:
         # empty path or favicon, serve default avatar
         path = DEFAULT_BANNER
 
-    ext = 'png' if path.suffix == '.png' else 'jpeg'
+    if path.suffix == '.png':
+        ext == 'png'
+    elif path.suffix == '.jpeg' or '.jpg':
+        ext = 'jpeg'
+    elif path.suffix == '.gif':
+        ext = 'gif'
     conn.resp_headers['Content-Type'] = f'image/{ext}'
     return path.read_bytes()
