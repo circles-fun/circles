@@ -35,11 +35,11 @@ from domains.osu import DATETIME_OFFSET, SCOREID_BORDERS
 from objects import glob
 
 __all__ = (
+    'run_circleguard',
     'get_press_times',
     'make_safe_name',
     'fetch_bot_name',
     'update_rank_history',
-    'run_circleguard',
     'download_achievement_images',
     'seconds_readable',
     'check_connection',
