@@ -128,12 +128,17 @@ async def run_circleguard(score, replay):
     log(f"[CircleGuard] UR: {a}", Ansi.CYAN)  # unstable rate
     log(f"[CircleGuard] Average frame time: {b}", Ansi.CYAN)  # average frame time
     log(f"[CircleGuard] Snaps {c}", Ansi.CYAN)  # any jerky/suspicious movement
-    return await save_circleguard(cg_replay, score, a, b, c)
+    return await save_circleguard(score, a, b, c)
 
 
-async def save_circleguard(cg, score, ur, frame_time, snaps):
+async def save_circleguard(score, ur, frame_time, snaps):
     webhook_url = glob.config.webhooks['circleguard']
-    webhook = cmyui.discord.Webhook(content=f"{cg.beatmap().stars}* {cg.beatmap().title}\nOD: {cg.beatmap().overall_difficulty}\nAR: {cg.beatmap().approach_rate}\nLink: https://osu.ppy.sh/beatmapsets/{cg.beatmap().beatmap_set_id}",url=webhook_url)
+    webhook = cmyui.discord.Webhook(content=f"{score.bmap.creator} - {score.bmap.diff} | {score.bmap.title}"
+                                            f"\nBPM: {score.bmap.bpm}"
+                                            f"\nOD: {score.bmap.od}"
+                                            f"\nAR: {score.bmap.ar}"
+                                            f"\nLink: https://osu.ppy.sh/beatmapsets/{score.bmap.id}",
+                                    url=webhook_url)
 
     embed = cmyui.discord.Embed(
         title=f'[{score.mode!r}] CircleGuard Analysis'
