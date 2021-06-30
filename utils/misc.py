@@ -128,7 +128,6 @@ async def run_circleguard(score, replay):
     log(f"[CircleGuard] UR: {a}", Ansi.CYAN)  # unstable rate
     log(f"[CircleGuard] Average frame time: {b}", Ansi.CYAN)  # average frame time
     log(f"[CircleGuard] Snaps {c}", Ansi.CYAN)  # any jerky/suspicious movement
-    cg_replay.beatmap().
     return await save_circleguard(cg_replay, score, a, b, c)
 
 
