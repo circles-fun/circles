@@ -66,7 +66,7 @@ SCOREID_BORDERS = tuple(
 async def run_circleguard(score, replay):
     cg = CircleGuard.Circleguard(config.osu_api_key)
 
-    replay_file = await replay.read_bytes()
+    replay_file = replay.read_bytes()
 
     score_id = int(score.id)
 
@@ -133,6 +133,7 @@ async def run_circleguard(score, replay):
     log(f"[CircleGuard] UR: {cg.ur(cg_replay)}", Ansi.CYAN)  # unstable rate
     log(f"[CircleGuard] Average frame time: {cg.frametime(cg_replay)}", Ansi.CYAN)  # average frame time
     log(f"[CircleGuard] Snaps {cg.snaps(cg_replay)}", Ansi.CYAN)  # any jerky/suspicious movement
+    return
 
 # async def save_circleguard():
 #    return True
