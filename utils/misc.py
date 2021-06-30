@@ -66,7 +66,7 @@ SCOREID_BORDERS = tuple(
 async def run_circleguard(score, replay):
     cg = CircleGuard.Circleguard(config.osu_api_key)
 
-    replay_file = replay.read_bytes()
+    replay_file = await replay.read_bytes()
 
     score_id = int(score.id)
 
