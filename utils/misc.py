@@ -129,11 +129,10 @@ async def run_circleguard(score, replay):
 
     cg_replay = cg.ReplayString(buf)
 
-    log(f"[CG] Information for replay {score.id} submitted by {score.player.name} (ID: {score.player.id})", Ansi.LCYAN)
-    log(f"[CG] UR: {cg.ur(cg_replay)}", Ansi.LCYAN)  # unstable rate
-    log(f"[CG] Average frame time: {cg.frametime(cg_replay)}", Ansi.LCYAN)  # average frame time
-    log(f"[CG] Snaps {cg.snaps(cg_replay)}", Ansi.LCYAN)  # any jerky/suspicious movement
-
+    log(f"[CircleGuard] Information for replay {score.id} submitted by {score.player.name}", Ansi.CYAN)
+    log(f"[CircleGuard] UR: {cg.ur(cg_replay)}", Ansi.CYAN)  # unstable rate
+    log(f"[CircleGuard] Average frame time: {cg.frametime(cg_replay)}", Ansi.CYAN)  # average frame time
+    log(f"[CircleGuard] Snaps {cg.snaps(cg_replay)}", Ansi.CYAN)  # any jerky/suspicious movement
 
 # async def save_circleguard():
 #    return True
