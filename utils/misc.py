@@ -66,6 +66,8 @@ SCOREID_BORDERS = tuple(
 async def run_circleguard(score, replay):
     cg = CircleGuard.Circleguard(config.osu_api_key)
 
+    replay_file = replay.read_bytes()
+
     score_id = int(score.id)
 
     if SCOREID_BORDERS[0] > score_id >= 1:
@@ -121,11 +123,11 @@ async def run_circleguard(score, replay):
 
     timestamp = int(res['play_time'].timestamp() * 1e7)
     buf += struct.pack('<q', timestamp + DATETIME_OFFSET)
-    buf += struct.pack('<i', len(replay))
-    buf += replay
+    buf += struct.pack('<i', len(replay_file))
+    buf += replay_file
     buf += struct.pack('<q', score_id)
 
-    cg_replay = cg.ReplayString().load_from_string(buf)
+    cg_replay = cg.ReplayString(buf)
 
     log(f"[CG] Information for replay {score.id} submitted by {score.player.name} (ID: {score.player.id})", Ansi.LYAN)
     log(f"[CG] UR: {cg.ur(cg_replay)}", Ansi.LYAN)  # unstable rate
