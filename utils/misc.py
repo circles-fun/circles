@@ -133,15 +133,15 @@ async def run_circleguard(score, replay):
 
 async def save_circleguard(score, ur, frame_time, snaps):
     webhook_url = glob.config.webhooks['circleguard']
-    webhook = cmyui.discord.Webhook(content=f"{score.bmap.creator} - {score.bmap.diff} | {score.bmap.title}"
-                                            f"\nBPM: {score.bmap.bpm}"
-                                            f"\nOD: {score.bmap.od}"
-                                            f"\nAR: {score.bmap.ar}"
-                                            f"\nLink: https://osu.ppy.sh/beatmapsets/{score.bmap.id}",
+    webhook = cmyui.discord.Webhook(content=f"{score.bmap.creator} - [{score.bmap.diff}*] {score.bmap.title}"
+                                            f"\n**BPM**: {score.bmap.bpm}"
+                                            f"\n**OD**: {score.bmap.od}"
+                                            f"\n**AR**: {score.bmap.ar}"
+                                            f"\n**Link**: https://chimu.moe/en/d/{score.bmap.id}",
                                     url=webhook_url)
 
     embed = cmyui.discord.Embed(
-        title=f'[{score.mode!r}] CircleGuard Analysis'
+        title=f'[{score.mode!r}] Replay Analysis'
     )
 
     embed.set_author(
