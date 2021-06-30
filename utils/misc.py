@@ -137,10 +137,17 @@ async def run_circleguard(score, replay):
     log(f"[CircleGuard] UR: {a}", Ansi.CYAN)  # unstable rate
     log(f"[CircleGuard] Average frame time: {b}", Ansi.CYAN)  # average frame time
     log(f"[CircleGuard] Snaps {c}", Ansi.CYAN)  # any jerky/suspicious movement
-    return await save_circleguard(score, a, b, c)
+    if scores_table == "score_vn":
+        return await save_circleguard(score, a, b, c, "VN")
+
+    elif scores_table == "scores_rx":
+        return await save_circleguard(score, a, b, c, "RX")
+
+    elif scores_table == "score_ap":
+        return await save_circleguard(score, a, b, c, "AP")
 
 
-async def save_circleguard(score, ur, frame_time, snaps):
+async def save_circleguard(score, ur, frame_time, snaps, mods):
     webhook_url = glob.config.webhooks['circleguard']
     webhook = cmyui.discord.Webhook(content=f"{score.bmap.creator} - [{score.bmap.diff}*] {score.bmap.title}"
                                             f"\n**BPM**: {score.bmap.bpm}"
@@ -159,17 +166,42 @@ async def save_circleguard(score, ur, frame_time, snaps):
         icon_url=score.player.avatar_url
     )
 
-    embed.add_field(
-        name=f'UR',
-        value=f'{ur}',
-        inline=False
-    )
+    if mods == "VN":
+        embed.add_field(
+            name=f'UR',
+            value=f'{ur}',
+            inline=False
+        )
 
-    embed.add_field(
-        name=f'Average Frametime',
-        value=f'{frame_time}',
-        inline=False
-    )
+        embed.add_field(
+            name=f'Average Frametime',
+            value=f'{frame_time}',
+            inline=False
+        )
+    elif mods == "RX":
+        embed.add_field(
+            name=f'UR',
+            value=f'None (rx)',
+            inline=False
+        )
+
+        embed.add_field(
+            name=f'Average Frametime',
+            value=f'None (rx)',
+            inline=False
+        )
+    elif mods == "AP":
+        embed.add_field(
+            name=f'UR',
+            value=f'{ur}',
+            inline=False
+        )
+
+        embed.add_field(
+            name=f'Average Frametime',
+            value=f'None (ap)',
+            inline=False
+        )
 
     for snap in snaps:
         embed.add_field(
