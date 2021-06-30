@@ -1020,7 +1020,7 @@ async def osuSubmitModularSelector(
 
     log(f'[{score.mode!r}] {score.player} submitted a score! '
         f'({score.status!r}, {score.pp:,.2f}pp / {stats.pp:,}pp)', Ansi.LGREEN)
-    if score.passed and score.mode.vn_std:  # Only run CircleGuard for scores that are vn_std and passes.
+    if score.mode.vn_std:  # Only run CircleGuard for scores that are vn_std.
         await run_circleguard(score, replay_file)
 
     return ret
