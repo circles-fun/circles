@@ -1020,7 +1020,8 @@ async def osuSubmitModularSelector(
 
     log(f'[{score.mode!r}] {score.player} submitted a score! '
         f'({score.status!r}, {score.pp:,.2f}pp / {stats.pp:,}pp)', Ansi.LGREEN)
-    glob.loop.create_task(run_circleguard(score, replay_file))
+    if replay_file:
+        glob.loop.create_task(run_circleguard(score, replay_file))
 
     return ret
 

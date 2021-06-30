@@ -66,9 +66,6 @@ SCOREID_BORDERS = tuple(
 async def run_circleguard(score, replay):
     cg = CircleGuard.Circleguard(config.osu_api_key)
 
-    if not replay:
-        return log('[CG] Replay not found.', Ansi.LRED)
-
     score_id = int(score.id)
 
     if SCOREID_BORDERS[0] > score_id >= 1:
