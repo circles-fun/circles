@@ -157,7 +157,7 @@ async def save_circleguard(score, ur, frame_time, snaps):
         inline=False
     )
 
-    for snap in snaps.items():
+    for snap in snaps():
         embed.add_field(
             name='Snap',
             value=f'{snap}',
