@@ -171,12 +171,12 @@ async def save_circleguard(score, ur, frame_time, snaps):
         inline=False
     )
 
-    # for snap in snaps():
-    #    embed.add_field(
-    #        name='Snap',
-    #        value=f'{snap}',
-    #        inline=True
-    #    )
+    for snap in snaps:
+        embed.add_field(
+            name='Aim Assistance / Snap',
+            value=f'{snap}',
+            inline=True
+        )
 
     webhook.add_embed(embed)
     return await webhook.post(glob.http)
