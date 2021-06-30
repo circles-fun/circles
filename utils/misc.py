@@ -125,7 +125,7 @@ async def run_circleguard(score, replay):
     buf += replay
     buf += struct.pack('<q', score_id)
 
-    cg_replay = cg.ReplayString(buf)
+    cg_replay = cg.ReplayString().load_from_string(buf)
 
     log(f"[CG] Information for replay {score.id} submitted by {score.player.name} (ID: {score.player.id})", Ansi.LYAN)
     log(f"[CG] UR: {cg.ur(cg_replay)}", Ansi.LYAN)  # unstable rate
