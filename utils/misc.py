@@ -4,23 +4,23 @@ import inspect
 import io
 import struct
 
-import requests
 import secrets
 import socket
 import sys
 import types
 import zipfile
-from pathlib import Path
-from typing import Callable
-from typing import Sequence
-from typing import Type
-from typing import Union
 
 import aiomysql
 import circleguard as CircleGuard
 import dill as pickle
 import pymysql
 import requests
+
+from pathlib import Path
+from typing import Callable
+from typing import Sequence
+from typing import Type
+from typing import Union
 from cmyui.logging import Ansi
 from cmyui.logging import log
 from cmyui.logging import printc
@@ -31,7 +31,7 @@ import config
 
 import packets
 from constants.countries import country_codes
-from domains.osu import JSON, DATETIME_OFFSET, SCOREID_BORDERS
+from domains.osu import DATETIME_OFFSET, SCOREID_BORDERS
 from objects import glob
 
 __all__ = (
