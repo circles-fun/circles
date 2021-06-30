@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
-
+import hashlib
 import inspect
 import io
+import struct
+
 import requests
 import secrets
 import socket
@@ -26,7 +28,10 @@ from cmyui.osu.replay import Keys
 from cmyui.osu.replay import ReplayFrame
 
 import config
+
+import packets
 from constants.countries import country_codes
+from domains.osu import JSON, DATETIME_OFFSET, SCOREID_BORDERS
 from objects import glob
 
 __all__ = (
@@ -53,14 +58,72 @@ useful_keys = (Keys.M1, Keys.M2,
                Keys.K1, Keys.K2)
 
 
-async def run_circleguard(score):
+async def run_circleguard(score, replay):
     cg = CircleGuard.Circleguard(config.osu_api_key)
-    async with glob.http.get(f"https://osu.circles.fun/api/get_replay?id={score.id}&include_headers=true") as r:
-        if not r or r.status != 200:
-            log("[CG] Failed to get the replay for analysis", Ansi.LRED)
 
-    log(r, Ansi.LMAGENTA)
-    cg_replay = cg.ReplayString(r.content)
+    if not replay:
+        return log('[CG] Replay not found.', Ansi.LRED)
+
+    score_id = int(score.id)
+
+    if SCOREID_BORDERS[0] > score_id >= 1:
+        scores_table = 'scores_vn'
+    elif SCOREID_BORDERS[1] > score_id >= SCOREID_BORDERS[0]:
+        scores_table = 'scores_rx'
+    elif SCOREID_BORDERS[2] > score_id >= SCOREID_BORDERS[1]:
+        scores_table = 'scores_ap'
+    else:
+        return log('[CG] Invalid score id.', Ansi.LRED)
+
+    res = await glob.db.fetch(
+        'SELECT u.name username, m.md5 map_md5, '
+        'm.artist, m.title, m.version, '
+        's.mode, s.n300, s.n100, s.n50, s.ngeki, '
+        's.nkatu, s.nmiss, s.score, s.max_combo, '
+        's.perfect, s.mods, s.play_time '
+        f'FROM {scores_table} s '
+        'INNER JOIN users u ON u.id = s.userid '
+        'INNER JOIN maps m ON m.md5 = s.map_md5 '
+        'WHERE s.id = %s',
+        [score.id]
+    )
+
+    if not res:
+        return log('[CG] Score not found.', Ansi.LRED)
+
+    replay_md5 = hashlib.md5(
+        '{}p{}o{}o{}t{}a{}r{}e{}y{}o{}u{}{}{}'.format(
+            res['n100'] + res['n300'], res['n50'],
+            res['ngeki'], res['nkatu'], res['nmiss'],
+            res['map_md5'], res['max_combo'],
+            str(res['perfect'] == 1),
+            res['username'], res['score'], 0,
+            res['mods'], 'True'
+        ).encode()
+    ).hexdigest()
+
+    buf = bytearray()
+    buf += struct.pack('<Bi', res['mode'], 20200207)
+    buf += packets.write_string(res['map_md5'])
+    buf += packets.write_string(res['username'])
+    buf += packets.write_string(replay_md5)
+
+    buf += struct.pack(
+        '<hhhhhhihBi',
+        res['n300'], res['n100'], res['n50'],
+        res['ngeki'], res['nkatu'], res['nmiss'],
+        res['score'], res['max_combo'], res['perfect'],
+        res['mods']
+    )
+    buf += b'\x00'
+
+    timestamp = int(res['play_time'].timestamp() * 1e7)
+    buf += struct.pack('<q', timestamp + DATETIME_OFFSET)
+    buf += struct.pack('<i', len(replay))
+    buf += replay
+    buf += struct.pack('<q', score_id)
+
+    cg_replay = cg.ReplayString(buf)
 
     log(f"[CG] Information for replay {score.id} submitted by {score.player.name} (ID: {score.player.id})", Ansi.LYAN)
     log(f"[CG] UR: {cg.ur(cg_replay)}", Ansi.LYAN)  # unstable rate
