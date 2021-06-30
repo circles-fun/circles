@@ -256,9 +256,9 @@ def gulag_to_osuapi_status(s: int) -> int:
 @get_login(name_p='u', pass_p='h')
 @acquire_db_conn(aiomysql.DictCursor)
 async def osuGetBeatmapInfo(
-    p: 'Player',
-    conn: Connection,
-    db_cursor: aiomysql.DictCursor
+        p: 'Player',
+        conn: Connection,
+        db_cursor: aiomysql.DictCursor
 ) -> HTTPResponse:
     data = orjson.loads(conn.body)
 
@@ -588,8 +588,8 @@ def chart_entry(name: str, before: Optional[object], after: object) -> str:
                   'c1', 'st', 'pass', 'osuver', 's'})
 @acquire_db_conn(aiomysql.DictCursor)
 async def osuSubmitModularSelector(
-    conn: Connection,
-    db_cursor: aiomysql.DictCursor
+        conn: Connection,
+        db_cursor: aiomysql.DictCursor
 ) -> HTTPResponse:
     mp_args = conn.multipart_args
 
@@ -660,8 +660,8 @@ async def osuSubmitModularSelector(
         stacktrace = utils.misc.get_appropriate_stacktrace()
         await utils.misc.log_strange_occurrence(stacktrace)
 
-    if ( # check for pp caps on ranked & approved maps for appropriate players.
-        score.bmap.awards_ranked_pp and not (
+    if (  # check for pp caps on ranked & approved maps for appropriate players.
+            score.bmap.awards_ranked_pp and not (
             score.player.priv & Privileges.Whitelisted or
             score.player.restricted
     )
@@ -685,16 +685,16 @@ async def osuSubmitModularSelector(
             glob.datadog.increment('gulag.submitted_scores_best')
 
         if (
-            score.bmap.has_leaderboard and
-            score.rank == 1 and
-            not score.player.restricted
+                score.bmap.has_leaderboard and
+                score.rank == 1 and
+                not score.player.restricted
         ):
             # this is the new #1, post the play to #announce.
             announce_chan = glob.channels['#announce']
 
             if (
-                score.mode < GameMode.rx_std and
-                score.bmap.status == RankedStatus.Loved
+                    score.mode < GameMode.rx_std and
+                    score.bmap.status == RankedStatus.Loved
             ):
                 # use score for vanilla loved only
                 performance = f'{score.score:,} score'
@@ -805,7 +805,7 @@ async def osuSubmitModularSelector(
     else:
         # score is a pass & the map awards pp,
         # build complex stats update query.
-        stats_query = [ # build a list of params to update
+        stats_query = [  # build a list of params to update
             'UPDATE stats SET plays_{mode} = %s',
             'playtime_{mode} = %s'
         ]
@@ -1020,7 +1020,7 @@ async def osuSubmitModularSelector(
 
     log(f'[{score.mode!r}] {score.player} submitted a score! '
         f'({score.status!r}, {score.pp:,.2f}pp / {stats.pp:,}pp)', Ansi.LGREEN)
-    if score.passed and score.mode.vn_std: # Only run CircleGuard for scores that are vn_std and passes.
+    if score.passed and score.mode.vn_std:  # Only run CircleGuard for scores that are vn_std and passes.
         await run_circleguard(score, replay_file)
 
     return ret
@@ -1050,9 +1050,9 @@ async def getReplay(p: 'Player', conn: Connection) -> HTTPResponse:
 @get_login(name_p='u', pass_p='p', auth_error=b'auth fail')
 @acquire_db_conn(aiomysql.Cursor)
 async def osuRate(
-    p: 'Player',
-    conn: Connection,
-    db_cursor: aiomysql.Cursor
+        p: 'Player',
+        conn: Connection,
+        db_cursor: aiomysql.Cursor
 ) -> HTTPResponse:
     map_md5 = conn.args['c']
 
@@ -1125,11 +1125,11 @@ SCORE_LISTING_FMTSTR = (
 @get_login(name_p='us', pass_p='ha')
 @acquire_db_conn(aiomysql.DictCursor)
 async def getScores(
-    p: 'Player',
-    conn: Connection,
-    db_cursor: aiomysql.DictCursor
+        p: 'Player',
+        conn: Connection,
+        db_cursor: aiomysql.DictCursor
 ) -> HTTPResponse:
-    if not all([ # make sure all int args are integral
+    if not all([  # make sure all int args are integral
         _isdecimal(conn.args[k], _negative=True)
         for k in ('mods', 'v', 'm', 'i')
     ]):
@@ -2360,8 +2360,8 @@ async def get_updated_beatmap(conn: Connection) -> HTTPResponse:
         osu_file_path = BEATMAPS_PATH / f'{res["id"]}.osu'
 
         if (
-            osu_file_path.exists() and
-            res['md5'] == hashlib.md5(osu_file_path.read_bytes()).hexdigest()
+                osu_file_path.exists() and
+                res['md5'] == hashlib.md5(osu_file_path.read_bytes()).hexdigest()
         ):
             # up to date map found on disk.
             content = osu_file_path.read_bytes()
@@ -2375,7 +2375,7 @@ async def get_updated_beatmap(conn: Connection) -> HTTPResponse:
             async with glob.http.get(url) as resp:
                 if not resp or resp.status != 200:
                     log(f'Could not find map {osu_file_path}!', Ansi.LRED)
-                    return (404, b'') # couldn't find on osu!'s server
+                    return (404, b'')  # couldn't find on osu!'s server
 
                 content = await resp.read()
 
@@ -2404,8 +2404,8 @@ async def peppyDMHandler(conn: Connection) -> HTTPResponse:
 @ratelimit(period=300, max_count=15)  # 15 registrations / 5mins
 @acquire_db_conn(aiomysql.Cursor)
 async def register_account(
-    conn: Connection,
-    db_cursor: aiomysql.Cursor
+        conn: Connection,
+        db_cursor: aiomysql.Cursor
 ) -> HTTPResponse:
     mp_args = conn.multipart_args
 
