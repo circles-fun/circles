@@ -82,26 +82,12 @@ disallowed_passwords = {
     'password', 'minilamp'
 }
 
-# circlesprovides connectivity to
-# discord via a few simple webhooks.
-# simply add urls to start receiving.
 webhooks = {
-    # general logging information
     'audit-log': '',
-
-    ''' (currently unused)
-    # notifications of sketchy plays
-    # & unusual activity auto-detected;
-    # described in more detail below.
-    'surveillance': '',
-    '''
-
-    # XXX: not a webhook, but the thumbnail used in them.
+    'circleguard': '',
     'thumbnail': 'https://akatsuki.pw/static/logos/logo.png'
 }
 
-# https://datadoghq.com
-# support (stats tracking)
 datadog = {
     'api_key': '',
     'app_key': ''

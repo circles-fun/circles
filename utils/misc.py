@@ -12,6 +12,7 @@ import zipfile
 
 import aiomysql
 import circleguard as CircleGuard
+import cmyui.discord
 import dill as pickle
 import pymysql
 import requests
@@ -67,17 +68,7 @@ async def run_circleguard(score, replay):
     cg = CircleGuard.Circleguard(config.osu_api_key)
 
     replay_file = replay.read_bytes()
-
     score_id = int(score.id)
-
-    if SCOREID_BORDERS[0] > score_id >= 1:
-        scores_table = 'scores_vn'
-    elif SCOREID_BORDERS[1] > score_id >= SCOREID_BORDERS[0]:
-        scores_table = 'scores_rx'
-    elif SCOREID_BORDERS[2] > score_id >= SCOREID_BORDERS[1]:
-        scores_table = 'scores_ap'
-    else:
-        return log('[CG] Invalid score id.', Ansi.LRED)
 
     res = await glob.db.fetch(
         'SELECT u.name username, m.md5 map_md5, '
@@ -85,7 +76,7 @@ async def run_circleguard(score, replay):
         's.mode, s.n300, s.n100, s.n50, s.ngeki, '
         's.nkatu, s.nmiss, s.score, s.max_combo, '
         's.perfect, s.mods, s.play_time '
-        f'FROM {scores_table} s '
+        f'FROM scores_vn s '
         'INNER JOIN users u ON u.id = s.userid '
         'INNER JOIN maps m ON m.md5 = s.map_md5 '
         'WHERE s.id = %s',
@@ -93,7 +84,7 @@ async def run_circleguard(score, replay):
     )
 
     if not res:
-        return log('[CG] Score not found.', Ansi.LRED)
+        return log('[CircleGuard] Score not found.', Ansi.LRED)
 
     replay_md5 = hashlib.md5(
         '{}p{}o{}o{}t{}a{}r{}e{}y{}o{}u{}{}{}'.format(
@@ -129,14 +120,52 @@ async def run_circleguard(score, replay):
 
     cg_replay = cg.ReplayString(buf)
 
-    log(f"[CircleGuard] Information for replay {score.id} submitted by {score.player.name}", Ansi.CYAN)
-    log(f"[CircleGuard] UR: {cg.ur(cg_replay)}", Ansi.CYAN)  # unstable rate
-    log(f"[CircleGuard] Average frame time: {cg.frametime(cg_replay)}", Ansi.CYAN)  # average frame time
-    log(f"[CircleGuard] Snaps {cg.snaps(cg_replay)}", Ansi.CYAN)  # any jerky/suspicious movement
-    return
+    a = cg.ur(cg_replay)
+    b = cg.frametime(cg_replay)
+    c = cg.snaps(cg_replay)
 
-# async def save_circleguard():
-#    return True
+    log(f"[CircleGuard] Information for replay {score.id} submitted by {score.player.name}", Ansi.CYAN)
+    log(f"[CircleGuard] UR: {a}", Ansi.CYAN)  # unstable rate
+    log(f"[CircleGuard] Average frame time: {b}", Ansi.CYAN)  # average frame time
+    log(f"[CircleGuard] Snaps {c}", Ansi.CYAN)  # any jerky/suspicious movement
+    return save_circleguard(score, a, b, c)
+
+
+async def save_circleguard(score, ur, frame_time, snaps):
+    webhook_url = glob.config.webhooks['circleguard']
+    webhook = cmyui.discord.Webhook(url=webhook_url)
+
+    embed = cmyui.discord.Embed(
+        title=f'[{score.mode!r}] CircleGuard Analysis'
+    )
+
+    embed.set_author(
+        url=score.player.url,
+        name=score.player.name,
+        icon_url=score.player.avatar_url
+    )
+
+    embed.add_field(
+        name=f'UR',
+        value=f'{ur}',
+        inline=False
+    )
+
+    embed.add_field(
+        name=f'Average Frametime',
+        value=f'{frame_time}',
+        inline=False
+    )
+
+    for snap in snaps.items():
+        embed.add_field(
+            name='Snap',
+            value=f'{snap}',
+            inline=True
+        )
+
+    webhook.add_embed(embed)
+    return await webhook.post(glob.http)
 
 
 def get_press_times(frames: Sequence[ReplayFrame]) -> dict[Keys, float]:
