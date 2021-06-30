@@ -137,13 +137,13 @@ async def run_circleguard(score, replay):
     log(f"[CircleGuard] UR: {a}", Ansi.CYAN)  # unstable rate
     log(f"[CircleGuard] Average frame time: {b}", Ansi.CYAN)  # average frame time
     log(f"[CircleGuard] Snaps {c}", Ansi.CYAN)  # any jerky/suspicious movement
-    if scores_table == "score_vn":
+    if scores_table == "scores_vn":
         return await save_circleguard(score, a, b, c, "VN")
 
     elif scores_table == "scores_rx":
         return await save_circleguard(score, a, b, c, "RX")
 
-    elif scores_table == "score_ap":
+    elif scores_table == "scores_ap":
         return await save_circleguard(score, a, b, c, "AP")
 
 
