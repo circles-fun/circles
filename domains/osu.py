@@ -2,6 +2,7 @@
 
 import copy
 import hashlib
+import ipaddress
 import random
 import re
 import secrets
@@ -528,35 +529,8 @@ async def osuSearchSetHandler(p: 'Player', conn: Connection) -> HTTPResponse:
     # just do same same query with either bid or bsid.
 
     if 's' in conn.args:
-        # gulag chat menu: if the argument is negative,
-        # check if it's in the players menu options.
-        if conn.args['s'][0] == '-':
-            opt_id = int(conn.args['s'])
-
-            if opt_id not in p.menu_options:
-                return b'no voila'
-
-            opt = p.menu_options[opt_id]
-
-            if time.time() > opt['timeout']:
-                # the option has expired.
-                del p.menu_options[opt_id]
-                return
-
-            # we have a menu option. activate it.
-            await opt['callback']()
-
-            if not opt['reusable']:
-                # remove the option from the player
-                del p.menu_options[opt_id]
-
-            # send back some random syntactically valid
-            # beatmap info so that the client doesn't open
-            # a webpage when clicking an unknown url.
-            return b'voila'
-        else:
-            # this is just a normal request
-            k, v = ('set_id', conn.args['s'])
+        # this is just a normal request
+        k, v = ('set_id', conn.args['s'])
     elif 'b' in conn.args:
         k, v = ('id', conn.args['b'])
     else:
@@ -684,14 +658,7 @@ async def osuSubmitModularSelector(
         if glob.datadog:
             glob.datadog.increment('gulag.submitted_scores_best')
 
-        if (
-                score.bmap.has_leaderboard and
-                score.rank == 1 and
-                not score.player.restricted
-        ):
-            # this is the new #1, post the play to #announce.
-            announce_chan = glob.channels['#announce']
-
+        if score.bmap.has_leaderboard:
             if (
                     score.mode < GameMode.rx_std and
                     score.bmap.status == RankedStatus.Loved
@@ -701,36 +668,46 @@ async def osuSubmitModularSelector(
             else:
                 performance = f'{score.pp:,.2f}pp'
 
-            # Announce the user's #1 score.
-            # TODO: truncate artist/title/version to fit on screen
-            ann = [f'\x01ACTION achieved #1 on {score.bmap.embed}',
-                   f'with {score.acc:.2f}% for {performance}.']
+            score.player.enqueue(packets.notification(
+                f'You achieved #{score.rank}! ({performance})'
+            ))
 
-            if score.mods:
-                ann.insert(1, f'+{score.mods!r}')
+            if (
+                score.rank == 1 and
+                not score.player.restricted
+            ):
+                # this is the new #1, post the play to #announce.
+                announce_chan = glob.channels['#announce']
 
-            scoring_metric = 'pp' if score.mode >= GameMode.rx_std else 'score'
+                # Announce the user's #1 score.
+                # TODO: truncate artist/title/version to fit on screen
+                ann = [f'\x01ACTION achieved #1 on {score.bmap.embed}',
+                    f'with {score.acc:.2f}% for {performance}.']
 
-            # If there was previously a score on the map, add old #1.
-            await db_cursor.execute(
-                'SELECT u.id, name FROM users u '
-                f'INNER JOIN {scores_table} s ON u.id = s.userid '
-                'WHERE s.map_md5 = %s AND s.mode = %s '
-                'AND s.status = 2 AND u.priv & 1 '
-                f'ORDER BY s.{scoring_metric} DESC LIMIT 1',
-                [score.bmap.md5, mode_vn]
-            )
+                if score.mods:
+                    ann.insert(1, f'+{score.mods!r}')
 
-            if db_cursor.rowcount != 0:
-                prev_n1 = await db_cursor.fetchone()
+                scoring_metric = 'pp' if score.mode >= GameMode.rx_std else 'score'
 
-                if score.player.id != prev_n1['id']:
-                    pid = prev_n1['id']
-                    pname = prev_n1['name']
-                    ann.append(f'(Previous #1: [https://{BASE_DOMAIN}/u/{pid} {pname}])')
+                # If there was previously a score on the map, add old #1.
+                await db_cursor.execute(
+                    'SELECT u.id, name FROM users u '
+                    f'INNER JOIN {scores_table} s ON u.id = s.userid '
+                    'WHERE s.map_md5 = %s AND s.mode = %s '
+                    'AND s.status = 2 AND u.priv & 1 '
+                    f'ORDER BY s.{scoring_metric} DESC LIMIT 1',
+                    [score.bmap.md5, mode_vn]
+                )
 
-            score.player.enqueue(packets.notification(f'You achieved #1! ({performance})'))
-            announce_chan.send(' '.join(ann), sender=score.player, to_self=True)
+                if db_cursor.rowcount != 0:
+                    prev_n1 = await db_cursor.fetchone()
+
+                    if score.player.id != prev_n1['id']:
+                        pid = prev_n1['id']
+                        pname = prev_n1['name']
+                        ann.append(f'(Previous #1: [https://{BASE_DOMAIN}/u/{pid} {pname}])')
+
+                announce_chan.send(' '.join(ann), sender=score.player, to_self=True)
 
         # this score is our best score.
         # update any preexisting personal best
@@ -1245,7 +1222,7 @@ async def getScores(
         params.append(p.friends | {p.id})
     elif rank_type == RankingType.Country:
         query.append('AND u.country = %s')
-        params.append(p.geoloc['country']['iso_code'])
+        params.append(p.geoloc['country']['acronym'])
 
     query.append('ORDER BY _score DESC LIMIT 50')
 
@@ -1832,7 +1809,8 @@ async def api_get_player_scores(conn: Connection) -> HTTPResponse:
         'SELECT id, map_md5, score, pp, acc, max_combo, '
         'mods, n300, n100, n50, nmiss, ngeki, nkatu, grade, '
         'status, mode, play_time, time_elapsed, perfect '
-        f'FROM {mode.scores_table} WHERE userid = %s AND mode = %s'
+        f'FROM {mode.scores_table} '
+        'WHERE userid = %s AND mode = %s'
     ]
 
     params = [p.id, mode.as_vanilla]
@@ -1845,7 +1823,11 @@ async def api_get_player_scores(conn: Connection) -> HTTPResponse:
             query.append('AND mods & %s != 0')
             params.append(mods)
 
-    sort = 'pp' if scope == 'best' else 'play_time'
+    if scope == 'best':
+        query.append('AND status = 2') # only pp-awarding scores
+        sort = 'pp'
+    else:
+        sort = 'play_time'
 
     query.append(f'ORDER BY {sort} DESC LIMIT %s')
     params.append(limit)
@@ -2482,21 +2464,27 @@ async def register_account(
             if 'CF-IPCountry' in conn.headers:
                 # best case, dev has enabled ip geolocation in the
                 # network tab of cloudflare, so it sends the iso code.
-                country_iso_code = conn.headers['CF-IPCountry']
+                country_acronym = conn.headers['CF-IPCountry']
             else:
                 # backup method, get the user's ip and
                 # do a db lookup to get their country.
                 if 'CF-Connecting-IP' in conn.headers:
-                    ip = conn.headers['CF-Connecting-IP']
+                    ip_str = conn.headers['CF-Connecting-IP']
                 else:
                     # if the request has been forwarded, get the origin
                     forwards = conn.headers['X-Forwarded-For'].split(',')
                     if len(forwards) != 1:
-                        ip = forwards[0]
+                        ip_str = forwards[0]
                     else:
-                        ip = conn.headers['X-Real-IP']
+                        ip_str = conn.headers['X-Real-IP']
 
-                if ip != '127.0.0.1':
+                if ip_str in glob.cache['ip']:
+                    ip = glob.cache['ip'][ip_str]
+                else:
+                    ip = ipaddress.IPv4Address(ip_str)
+                    glob.cache['ip'][ip_str] = ip
+
+                if not ip.is_private:
                     if glob.geoloc_db is not None:
                         # decent case, dev has downloaded a geoloc db from
                         # maxmind, so we can do a local db lookup. (~1-5ms)
@@ -2507,17 +2495,17 @@ async def register_account(
                         # using a public api. (depends, `ping ip-api.com`)
                         geoloc = await utils.misc.fetch_geoloc_web(ip)
 
-                    country_iso_code = geoloc['country']['iso_code']
+                    country_acronym = geoloc['country']['acronym']
                 else:
                     # localhost, unknown country
-                    country_iso_code = 'XX'
+                    country_acronym = 'XX'
 
             # add to `users` table.
             await db_cursor.execute(
                 'INSERT INTO users '
                 '(name, safe_name, email, pw_bcrypt, country, creation_time, latest_activity) '
                 'VALUES (%s, %s, %s, %s, %s, UNIX_TIMESTAMP(), UNIX_TIMESTAMP())',
-                [name, safe_name, email, pw_bcrypt, country_iso_code]
+                [name, safe_name, email, pw_bcrypt, country_acronym]
             )
             user_id = db_cursor.lastrowid
 

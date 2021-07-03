@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
+import ipaddress
 import re
 import struct
 import time
@@ -41,6 +42,9 @@ from objects.match import MatchTeams
 from objects.match import MatchTeamTypes
 from objects.match import Slot
 from objects.match import SlotStatus
+from objects.menu import Menu
+from objects.menu import MenuCommands
+from objects.menu import MenuFunction
 from objects.player import Action
 from objects.player import Player
 from objects.player import PresenceFilter
@@ -75,14 +79,20 @@ async def bancho_http_handler(conn: Connection) -> bytes:
 @domain.route('/', methods=['POST'])
 async def bancho_handler(conn: Connection) -> bytes:
     if 'CF-Connecting-IP' in conn.headers:
-        ip = conn.headers['CF-Connecting-IP']
+        ip_str = conn.headers['CF-Connecting-IP']
     else:
         # if the request has been forwarded, get the origin
         forwards = conn.headers['X-Forwarded-For'].split(',')
         if len(forwards) != 1:
-            ip = forwards[0]
+            ip_str = forwards[0]
         else:
-            ip = conn.headers['X-Real-IP']
+            ip_str = conn.headers['X-Real-IP']
+
+    if ip_str in glob.cache['ip']:
+        ip = glob.cache['ip'][ip_str]
+    else:
+        ip = ipaddress.IPv4Address(ip_str)
+        glob.cache['ip'][ip_str] = ip
 
     if ip == '10.0.0.1':
         ip = '1.1.1.1'
@@ -383,8 +393,11 @@ OFFLINE_NOTIFICATION = packets.notification(
 
 DELTA_60_DAYS = timedelta(days=60)
 
-
-async def login(body_view: memoryview, ip: str, db_cursor: aiomysql.DictCursor) -> tuple[bytes, str]:
+async def login(
+    body_view: memoryview,
+    ip: ipaddress.IPv4Address,
+    db_cursor: aiomysql.DictCursor
+) -> tuple[bytes, str]:
     """\
     Login has no specific packet, but happens when the osu!
     client sends a request without an 'osu-token' header.
@@ -547,7 +560,7 @@ async def login(body_view: memoryview, ip: str, db_cursor: aiomysql.DictCursor) 
         'INSERT INTO ingame_logins '
         '(userid, ip, osu_ver, osu_stream, datetime) '
         'VALUES (%s, %s, %s, %s, NOW())',
-        [user_info['id'], ip, osu_ver_date, osu_ver_stream]
+        [user_info['id'], str(ip), osu_ver_date, osu_ver_stream]
     )
 
     await db_cursor.execute(
@@ -608,7 +621,7 @@ async def login(body_view: memoryview, ip: str, db_cursor: aiomysql.DictCursor) 
         del user_info['clan_priv']
         clan = clan_priv = None
 
-    if ip != '127.0.0.1':
+    if not ip.is_private:
         if glob.geoloc_db is not None:
             # good, dev has downloaded a geoloc db from maxmind,
             # so we can do a local db lookup. (typically ~1-5ms)
@@ -1119,22 +1132,34 @@ class MatchCreate(BasePacket):
         self.match.chat.send_bot(f'Match created by {p.name}.')
         log(f'{p} created a new multiplayer match.')
 
-async def check_menu_option(p: Player, key: int) -> None:
-    if key not in p.menu_options:
+async def execute_menu_option(p: Player, key: int) -> None:
+    if key not in p.current_menu.options:
         return
 
-    opt = p.menu_options[key]
+    # this is one of their menu options, execute it.
+    cmd, data = p.current_menu.options[key]
 
-    if time.time() > opt['timeout']:
-        # the option has expired
-        del p.menu_options[key]
-        return
+    if glob.config.debug:
+        print(f'\x1b[0;95m{cmd!r}\x1b[0m {data}')
 
-    # we have a menu option, call it.
-    await opt['callback']()
-
-    if not opt['reusable']:
-        del p.menu_options[key]
+    if cmd == MenuCommands.Reset:
+        # go back to the main menu
+        p.current_menu = p.previous_menus[0]
+        p.previous_menus.clear()
+    elif cmd == MenuCommands.Back:
+        # return one menu back
+        p.current_menu = p.previous_menus.pop()
+        p.send_current_menu()
+    elif cmd == MenuCommands.Advance:
+        # advance to a new menu
+        assert isinstance(data, Menu)
+        p.previous_menus.append(p.current_menu)
+        p.current_menu = data
+        p.send_current_menu()
+    elif cmd == MenuCommands.Execute:
+        # execute a function on the current menu
+        assert isinstance(data, MenuFunction)
+        await data.callback(p)
 
 
 @register(ClientPackets.JOIN_MATCH)
@@ -1144,10 +1169,13 @@ class MatchJoin(BasePacket):
         self.match_passwd = reader.read_string()
 
     async def handle(self, p: Player) -> None:
-        if not 0 <= self.match_id < 64:
-            if self.match_id >= 64:
+        is_menu_request = \
+            self.match_id >= glob.config.max_multi_matches
+
+        if is_menu_request or self.match_id < 0:
+            if is_menu_request:
                 # NOTE: this function is unrelated to mp.
-                await check_menu_option(p, self.match_id)
+                await execute_menu_option(p, self.match_id)
 
             p.enqueue(packets.matchJoinFail())
             return

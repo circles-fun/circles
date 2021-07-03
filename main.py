@@ -61,7 +61,7 @@ utils.misc.install_excepthook()
 # current version of gulag
 # NOTE: this is used internally for the updater, it may be
 # worth reading through it's code before playing with it.
-glob.version = cmyui.Version(3, 5, 0)
+glob.version = cmyui.Version(3, 5, 1)
 
 OPPAI_PATH = Path.cwd() / 'oppai-ng'
 GEOLOC_DB_FILE = Path.cwd() / 'ext/GeoLite2-City.mmdb'
@@ -182,7 +182,7 @@ async def after_serving() -> None:
 def detect_mysqld_running() -> bool:
     """Detect whether theres a mysql server running locally."""
     for service in ('mysqld', 'mariadb'):
-        if os.path.exists(f'/var/run/mysqld/{service}.pid'):
+        if os.path.exists(f'/var/run/{service}/{service}.pid'):
             return True
     else:
         # not found, try pgrep

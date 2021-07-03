@@ -16,6 +16,7 @@ import cmyui.discord
 import dill as pickle
 import pymysql
 import requests
+from geoip2.types import IPAddress
 
 from pathlib import Path
 from typing import Callable
@@ -470,23 +471,22 @@ async def log_strange_occurrence(obj: object) -> None:
             Ansi.LYELLOW)
 
 
-def fetch_geoloc_db(ip: str) -> dict[str, Union[str, float]]:
+def fetch_geoloc_db(ip: IPAddress) -> dict[str, Union[str, float]]:
     """Fetch geolocation data based on ip (using local db)."""
     res = glob.geoloc_db.city(ip)
 
-    iso_code = res.country.iso_code
+    acronym = res.country.iso_code
 
     return {
         'latitude': res.location.latitude,
         'longitude': res.location.longitude,
         'country': {
-            'iso_code': iso_code,
-            'numeric': country_codes[iso_code]
+            'acronym': acronym,
+            'numeric': country_codes[acronym]
         }
     }
 
-
-async def fetch_geoloc_web(ip: str) -> dict[str, Union[str, float]]:
+async def fetch_geoloc_web(ip: IPAddress) -> dict[str, Union[str, float]]:
     """Fetch geolocation data based on ip (using ip-api)."""
     if not glob.has_internet:  # requires internet connection
         return
@@ -508,14 +508,14 @@ async def fetch_geoloc_web(ip: str) -> dict[str, Union[str, float]]:
             log(f'Failed to get geoloc data: {err_msg}.', Ansi.LRED)
             return
 
-    iso_code = lines[1]
+    acronym = lines[1]
 
     return {
         'latitude': float(lines[6]),
         'longitude': float(lines[7]),
         'country': {
-            'iso_code': iso_code,
-            'numeric': country_codes[iso_code]
+            'acronym': acronym,
+            'numeric': country_codes[acronym]
         }
     }
 
