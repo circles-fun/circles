@@ -4,6 +4,8 @@ import inspect
 import io
 import struct
 
+import ipaddress
+import requests
 import secrets
 import socket
 import sys
@@ -26,7 +28,10 @@ from typing import Union
 from cmyui.logging import Ansi
 from cmyui.logging import log
 from cmyui.logging import printc
-from cmyui.osu.replay import Keys
+from cmyui.osu.replay import KEYS_K1
+from cmyui.osu.replay import KEYS_K2
+from cmyui.osu.replay import KEYS_M1
+from cmyui.osu.replay import KEYS_M2
 from cmyui.osu.replay import ReplayFrame
 
 import config
@@ -55,8 +60,8 @@ __all__ = (
     'escape_enum'
 )
 
-useful_keys = (Keys.M1, Keys.M2,
-               Keys.K1, Keys.K2)
+useful_keys = (KEYS_M1, KEYS_M2,
+               KEYS_K1, KEYS_K2)
 
 DATETIME_OFFSET = 0x89F7FF5F7B58000
 SCOREID_BORDERS = tuple(
@@ -226,7 +231,7 @@ async def save_circleguard(score, ur, frame_time, snaps, mods):
     return await webhook.post(glob.http)
 
 
-def get_press_times(frames: Sequence[ReplayFrame]) -> dict[Keys, float]:
+def get_press_times(frames: Sequence[ReplayFrame]) -> dict[int, float]:
     """A very basic function to press times of an osu! replay.
        This is mostly only useful for taiko maps, since it
        doesn't take holds into account (taiko has none).
@@ -482,11 +487,13 @@ async def log_strange_occurrence(obj: object) -> None:
             Ansi.LYELLOW)
 
 
+IPAddress = Union[ipaddress.IPv4Address, ipaddress.IPv6Address]
+
 def fetch_geoloc_db(ip: IPAddress) -> dict[str, Union[str, float]]:
     """Fetch geolocation data based on ip (using local db)."""
     res = glob.geoloc_db.city(ip)
 
-    acronym = res.country.iso_code
+    acronym = res.country.iso_code.lower()
 
     return {
         'latitude': res.location.latitude,
@@ -519,7 +526,7 @@ async def fetch_geoloc_web(ip: IPAddress) -> dict[str, Union[str, float]]:
             log(f'Failed to get geoloc data: {err_msg}.', Ansi.LRED)
             return
 
-    acronym = lines[1]
+    acronym = lines[1].lower()
 
     return {
         'latitude': float(lines[6]),

@@ -41,6 +41,7 @@ from objects import glob
 from objects.beatmap import Beatmap
 from objects.beatmap import RankedStatus
 from objects.player import Privileges
+from objects.score import Grade
 from objects.score import Score
 from objects.score import SubmissionStatus
 from utils.misc import escape_enum
@@ -601,25 +602,13 @@ async def osuSubmitModularSelector(
     mode_vn = score.mode.as_vanilla
 
     # Check for score duplicates
-    # TODO: this it quite the bandaid fix, not that other
-    # implementations do it better.. still though, perhaps
-    # it would be worth going through a hardcoded number or
-    # percent of the replay's frames to really determine
-    # whether the plays are the same, rather than just
-    # using the score/header data.
     await db_cursor.execute(
         f'SELECT 1 FROM {scores_table} '
-        'WHERE play_time > DATE_SUB(NOW(), INTERVAL 2 MINUTE) '  # last 2mins
-        'AND mode = %s AND map_md5 = %s '
-        'AND userid = %s AND mods = %s '
-        'AND score = %s AND play_time', [
-            mode_vn, score.bmap.md5,
-            score.player.id, score.mods, score.score
-        ]
+        'WHERE online_checksum = %s',
+        [score.online_checksum]
     )
-    res = await db_cursor.fetchone()
 
-    if res:
+    if db_cursor.rowcount != 0:
         log(f'{score.player} submitted a duplicate score.', Ansi.LYELLOW)
         return b'error: no'
 
@@ -726,12 +715,14 @@ async def osuSubmitModularSelector(
         '%s, %s, %s, %s, '
         '%s, %s, %s, %s, '
         '%s, %s, %s, %s, '
-        '%s, %s, %s, %s)', [
+        '%s, %s, %s, %s, '
+        '%s)', [
             score.bmap.md5, score.score, score.pp, score.acc,
             score.max_combo, score.mods, score.n300, score.n100,
             score.n50, score.nmiss, score.ngeki, score.nkatu,
-            score.grade, score.status, mode_vn, score.play_time,
-            score.time_elapsed, score.client_flags, score.player.id, score.perfect
+            score.grade.name, score.status, mode_vn, score.play_time,
+            score.time_elapsed, score.client_flags, score.player.id, score.perfect,
+            score.online_checksum
         ]
     )
     score.id = db_cursor.lastrowid
@@ -765,56 +756,62 @@ async def osuSubmitModularSelector(
     stats = score.player.gm_stats
     prev_stats = copy.copy(stats)
 
-    # update plays & playtime for all submitted scores
+    # stuff update for all submitted scores
     stats.playtime += score.time_elapsed // 1000
     stats.plays += 1
+    stats.tscore += score.score
 
-    mode_sql = format(score.mode, 'sql')
+    stats_query_l = [
+        'UPDATE stats '
+        'SET plays = %s,'
+        'playtime = %s,'
+        'tscore = %s'
+    ]
 
-    if not (score.passed and score.bmap.awards_ranked_pp):
-        # only update plays & playtime, simple query
-        stats_query = (
-            'UPDATE stats '
-            'SET plays_{mode} = %s, '
-            'playtime_{mode} = %s'
-        ).format(mode=mode_sql)
-        stats_params = [stats.plays, stats.playtime]
-    else:
-        # score is a pass & the map awards pp,
-        # build complex stats update query.
-        stats_query = [  # build a list of params to update
-            'UPDATE stats SET plays_{mode} = %s',
-            'playtime_{mode} = %s'
-        ]
-        stats_params = [stats.plays, stats.playtime]
+    stats_query_args = [stats.plays, stats.playtime, stats.tscore]
 
-        # submitted score on a ranked map,
-        # update max combo and total score.
+    if score.passed and score.bmap.has_leaderboard:
+        # player passed & map is ranked, approved, or loved.
 
-        # update max combo
         if score.max_combo > stats.max_combo:
             stats.max_combo = score.max_combo
-            stats_query.append('max_combo_{mode} = %s')
-            stats_params.append(stats.max_combo)
+            stats_query_l.append('max_combo = %s')
+            stats_query_args.append(stats.max_combo)
 
-        # update total score
-        stats.tscore += score.score
-        stats_query.append('tscore_{mode} = %s')
-        stats_params.append(stats.tscore)
+        if (
+            score.bmap.awards_ranked_pp and
+            score.status == SubmissionStatus.BEST
+        ):
+            # map is ranked or approved, and it's our (new)
+            # best score on the map. update the player's
+            # ranked score, grades, pp, acc and global rank.
 
-        if score.status == SubmissionStatus.BEST:
-            # our (new) best score on the map,
-            # update ranked score, pp, acc, and rank.
-
-            # update ranked score
             additional_rscore = score.score
             if score.prev_best:
                 # we previously had a score, so remove
                 # it's score from our ranked score.
                 additional_rscore -= score.prev_best.score
+
+                if score.grade != score.prev_best.grade:
+                    if score.grade >= Grade.A:
+                        stats.grades[score.grade] += 1
+                        grade_col = format(score.grade, 'stats_column')
+                        stats_query_l.append(f'{grade_col} = {grade_col} + 1')
+
+                    if score.prev_best.grade >= Grade.A:
+                        stats.grades[score.prev_best.grade] -= 1
+                        grade_col = format(score.prev_best.grade, 'stats_column')
+                        stats_query_l.append(f'{grade_col} = {grade_col} - 1')
+            else:
+                # this is our first submitted score on the map
+                if score.grade >= Grade.A:
+                    stats.grades[score.grade] += 1
+                    grade_col = format(score.grade, 'stats_column')
+                    stats_query_l.append(f'{grade_col} = {grade_col} + 1')
+
             stats.rscore += additional_rscore
-            stats_query.append('rscore_{mode} = %s')
-            stats_params.append(stats.rscore)
+            stats_query_l.append('rscore = %s')
+            stats_query_args.append(stats.rscore)
 
             # fetch scores sorted by pp for total acc/pp calc
             # NOTE: we select all plays (and not just top100)
@@ -840,28 +837,29 @@ async def osuSubmitModularSelector(
                 tot += row['acc'] * add
                 div += add
             stats.acc = tot / div
-            stats_query.append('acc_{mode} = %s')
-            stats_params.append(stats.acc)
+            stats_query_l.append('acc = %s')
+            stats_query_args.append(stats.acc)
 
             # update total weighted pp
             weighted_pp = sum([row['pp'] * 0.95 ** i
                                for i, row in enumerate(top_100_pp)])
             bonus_pp = 416.6667 * (1 - 0.9994 ** total_scores)
             stats.pp = round(weighted_pp + bonus_pp)
-            stats_query.append('pp_{mode} = %s')
-            stats_params.append(stats.pp)
+            stats_query_l.append('pp = %s')
+            stats_query_args.append(stats.pp)
 
             # update rank
-            # TODO: adjust any people inbetween we passed,
-            # check whether they're online, and push their
-            # stats to all online players if nescessary.
+            # TODO: do rankings with bisection algorithms
+            # locally, pulling from the database @ startup.
             await db_cursor.execute(
                 'SELECT COUNT(*) AS higher_pp_players '
                 'FROM stats s '
                 'INNER JOIN users u USING(id) '
-                f'WHERE s.pp_{mode_sql} > %s '
-                'AND u.priv & 1 and u.id != %s',
-                [stats.pp, score.player.id]
+                'WHERE s.mode = %s '
+                'AND s.pp > %s '
+                'AND u.priv & 1 '
+                'AND u.id != %s',
+                [mode_vn, stats.pp, score.player.id]
             )
             rank = 1 + (await db_cursor.fetchone())['higher_pp_players']
 
@@ -871,14 +869,15 @@ async def osuSubmitModularSelector(
 
             stats.rank = rank
 
-        # combine the list of updates into a single querystring
-        stats_query = ','.join(stats_query).format(mode=mode_sql)
+    # create a single querystring from the list of updates
+    stats_query = ','.join(stats_query_l)
 
-    stats_query += ' WHERE id = %s'
-    stats_params.append(score.player.id)
+    stats_query += ' WHERE id = %s AND mode = %s'
+    stats_query_args.append(score.player.id)
+    stats_query_args.append(score.mode.value)
 
     # send any stat changes to sql, and other players
-    await db_cursor.execute(stats_query, stats_params)
+    await db_cursor.execute(stats_query, stats_query_args)
     glob.players.enqueue(packets.userStats(score.player))
 
     if not score.player.restricted:
@@ -901,16 +900,7 @@ async def osuSubmitModularSelector(
     """ score submission charts """
 
     if not score.passed or score.mode >= GameMode.rx_std:
-        # basically, the osu! client and the way bancho handles this
-        # is dumb. if you submit a failed play on bancho, it will
-        # still generate the charts and send it to the client, even
-        # when the client can't (and doesn't use them).. so instead,
-        # we'll send back an empty error, which will just tell the
-        # client that the score submission process is complete.. lol
-        # (also no point on rx/ap since you can't see the charts atm xd)
-
-        # TODO: we actually have to send back an empty chart since the
-        # client uses this to confirm the score has been submitted.. lol
+        # charts & achievements won't be shown ingame.
         ret = b'error: no'
 
     else:
@@ -1072,7 +1062,7 @@ async def osuRate(
         'WHERE map_md5 = %s',
         [map_md5]
     )
-    ratings = [row[0] async for row in await db_cursor]
+    ratings = [row[0] async for row in db_cursor]
 
     # send back the average rating
     avg = sum(ratings) / len(ratings)
@@ -1484,6 +1474,9 @@ async def checkUpdates(conn: Connection) -> HTTPResponse:
 
 
 """ /api/ Handlers """
+# NOTE: the api is still under design and is subject to change.
+# to keep up with breaking changes, please either join our discord,
+# or keep up with changes to https://github.com/JKBGL/gulag-api-docs.
 
 # Unauthorized (no api key required)
 # GET /api/get_player_count: return total registered & online player counts.
@@ -1498,6 +1491,7 @@ async def checkUpdates(conn: Connection) -> HTTPResponse:
 # GET /api/get_score_info: return information about a given score.
 # GET /api/get_replay: return the file for a given replay (with or without headers).
 # GET /api/get_match: return information for a given multiplayer match.
+# GET /api/get_leaderboard: return the top players for a given mode & sort condition
 
 # Authorized (requires valid api key, passed as 'Authorization' header)
 # NOTE: authenticated handlers may have privilege requirements.
@@ -1666,22 +1660,23 @@ async def api_get_player_info(conn: Connection) -> HTTPResponse:
         if not info_res:
             return (404, JSON({'status': 'Player not found'}))
 
-        api_data |= info_res
+        api_data['info'] = info_res
 
     # fetch user's stats if requested
     if conn.args['scope'] in ('stats', 'all'):
         # get all regular stats
-        stats_res = await glob.db.fetch(
-            'SELECT * FROM stats '
+        stats_res = await glob.db.fetchall(
+            'SELECT tscore, rscore, pp, plays, playtime, acc, max_combo, '
+            'xh_count, x_count, sh_count, s_count, a_count FROM stats '
             'WHERE id = %s', [pid]
         )
 
         if not stats_res:
             return (404, JSON({'status': 'Player not found'}))
 
-        api_data |= stats_res
+        api_data['stats'] = stats_res
 
-    return orjson.dumps({'status': 'success', 'player': api_data})
+    return JSON({'status': 'success', 'player': api_data})
 
 
 @domain.route('/api/get_player_status')
@@ -2230,6 +2225,53 @@ async def api_get_match(conn: Connection) -> HTTPResponse:
         }
     })
 
+@domain.route('/api/get_leaderboard')
+async def api_get_global_leaderboard(conn: Connection) -> HTTPResponse:
+    conn.resp_headers['Content-Type'] = f'application/json'
+
+    if (mode_arg := conn.args.get('mode', None)) is not None:
+        if not (
+            mode_arg.isdecimal() and
+            0 <= (mode := int(mode_arg)) <= 7
+        ):
+            return (400, JSON({'status': 'Invalid mode.'}))
+
+        mode = GameMode(mode)
+    else:
+        mode = GameMode.vn_std
+
+    if (limit_arg := conn.args.get('limit', None)) is not None:
+        if not (
+            limit_arg.isdecimal() and
+            0 < (limit := int(limit_arg)) <= 100
+        ):
+            return (400, JSON({'status': 'Invalid limit.'}))
+    else:
+        limit = 25
+
+    if (sort := conn.args.get('sort', None)) is not None:
+        if sort not in ('tscore', 'rscore', 'pp', 'acc'):
+            return (400, JSON({'status': 'Invalid sort.'}))
+    else:
+        sort = 'pp'
+
+    res = await glob.db.fetchall(
+        'SELECT u.id as player_id, u.name, u.country, s.tscore, s.rscore, '
+        's.pp, s.plays, s.playtime, s.acc, s.max_combo, '
+        's.xh_count, s.x_count, s.sh_count, s.s_count, s.a_count, '
+        'c.id as clan_id, c.name as clan_name, c.tag as clan_tag '
+        'FROM stats s '
+        'LEFT JOIN users u USING (id) '
+        'LEFT JOIN clans c ON u.clan_id = c.id '
+        f'WHERE s.mode = %s AND u.priv & 1 AND s.{sort} > 0 '
+        f'ORDER BY s.{sort} DESC LIMIT %s',
+        [mode, limit]
+    )
+
+    return JSON({
+        'status': 'success',
+        'leaderboard': res
+    })
 
 def requires_api_key(f: Callable) -> Callable:
     @wraps(f)
@@ -2481,7 +2523,7 @@ async def register_account(
                 if ip_str in glob.cache['ip']:
                     ip = glob.cache['ip'][ip_str]
                 else:
-                    ip = ipaddress.IPv4Address(ip_str)
+                    ip = ipaddress.ip_address(ip_str)
                     glob.cache['ip'][ip_str] = ip
 
                 if not ip.is_private:
@@ -2498,7 +2540,7 @@ async def register_account(
                     country_acronym = geoloc['country']['acronym']
                 else:
                     # localhost, unknown country
-                    country_acronym = 'XX'
+                    country_acronym = 'xx'
 
             # add to `users` table.
             await db_cursor.execute(
@@ -2510,10 +2552,10 @@ async def register_account(
             user_id = db_cursor.lastrowid
 
             # add to `stats` table.
-            await db_cursor.execute(
+            await db_cursor.executemany(
                 'INSERT INTO stats '
-                '(id) VALUES (%s)',
-                [user_id]
+                '(id, mode) VALUES (%s, %s)',
+                [(user_id, mode) for mode in range(8)]
             )
 
         if glob.datadog:

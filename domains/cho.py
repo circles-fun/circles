@@ -52,6 +52,8 @@ from packets import BanchoPacketReader
 from packets import BasePacket
 from packets import ClientPackets
 
+IPAddress = Union[ipaddress.IPv4Address, ipaddress.IPv6Address]
+
 """ Bancho: handle connections from the osu! client """
 
 BEATMAPS_PATH = Path.cwd() / '.data/osu'
@@ -91,7 +93,7 @@ async def bancho_handler(conn: Connection) -> bytes:
     if ip_str in glob.cache['ip']:
         ip = glob.cache['ip'][ip_str]
     else:
-        ip = ipaddress.IPv4Address(ip_str)
+        ip = ipaddress.ip_address(ip_str)
         glob.cache['ip'][ip_str] = ip
 
     if ip == '10.0.0.1':
@@ -341,7 +343,7 @@ class SendMessage(BasePacket):
             t_chan.send(msg, sender=p)
 
         p.update_latest_activity()
-        log(f'{p} @ {t_chan}: {msg}', Ansi.LCYAN, fd='.data/logs/chat.log')
+        log(f'{p} @ {t_chan}: {msg}', Ansi.LCYAN, file='.data/logs/chat.log')
 
 
 @register(ClientPackets.LOGOUT, restricted=True)
@@ -395,7 +397,7 @@ DELTA_60_DAYS = timedelta(days=60)
 
 async def login(
     body_view: memoryview,
-    ip: ipaddress.IPv4Address,
+    ip: IPAddress,
     db_cursor: aiomysql.DictCursor
 ) -> tuple[bytes, str]:
     """\
@@ -470,24 +472,22 @@ async def login(
     utc_offset = int(client_info[1])
     # display_city = client_info[2] == '1'
 
-    # Client hashes contain a few values useful to us.
-    # TODO: store these correctly in the db
-    # [0]: md5(osu path)
-    # [1]: adapters (network physical addresses delimited by '.')
-    # [2]: md5(adapters)
-    # [3]: md5(uniqueid) (osu! uninstall id)
-    # [4]: md5(uniqueid2) (disk signature/serial num)
-    if len(client_hashes := client_info[3].split(':')[:-1]) != 5:
-        return  # invalid request
+    client_hashes = client_info[3][:-1].split(':')
+    if len(client_hashes) != 5:
+        return
 
-    adapters = client_hashes.pop(1)
+    # TODO: should these be stored in player object?
+    (osu_path_md5, adapters_str, adapters_md5,
+     uninstall_md5, disk_sig_md5) = client_hashes
 
-    if adapters == '.':  # none sent
+    is_wine = adapters_str == 'runningunderwine'
+    adapters = [a for a in adapters_str[:-1].split('.') if a]
+
+    if not (is_wine or adapters):
         data = (packets.userID(-1) +
                 packets.notification('Please restart your osu! and try again.'))
         return data, 'no'
 
-    is_wine = adapters == 'runningunderwine'
     pm_private = client_info[4] == '1'
 
     """ Parsing complete, now check the given data. """
@@ -514,7 +514,7 @@ async def login(
                     return data, 'no'
 
     await db_cursor.execute(
-        'SELECT id, name, priv, pw_bcrypt, '
+        'SELECT id, name, priv, pw_bcrypt, country, '
         'silence_end, clan_id, clan_priv, api_key '
         'FROM users WHERE safe_name = %s',
         [utils.misc.make_safe_name(username)]
@@ -571,17 +571,20 @@ async def login(
         'ON DUPLICATE KEY UPDATE '
         'occurrences = occurrences + 1, '
         'latest_time = NOW() ',
-        [user_info['id'], *client_hashes]
+        [user_info['id'], osu_path_md5,
+         adapters_md5, uninstall_md5, disk_sig_md5]
     )
+
+    # TODO: store adapters individually
 
     if is_wine:
         hw_checks = 'h.uninstall_id = %s'
-        hw_args = [client_hashes[3]]
+        hw_args = [uninstall_md5]
     else:
         hw_checks = ('h.adapters = %s OR '
                      'h.uninstall_id = %s OR '
                      'h.disk_serial = %s')
-        hw_args = client_hashes[1:]
+        hw_args = [adapters_md5, uninstall_md5, disk_sig_md5]
 
     await db_cursor.execute(
         'SELECT u.name, u.priv, h.occurrences '
@@ -621,6 +624,8 @@ async def login(
         del user_info['clan_priv']
         clan = clan_priv = None
 
+    db_country = user_info.pop('country')
+
     if not ip.is_private:
         if glob.geoloc_db is not None:
             # good, dev has downloaded a geoloc db from maxmind,
@@ -632,6 +637,16 @@ async def login(
             # a public api. (depends, `ping ip-api.com`)
             user_info['geoloc'] = await utils.misc.fetch_geoloc_web(ip)
 
+        if db_country == 'xx':
+            # bugfix for old gulag versions when
+            # country wasn't stored on registration.
+            log(f"Fixing {username}'s country.", Ansi.LGREEN)
+
+            await db_cursor.execute(
+                'UPDATE users SET country = %s WHERE id = %s',
+                [user_info['geoloc']['country']['acronym'], user_info['id']]
+            )
+
     p = Player(
         **user_info, # {id, name, priv, pw_bcrypt, silence_end, api_key, geoloc?}
         utc_offset=utc_offset,
@@ -642,10 +657,6 @@ async def login(
         clan_priv=clan_priv,
         tourney_client=using_tourney_client
     )
-
-    for mode in GameMode:
-        p.recent_scores[mode] = None  # TODO: sql?
-        p.stats[mode] = None
 
     data = bytearray(packets.protocolVersion(19))
     data += packets.userID(p.id)
@@ -696,6 +707,8 @@ async def login(
     await p.achievements_from_sql(db_cursor)
     await p.stats_from_sql_full(db_cursor)
     await p.relationships_from_sql(db_cursor)
+
+    # TODO: fetch p.recent_scores from sql
 
     data += packets.mainMenuIcon()
     data += packets.friendsList(*p.friends)
@@ -1067,7 +1080,7 @@ class SendPrivateMessage(BasePacket):
                     p.send(resp_msg, sender=t)
 
         p.update_latest_activity()
-        log(f'{p} @ {t}: {msg}', Ansi.LCYAN, fd='.data/logs/chat.log')
+        log(f'{p} @ {t}: {msg}', Ansi.LCYAN, file='.data/logs/chat.log')
 
 
 @register(ClientPackets.PART_LOBBY)
