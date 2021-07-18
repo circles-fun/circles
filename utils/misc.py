@@ -11,7 +11,7 @@ import types
 import zipfile
 
 import aiomysql
-import circleguard as CircleGuard
+import circleguard as circleguard
 import cmyui.discord
 import dill as pickle
 import pymysql
@@ -66,7 +66,7 @@ SCOREID_BORDERS = tuple(
 
 
 async def run_circleguard(score, replay):
-    cg = CircleGuard.Circleguard(config.osu_api_key)
+    cg = circleguard.Circleguard(config.osu_api_key)
 
     replay_file = replay.read_bytes()
     score_id = int(score.id)
@@ -205,10 +205,21 @@ async def save_circleguard(score, ur, frame_time, snaps, mods):
         )
 
     for snap in snaps:
+        if snap is None:
+            break
+
         embed.add_field(
-            name='Aim Assistance / Snap',
-            value=f'{snap}',
+            name='Snaps',
+            value=f'Time: {snap.time}'
+                  f'Angle: {snap.angle}'
+                  f'Distance: {snap.distance}',
             inline=True
+        )
+    else:
+        embed.add_field(
+            name='Snaps',
+            value=f'None detected',
+            inline=True,
         )
 
     webhook.add_embed(embed)
