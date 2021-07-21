@@ -19,7 +19,6 @@ from cmyui.logging import AnsiRGB
 from cmyui.logging import log
 from cmyui.osu.oppai_ng import OppaiWrapper
 from cmyui.utils import magnitude_fmt_time
-from cmyui.utils import _isdecimal
 from cmyui.web import Connection
 from cmyui.web import Domain
 from maniera.calculator import Maniera
@@ -393,7 +392,7 @@ OFFLINE_NOTIFICATION = packets.notification(
     'some features will be unavailble.'
 )
 
-DELTA_60_DAYS = timedelta(days=60)
+DELTA_90_DAYS = timedelta(days=90)
 
 async def login(
     body_view: memoryview,
@@ -455,19 +454,19 @@ async def login(
     using_tourney_client = osu_ver_stream == 'tourney'
 
     # disallow the login if their osu! client is older
-    # than two months old, forcing an update re-check.
+    # than three months old, forcing an update re-check.
     # NOTE: this is disabled on debug since older clients
     #       can sometimes be quite useful when testing.
     if not glob.app.debug:
         # this is currently slow, but asottile is on the
         # case https://bugs.python.org/issue44307 :D
-        if osu_ver_date < (date.today() - DELTA_60_DAYS):
+        if osu_ver_date < (date.today() - DELTA_90_DAYS):
             return (packets.versionUpdateForced() +
                     packets.userID(-2)), 'no'
 
     # ensure utc_offset is a number (negative inclusive).
-    if not _isdecimal(client_info[1], _negative=True):
-        return  # invalid request
+    if not client_info[1].replace('-', '').isdecimal():
+        return # invalid request
 
     utc_offset = int(client_info[1])
     # display_city = client_info[2] == '1'
@@ -1065,7 +1064,7 @@ class SendPrivateMessage(BasePacket):
                                         pp_values.append((score, pp))
 
                                     resp_msg = ' | '.join([
-                                        f'{score // 1000:.0f}k: {pp:,.2f}pp'
+                                        f'{int(score // 1000)}k: {pp:,.2f}pp'
                                         for score, pp in pp_values
                                     ])
 

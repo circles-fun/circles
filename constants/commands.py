@@ -437,7 +437,7 @@ async def _with(ctx: Context) -> str:
         mods = Mods.NOMOD
 
         for param in (p.strip('+k') for p in ctx.args):
-            if cmyui.utils._isdecimal(param): # acc
+            if param.isdecimal(): # acc
                 if not 0 <= (score := int(param)) <= 1000:
                     return 'Invalid score.'
                 if score <= 500:
@@ -1502,7 +1502,7 @@ if glob.config.advanced:
 
 @mp_commands.add(Privileges.Normal, aliases=['h'])
 async def mp_help(ctx: Context) -> str:
-    """Show all documented multiplayer commands the play can access."""
+    """Show all documented multiplayer commands the player can access."""
     prefix = glob.config.command_prefix
     cmds = []
 
@@ -2143,7 +2143,7 @@ async def mp_pick(ctx: Context) -> str:
 
 @pool_commands.add(Privileges.Tournament, aliases=['h'], hidden=True)
 async def pool_help(ctx: Context) -> str:
-    """Show all documented mappool commands the play can access."""
+    """Show all documented mappool commands the player can access."""
     prefix = glob.config.command_prefix
     cmds = []
 
@@ -2341,7 +2341,7 @@ async def pool_info(ctx: Context) -> str:
 
 @clan_commands.add(Privileges.Normal, aliases=['h'])
 async def clan_help(ctx: Context) -> str:
-    """Show all documented clan commands the play can access."""
+    """Show all documented clan commands the player can access."""
     prefix = glob.config.command_prefix
     cmds = []
 
