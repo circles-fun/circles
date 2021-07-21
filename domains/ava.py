@@ -45,11 +45,12 @@ async def get_avatar(conn: Connection) -> HTTPResponse:
         path = DEFAULT_AVATAR
 
     if path.suffix == '.png':
-        ext == 'png'
+        ext = 'png'
     elif path.suffix == '.jpeg' or '.jpg':
         ext = 'jpeg'
     elif path.suffix == '.gif':
         ext = 'gif'
+        
     conn.resp_headers['Content-Type'] = f'image/{ext}'
     return path.read_bytes()
 
@@ -81,11 +82,14 @@ async def get_banner(conn: Connection) -> HTTPResponse:
         # empty path or favicon, serve default avatar
         path = DEFAULT_BANNER
 
+    # Allow only gifs, jpg/jpeg and png files.
+
     if path.suffix == '.png':
-        ext == 'png'
+        ext = 'png'
     elif path.suffix == '.jpeg' or '.jpg':
         ext = 'jpeg'
     elif path.suffix == '.gif':
         ext = 'gif'
+    
     conn.resp_headers['Content-Type'] = f'image/{ext}'
     return path.read_bytes()
