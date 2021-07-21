@@ -26,32 +26,27 @@ DEFAULT_AVATAR = AVATARS_PATH / 'default.jpg'
 async def get_avatar(conn: Connection) -> HTTPResponse:
     filename = conn.path[1:]
 
+    # Profile avatar upload endpoint
+    # Allow users to upload a avatar to their profile.
+    # Accepted file types are jpg, jpeg, png, gif.
+    # The avatar is automatically resized to a maximum width of 200px.
+
     if '.' in filename:
         # user id & file extension provided
         path = AVATARS_PATH / filename
         if not path.exists():
-            path = DEFAULT_AVATAR
+            path = AVATARS_PATH
     elif filename not in ('', 'favicon.ico'):
         # user id provided - determine file extension
-        for ext in ('jpg', 'jpeg', 'png', 'gif'):
-            path = AVATARS_PATH / f'{filename}.{ext}'
-            if path.exists():
-                break
-        else:
-            # no file exists
+        path = AVATARS_PATH / f'{filename}.{AVATARS_PATH.suffix}'
+        if not path.exists():
+            # no file with this name exists - use default avatar.
             path = DEFAULT_AVATAR
     else:
-        # empty path or favicon, serve default avatar
+        # empty path or favicon, serve default banner
         path = DEFAULT_AVATAR
 
-    if path.suffix == '.png':
-        ext = 'png'
-    elif path.suffix == '.jpeg' or '.jpg':
-        ext = 'jpeg'
-    elif path.suffix == '.gif':
-        ext = 'gif'
-        
-    conn.resp_headers['Content-Type'] = f'image/{ext}'
+    conn.resp_headers['Content-Type'] = f'image/{path.suffix}'
     return path.read_bytes()
 
 
@@ -64,32 +59,25 @@ DEFAULT_BANNER = BANNERS_PATH / 'default.jpg'
 async def get_banner(conn: Connection) -> HTTPResponse:
     filename = conn.path[9:]
 
+    # Profile banner upload endpoint
+    # Allow users to upload a banner to their profile.
+    # Accepted file types are jpg, jpeg, png, gif.
+    # The banner is automatically resized to a maximum width of 200px.
+
     if '.' in filename:
         # user id & file extension provided
         path = BANNERS_PATH / filename
         if not path.exists():
-            path = DEFAULT_BANNER
+            path = BANNERS_PATH
     elif filename not in ('', 'favicon.ico'):
         # user id provided - determine file extension
-        for ext in ('jpg', 'jpeg', 'png', 'gif'):
-            path = BANNERS_PATH / f'{filename}.{ext}'
-            if path.exists():
-                break
-        else:
-            # no file exists
+        path = BANNERS_PATH / f'{filename}.{BANNERS_PATH.suffix}'
+        if not path.exists():
+            # no file with this name exists - use default banner.
             path = DEFAULT_BANNER
     else:
-        # empty path or favicon, serve default avatar
+        # empty path or favicon, serve default banner
         path = DEFAULT_BANNER
 
-    # Allow only gifs, jpg/jpeg and png files.
-
-    if path.suffix == '.png':
-        ext = 'png'
-    elif path.suffix == '.jpeg' or '.jpg':
-        ext = 'jpeg'
-    elif path.suffix == '.gif':
-        ext = 'gif'
-    
-    conn.resp_headers['Content-Type'] = f'image/{ext}'
+    conn.resp_headers['Content-Type'] = f'image/{path.suffix}'
     return path.read_bytes()
