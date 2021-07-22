@@ -24,9 +24,9 @@ DEFAULT_AVATAR = AVATARS_PATH / 'default.jpg'
 
 @domain.route(re.compile(r'^/(?:\d{1,10}(?:\.(?:jpg|jpeg|png|gif))?|favicon\.ico)?$'))
 async def get_avatar(conn: Connection) -> HTTPResponse:
+    
     filename = conn.path[1:]
-
-    extension = "jpeg"
+    extension = "jpg"
 
     if '.' in filename:
         # user id & file extension provided
@@ -37,7 +37,7 @@ async def get_avatar(conn: Connection) -> HTTPResponse:
         # user id provided - determine file extension
         for ext in ('jpg', 'jpeg', 'png', 'gif'):
             path = AVATARS_PATH / f'{filename}.{ext}'
-            if path.exists():
+            if path.is_file():
                 extension = ext
                 break
         else:
@@ -58,9 +58,11 @@ DEFAULT_BANNER = BANNERS_PATH / 'default.jpg'
 
 @domain.route(re.compile(r'\/banners\/(?:\d{1,10}(?:.(?:jpg|jpeg|png|gif))?|favicon.ico)?$'))
 async def get_banner(conn: Connection) -> HTTPResponse:
+    
     filename = conn.path[9:]
+    extension = "jpg"
 
-    extension = "jpeg"
+    print(f'get_banner: {filename}')
 
     if '.' in filename:
         # user id & file extension provided
@@ -71,7 +73,7 @@ async def get_banner(conn: Connection) -> HTTPResponse:
         # user id provided - determine file extension
         for ext in ('jpg', 'jpeg', 'png', 'gif'):
             path = BANNERS_PATH / f'{filename}.{ext}'
-            if path.exists():
+            if path.is_file():
                 extension = ext
                 break
         else:
