@@ -1532,49 +1532,6 @@ async def api_get_player_count(conn: Connection) -> HTTPResponse:
     })
 
 
-@domain.route('/api/get_player_rank')
-async def api_get_player_rank(conn: Connection) -> tuple[int, bytes]:
-    """Return the ranking of a given player."""
-    conn.resp_headers['Content-Type'] = f'application/json'
-    conn.resp_headers['Access-Control-Allow-Origin'] = "*"
-    conn.resp_headers['Access-Control-Allow-Headers'] = "Content-Type"
-
-    if 'userid' not in conn.args:
-        return 418, JSON({'status': 'Must provide player id!'})
-
-    if not conn.args['userid'].isdecimal():
-        return 418, JSON({'status': 'Invalid player id.'})
-
-    if (
-            'mode' not in conn.args or
-            conn.args['mode'] not in ('std', 'taiko', 'mania')
-    ):
-        return 418, JSON({'status': 'Must provide mode (std/taiko/mania).'})
-
-    if (
-            'mods' not in conn.args or
-            conn.args['mods'] not in ('vn', 'rx', 'ap')
-    ):
-        return 418, JSON({'status': 'Must provide mod (vn/rx/ap).'})
-
-    output = await glob.db.fetchall(f"SELECT `id` from `stats` JOIN users "
-                                    f"u using(id) WHERE u.priv & 1 "
-                                    f"ORDER BY pp_{conn.args['mods']}_{conn.args['mode']} DESC")
-
-    search_id = int(conn.args['userid'])
-
-    users_array = []
-    for i in range(len(output)):
-        users_array.append(output[i]['id'])
-
-    rank = users_array.index(search_id) + 1
-    return (200, JSON({
-        "status": "success",
-        "global_rank": rank,
-        "country_rank": "soon",
-    }))
-
-
 @domain.route('/api/get_player_rank_history')
 async def api_get_player_rank(conn: Connection) -> tuple[int, bytes]:
     """Return the ranking history of a given player."""
