@@ -394,6 +394,7 @@ OFFLINE_NOTIFICATION = packets.notification(
 
 DELTA_90_DAYS = timedelta(days=90)
 
+
 async def login(
     body_view: memoryview,
     ip: IPAddress,
@@ -466,7 +467,7 @@ async def login(
 
     # ensure utc_offset is a number (negative inclusive).
     if not client_info[1].replace('-', '').isdecimal():
-        return # invalid request
+        return  # invalid request
 
     utc_offset = int(client_info[1])
     # display_city = client_info[2] == '1'
@@ -508,7 +509,7 @@ async def login(
                 else:
                     # the user is currently online, send back failure.
                     data = packets.userID(-1) + \
-                           packets.notification('User already logged in.')
+                        packets.notification('User already logged in.')
 
                     return data, 'no'
 
@@ -528,8 +529,8 @@ async def login(
     if (
             using_tourney_client and
             not (
-                    user_info['priv'] & Privileges.Donator and
-                    user_info['priv'] & Privileges.Normal
+                user_info['priv'] & Privileges.Donator and
+                user_info['priv'] & Privileges.Normal
             )
     ):
         # trying to use tourney client with insufficient privileges.
@@ -647,7 +648,8 @@ async def login(
             )
 
     p = Player(
-        **user_info, # {id, name, priv, pw_bcrypt, silence_end, api_key, geoloc?}
+        # {id, name, priv, pw_bcrypt, silence_end, api_key, geoloc?}
+        **user_info,
         utc_offset=utc_offset,
         osu_ver=osu_ver_date,
         pm_private=pm_private,
@@ -865,8 +867,8 @@ class SpectateFrames(BasePacket):
         # packing this manually is about ~3x faster
         # data = packets.spectateFrames(self.frame_bundle.raw_data)
         data = (
-                struct.pack('<HxI', 15, len(self.frame_bundle.raw_data)) +
-                self.frame_bundle.raw_data
+            struct.pack('<HxI', 15, len(self.frame_bundle.raw_data)) +
+            self.frame_bundle.raw_data
         )
 
         # enqueue the data
@@ -1017,7 +1019,7 @@ class SendPrivateMessage(BasePacket):
                             # calculate pp for common generic values
                             pp_calc_st = time.time_ns()
 
-                            if mode_vn in (0, 1): # osu, taiko
+                            if mode_vn in (0, 1):  # osu, taiko
                                 with OppaiWrapper('oppai-ng/liboppai.so') as ezpp:
                                     # std & taiko, use oppai-ng to calc pp
                                     if r_match['mods'] is not None:
@@ -1026,7 +1028,7 @@ class SendPrivateMessage(BasePacket):
                                         mods = Mods.from_np(mods_str, mode_vn)
                                         ezpp.set_mods(int(mods))
 
-                                    pp_values = [] # [(acc, pp), ...]
+                                    pp_values = []  # [(acc, pp), ...]
 
                                     for acc in glob.config.pp_cached_accs:
                                         ezpp.set_accuracy_percent(acc)
@@ -1039,16 +1041,17 @@ class SendPrivateMessage(BasePacket):
                                         f'{acc}%: {pp:,.2f}pp'
                                         for acc, pp in pp_values
                                     ])
-                            elif mode_vn == 2: # catch
+                            elif mode_vn == 2:  # catch
                                 resp_msg = 'Gamemode not yet supported.'
-                            else: # mania
+                            else:  # mania
                                 if bmap.mode.as_vanilla != 3:
                                     resp_msg = 'Mania converts not currently supported.'
                                 else:
                                     if r_match['mods'] is not None:
                                         # [1:] to remove leading whitespace
                                         mods_str = r_match['mods'][1:]
-                                        mods = int(Mods.from_np(mods_str, mode_vn))
+                                        mods = int(Mods.from_np(
+                                            mods_str, mode_vn))
                                     else:
                                         mods = 0
 
@@ -1108,14 +1111,16 @@ class MatchCreate(BasePacket):
         if p.restricted:
             p.enqueue(
                 packets.matchJoinFail() +
-                packets.notification('Multiplayer is not available while restricted.')
+                packets.notification(
+                    'Multiplayer is not available while restricted.')
             )
             return
 
         if p.silenced:
             p.enqueue(
                 packets.matchJoinFail() +
-                packets.notification('Multiplayer is not available while silenced.')
+                packets.notification(
+                    'Multiplayer is not available while silenced.')
             )
             return
 
@@ -1143,6 +1148,7 @@ class MatchCreate(BasePacket):
 
         self.match.chat.send_bot(f'Match created by {p.name}.')
         log(f'{p} created a new multiplayer match.')
+
 
 async def execute_menu_option(p: Player, key: int) -> None:
     if key not in p.current_menu.options:
@@ -1507,8 +1513,8 @@ class MatchChangeMods(BasePacket):
 
 def is_playing(slot: Slot) -> bool:
     return (
-            slot.status == SlotStatus.playing and
-            not slot.loaded
+        slot.status == SlotStatus.playing and
+        not slot.loaded
     )
 
 

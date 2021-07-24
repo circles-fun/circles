@@ -626,10 +626,11 @@ async def osuSubmitModularSelector(
             score.bmap.awards_ranked_pp and not (
             score.player.priv & Privileges.Whitelisted or
             score.player.restricted
-    )
+            )
     ):
         # Get the PP cap for the current context.
-        pp_cap = glob.config.autoban_pp[score.mode][score.mods & Mods.FLASHLIGHT != 0]
+        pp_cap = glob.config.autoban_pp[score.mode][score.mods &
+                                                    Mods.FLASHLIGHT != 0]
 
         if score.pp > pp_cap:
             await score.player.restrict(
@@ -693,9 +694,11 @@ async def osuSubmitModularSelector(
                     if score.player.id != prev_n1['id']:
                         pid = prev_n1['id']
                         pname = prev_n1['name']
-                        ann.append(f'(Previous #1: [https://{BASE_DOMAIN}/u/{pid} {pname}])')
+                        ann.append(
+                            f'(Previous #1: [https://{BASE_DOMAIN}/u/{pid} {pname}])')
 
-                announce_chan.send(' '.join(ann), sender=score.player, to_self=True)
+                announce_chan.send(
+                    ' '.join(ann), sender=score.player, to_self=True)
 
         # this score is our best score.
         # update any preexisting personal best
@@ -730,8 +733,8 @@ async def osuSubmitModularSelector(
         # All submitted plays should have a replay.
         # If not, they may be using a score submitter.
         replay_missing = (
-                'score' not in conn.files or
-                conn.files['score'] == b'\r\n'
+            'score' not in conn.files or
+            conn.files['score'] == b'\r\n'
         )
 
         if replay_missing and not score.player.restricted:
@@ -799,7 +802,8 @@ async def osuSubmitModularSelector(
 
                     if score.prev_best.grade >= Grade.A:
                         stats.grades[score.prev_best.grade] -= 1
-                        grade_col = format(score.prev_best.grade, 'stats_column')
+                        grade_col = format(
+                            score.prev_best.grade, 'stats_column')
                         stats_query_l.append(f'{grade_col} = {grade_col} - 1')
             else:
                 # this is our first submitted score on the map
@@ -939,13 +943,15 @@ async def osuSubmitModularSelector(
             'chartName:Beatmap Ranking',
 
             *((
-                  chart_entry('rank', score.prev_best.rank, score.rank),
-                  chart_entry('rankedScore', score.prev_best.score, score.score),
-                  chart_entry('totalScore', score.prev_best.score, score.score),
-                  chart_entry('maxCombo', score.prev_best.max_combo, score.max_combo),
-                  chart_entry('accuracy', round(score.prev_best.acc, 2), round(score.acc, 2)),
-                  chart_entry('pp', score.prev_best.pp, score.pp)
-              ) if score.prev_best else (
+                chart_entry('rank', score.prev_best.rank, score.rank),
+                chart_entry('rankedScore', score.prev_best.score, score.score),
+                chart_entry('totalScore', score.prev_best.score, score.score),
+                chart_entry('maxCombo', score.prev_best.max_combo,
+                            score.max_combo),
+                chart_entry('accuracy', round(
+                    score.prev_best.acc, 2), round(score.acc, 2)),
+                chart_entry('pp', score.prev_best.pp, score.pp)
+            ) if score.prev_best else (
                 chart_entry('rank', None, score.rank),
                 chart_entry('rankedScore', None, score.score),
                 chart_entry('totalScore', None, score.score),
@@ -964,13 +970,14 @@ async def osuSubmitModularSelector(
             'chartName:Overall Ranking',
 
             *((
-                  chart_entry('rank', prev_stats.rank, stats.rank),
-                  chart_entry('rankedScore', prev_stats.rscore, stats.rscore),
-                  chart_entry('totalScore', prev_stats.tscore, stats.tscore),
-                  chart_entry('maxCombo', prev_stats.max_combo, stats.max_combo),
-                  chart_entry('accuracy', round(prev_stats.acc, 2), round(stats.acc, 2)),
-                  chart_entry('pp', prev_stats.pp, stats.pp),
-              ) if prev_stats else (
+                chart_entry('rank', prev_stats.rank, stats.rank),
+                chart_entry('rankedScore', prev_stats.rscore, stats.rscore),
+                chart_entry('totalScore', prev_stats.tscore, stats.tscore),
+                chart_entry('maxCombo', prev_stats.max_combo, stats.max_combo),
+                chart_entry('accuracy', round(
+                    prev_stats.acc, 2), round(stats.acc, 2)),
+                chart_entry('pp', prev_stats.pp, stats.pp),
+            ) if prev_stats else (
                 chart_entry('rank', None, stats.rank),
                 chart_entry('rankedScore', None, stats.rscore),
                 chart_entry('totalScore', None, stats.tscore),
@@ -1095,7 +1102,7 @@ async def getScores(
         conn: Connection,
         db_cursor: aiomysql.DictCursor
 ) -> HTTPResponse:
-    if not all([ # make sure all int args are integral
+    if not all([  # make sure all int args are integral
         conn.args[k].replace('-', '').isdecimal()
         for k in ('mods', 'v', 'm', 'i')
     ]):
@@ -1480,8 +1487,6 @@ async def checkUpdates(conn: Connection) -> HTTPResponse:
 # Unauthorized (no api key required)
 # GET /api/get_player_count: return total registered & online player counts.
 # GET /api/get_player_info: return info or stats for a given player.
-# GET /api/get_player_rank: return global ranking and country ranking for a given player.
-# GET /api/get_player_rank_history: return ranking history for a given player.
 # GET /api/get_player_status: return a player's current status, if online.
 # GET /api/get_player_scores: return a list of best or recent scores for a given player.
 # GET /api/get_player_most_played: return a list of maps most played by a given player.
@@ -1530,42 +1535,6 @@ async def api_get_player_count(conn: Connection) -> HTTPResponse:
             'total': total_users
         }
     })
-
-
-@domain.route('/api/get_player_rank_history')
-async def api_get_player_rank(conn: Connection) -> tuple[int, bytes]:
-    """Return the ranking history of a given player."""
-    conn.resp_headers['Content-Type'] = f'application/json'
-    conn.resp_headers['Access-Control-Allow-Origin'] = "*"
-    conn.resp_headers['Access-Control-Allow-Headers'] = "Content-Type"
-
-    if 'userid' not in conn.args:
-        return 418, JSON({'status': 'Must provide player id!'})
-
-    if not conn.args['userid'].isdecimal():
-        return 418, JSON({'status': 'Invalid player id.'})
-
-    if (
-            'mode' not in conn.args or
-            conn.args['mode'] not in ('std', 'taiko', 'mania')
-    ):
-        return 418, JSON({'status': 'Must provide mode (std/taiko/mania).'})
-
-    if (
-            'mods' not in conn.args or
-            conn.args['mods'] not in ('vn', 'rx', 'ap')
-    ):
-        return 418, JSON({'status': 'Must provide mod (vn/rx/ap).'})
-
-    output = await glob.db.fetchall(f"SELECT `rank`, `time` FROM `circles_ranking` WHERE `id` = {conn.args['userid']} "
-                                    f"AND `mode` = '{conn.args['mode']}' AND `mods` = '{conn.args['mods']}';")
-
-    # output = await glob.db.fetchall(f"SELECT * FROM `circles_ranking`")
-
-    return (200, JSON({
-        "status": "success",
-        "history": output,
-    }))
 
 
 @domain.route('/api/get_player_info')
@@ -1775,7 +1744,7 @@ async def api_get_player_scores(conn: Connection) -> HTTPResponse:
             params.append(mods)
 
     if scope == 'best':
-        query.append('AND status = 2') # only pp-awarding scores
+        query.append('AND status = 2')  # only pp-awarding scores
         sort = 'pp'
     else:
         sort = 'play_time'
@@ -2075,7 +2044,8 @@ async def api_get_replay(conn: Connection) -> HTTPResponse:
 
     if not res:
         # score not found in sql
-        return (404, JSON({'status': 'Score not found.'}))  # but replay was? lol
+        # but replay was? lol
+        return (404, JSON({'status': 'Score not found.'}))
 
     # generate the replay's hash
     replay_md5 = hashlib.md5(
@@ -2181,6 +2151,7 @@ async def api_get_match(conn: Connection) -> HTTPResponse:
         }
     })
 
+
 @domain.route('/api/get_leaderboard')
 async def api_get_global_leaderboard(conn: Connection) -> HTTPResponse:
     conn.resp_headers['Content-Type'] = f'application/json'
@@ -2228,6 +2199,7 @@ async def api_get_global_leaderboard(conn: Connection) -> HTTPResponse:
         'status': 'success',
         'leaderboard': res
     })
+
 
 def requires_api_key(f: Callable) -> Callable:
     @wraps(f)
@@ -2341,7 +2313,8 @@ async def get_updated_beatmap(conn: Connection) -> HTTPResponse:
 
         if (
                 osu_file_path.exists() and
-                res['md5'] == hashlib.md5(osu_file_path.read_bytes()).hexdigest()
+                res['md5'] == hashlib.md5(
+                    osu_file_path.read_bytes()).hexdigest()
         ):
             # up to date map found on disk.
             content = osu_file_path.read_bytes()
@@ -2417,7 +2390,8 @@ async def register_account(
     if 'username' not in errors:
         await db_cursor.execute('SELECT 1 FROM users WHERE name = %s', [name])
         if db_cursor.rowcount != 0:
-            errors['username'].append('Username already taken by another player.')
+            errors['username'].append(
+                'Username already taken by another player.')
 
     # Emails must:
     # - match the regex `^[^@\s]{1,200}@[^@\s\.]{1,30}\.[^@\.\s]{1,24}$`
@@ -2427,7 +2401,8 @@ async def register_account(
     else:
         await db_cursor.execute('SELECT 1 FROM users WHERE email = %s', [email])
         if db_cursor.rowcount != 0:
-            errors['user_email'].append('Email already taken by another player.')
+            errors['user_email'].append(
+                'Email already taken by another player.')
 
     # Passwords must:
     # - be within 8-32 characters in length
