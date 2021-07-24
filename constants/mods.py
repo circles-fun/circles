@@ -278,9 +278,9 @@ mod2modstr_dict = {
 }
 
 KEY_MODS = (
-        Mods.KEY1 | Mods.KEY2 | Mods.KEY3 |
-        Mods.KEY4 | Mods.KEY5 | Mods.KEY6 |
-        Mods.KEY7 | Mods.KEY8 | Mods.KEY9
+    Mods.KEY1 | Mods.KEY2 | Mods.KEY3 |
+    Mods.KEY4 | Mods.KEY5 | Mods.KEY6 |
+    Mods.KEY7 | Mods.KEY8 | Mods.KEY9
 )
 
 # FREE_MOD_ALLOWED = (
@@ -290,8 +290,8 @@ KEY_MODS = (
 # )
 
 SCORE_INCREASE_MODS = (
-        Mods.HIDDEN | Mods.HARDROCK | Mods.FADEIN |
-        Mods.DOUBLETIME | Mods.FLASHLIGHT
+    Mods.HIDDEN | Mods.HARDROCK | Mods.FADEIN |
+    Mods.DOUBLETIME | Mods.FLASHLIGHT
 )
 
 SPEED_CHANGING_MODS = Mods.DOUBLETIME | Mods.NIGHTCORE | Mods.HALFTIME

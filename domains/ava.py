@@ -24,7 +24,7 @@ DEFAULT_AVATAR = AVATARS_PATH / 'default.jpg'
 
 @domain.route(re.compile(r'^/(?:\d{1,10}(?:\.(?:jpg|jpeg|png|gif))?|favicon\.ico)?$'))
 async def get_avatar(conn: Connection) -> HTTPResponse:
-    
+
     filename = conn.path[1:]
     extension = "jpg"
 
@@ -58,7 +58,7 @@ DEFAULT_BANNER = BANNERS_PATH / 'default.jpg'
 
 @domain.route(re.compile(r'\/banners\/(?:\d{1,10}(?:.(?:jpg|jpeg|png|gif))?|favicon.ico)?$'))
 async def get_banner(conn: Connection) -> HTTPResponse:
-    
+
     filename = conn.path[9:]
     extension = "jpg"
 

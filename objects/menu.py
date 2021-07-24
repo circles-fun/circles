@@ -16,20 +16,25 @@ from objects import glob
 if TYPE_CHECKING:
     from objects.player import Player
 
+
 @unique
 class MenuCommands(IntEnum):
-    Reset = 0 # go to main menu
-    Back = 1 # go to previous menu
-    Advance = 2 # go to new menu
-    Execute = 3 # execute a function on current menu
+    Reset = 0  # go to main menu
+    Back = 1  # go to previous menu
+    Advance = 2  # go to new menu
+    Execute = 3  # execute a function on current menu
+
 
 class Menu(NamedTuple):
     name: str
-    options: dict[int, int, tuple[MenuCommands, Union['Menu', 'MenuFunction', None]]]
+    options: dict[int, int, tuple[MenuCommands,
+                                  Union['Menu', 'MenuFunction', None]]]
+
 
 class MenuFunction(NamedTuple):
     name: str
     callback: Callable[['Player'], None]
+
 
 def menu_keygen() -> int:
     min_key = glob.config.max_multi_matches
