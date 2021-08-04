@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import math
+
 from base64 import b64decode
 from datetime import datetime
 from enum import IntEnum
@@ -352,9 +354,13 @@ class Score:
                 ezpp.set_accuracy_percent(self.acc)
 
                 ezpp.calculate(osu_file_path)
-
-                return (ezpp.get_pp(), ezpp.get_sr())
-        elif mode_vn == 2:  # catch
+                
+                pp = ezpp.get_pp()
+                if pp not in (math.inf, math.nan):
+                    return (pp, ezpp.get_sr())
+                else:
+                    return (0.0, 0.0)
+        elif mode_vn == 2: # catch
             return (0.0, 0.0)
         else:  # mania
             if self.bmap.mode.as_vanilla != 3:
