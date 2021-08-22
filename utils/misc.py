@@ -28,6 +28,7 @@ from typing import Union
 from cmyui.logging import Ansi
 from cmyui.logging import log
 from cmyui.logging import printc
+from cmyui.logging import Rainbow
 from cmyui.osu.replay import Keys
 from cmyui.osu.replay import ReplayFrame
 
@@ -462,7 +463,7 @@ async def log_strange_occurrence(obj: object) -> None:
             ):
                 uploaded = True
                 log("Logged strange occurrence to cmyui's server.", Ansi.LBLUE)
-                log("Thank you for your participation! <3", Ansi.LBLUE)
+                log("Thank you for your participation! <3", Rainbow)
             else:
                 log(
                     f"Autoupload to cmyui's server failed (HTTP {resp.status})", Ansi.LRED)
@@ -544,6 +545,5 @@ def pymysql_encode(conv: Callable) -> Callable:
 
     return wrapper
 
-
-def escape_enum(val, mapping=None) -> str:  # used for ^
+def escape_enum(val, _ = None) -> str: # used for ^
     return str(int(val))
