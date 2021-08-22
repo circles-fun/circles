@@ -4,7 +4,7 @@ create table achievements
 		primary key,
 	file varchar(128) not null,
 	name varchar(128) charset utf8 not null,
-	`desc` varchar(256) charset utf8 not null,
+	`desc` varchar(191) charset utf8 not null,
 	cond varchar(64) not null,
 	constraint achievements_desc_uindex
 		unique (`desc`),
@@ -19,7 +19,7 @@ create table channels
 	id int auto_increment
 		primary key,
 	name varchar(32) not null,
-	topic varchar(256) not null,
+	topic varchar(191) not null,
 	read_priv int default 1 not null,
 	write_priv int default 2 not null,
 	auto_join tinyint(1) default 0 not null,
@@ -125,7 +125,7 @@ create table maps
 	title varchar(128) charset utf8 not null,
 	version varchar(128) charset utf8 not null,
 	creator varchar(19) charset utf8 not null,
-	filename varchar(256) charset utf8 not null,
+	filename varchar(191) charset utf8 not null,
 	last_update datetime not null,
 	total_length int not null,
 	max_combo int not null,
