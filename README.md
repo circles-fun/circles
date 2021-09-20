@@ -5,6 +5,8 @@ Notes:
 - ubuntu 20.04 & nginx have unknown issues? i recommend using 18.04
 - I will not help with the creation of a fake *.ppy.sh cert for switcher support.
 
+Installation Guide
+-------------
 ```sh
 # add ppa for py3.9 (i love anthonywritescode)
 sudo add-apt-repository ppa:deadsnakes/ppa

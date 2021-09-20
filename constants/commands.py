@@ -998,6 +998,7 @@ async def shutdown(ctx: Context) -> str:
         return f'Enqueued {ctx.trigger}.'
     else:  # shutdown immediately
         os.kill(os.getpid(), _signal)
+        return ':D'
 
 
 """ Developer commands
@@ -2408,8 +2409,6 @@ async def clan_create(ctx: Context) -> str:
         'WHERE id = %s',
         [clan_id, ctx.player.id]
     )
-
-    # TODO: take currency from player
 
     # announce clan creation
     if announce_chan := glob.channels['#announce']:
