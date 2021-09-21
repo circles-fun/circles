@@ -20,10 +20,10 @@ wget https://bootstrap.pypa.io/get-pip.py
 python3.9 get-pip.py && rm get-pip.py
 
 # clone the repo & init submodules
-git clone https://github.com/cmyui/gulag.git && cd gulag
+git clone https://github.com/circles-fun/circles.git && cd circles
 git submodule init && git submodule update
 
-# install gulag requirements w/ pip
+# install circles requirements w/ pip
 python3.9 -m pip install -r ext/requirements.txt
 
 # build oppai-ng's static library
@@ -31,10 +31,10 @@ cd oppai-ng && ./libbuild && cd ..
 
 ######################################
 # NOTE: before continuing, create an #
-# empty database in mysql for gulag  #
+# empty database in mysql for circles  #
 ######################################
 
-# import gulag's mysql structure
+# import circles's mysql structure
 mysql -u your_sql_username -p your_db_name < ext/db.sql
 
 # generate an ssl certificate for your domain (change email & domain)
@@ -47,8 +47,8 @@ sudo certbot certonly \
     -d *.your.domain
 
 # copy our nginx config to `sites-enabled` & open for editing
-sudo cp ext/nginx.conf /etc/nginx/sites-enabled/gulag.conf
-sudo nano /etc/nginx/sites-enabled/gulag.conf
+sudo cp ext/nginx.conf /etc/nginx/sites-enabled/circles.conf
+sudo nano /etc/nginx/sites-enabled/circles.conf
 
 ##########################################
 # NOTE: before continuing, make sure you #
@@ -58,7 +58,7 @@ sudo nano /etc/nginx/sites-enabled/gulag.conf
 # reload the reverse proxy's config
 sudo nginx -s reload
 
-# copy our gulag config to cwd & open for editing
+# copy our circles config to cwd & open for editing
 cp ext/config.sample.py config.py
 nano config.py
 
@@ -75,7 +75,7 @@ Directory Structure
 ------
     .
     ├── constants  # code representing gamemodes, mods, privileges, and other constants.
-    ├── ext        # external files from gulag's primary operation.
+    ├── ext        # external files from circles's primary operation.
     ├── objects    # code for representing players, scores, maps, and more.
     ├── utils      # utility functions used throughout the codebase for general purposes.
     └── domains    # the route-containing domains accessible to the public web.

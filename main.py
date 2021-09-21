@@ -1,16 +1,13 @@
 #!/usr/bin/env python3.9
 # -*- coding: utf-8 -*-
 
-# if you're interested in development, my test server is usually
-# up at https://c.cmyui.xyz. just use the same `-devserver cmyui.xyz`
-# connection method you would with any other modern server and you
-# should have no problems connecting. registration is done in-game
-# with osu!'s built-in registration (if you're worried about not being
-# properly connected while registering, the server should send back
-# https://i.cmyui.xyz/8-Vzy9NllPBp5K7L.png if you use a random login).
+#  ██████╗██╗██████╗  ██████╗██╗     ███████╗███████╗
+# ██╔════╝██║██╔══██╗██╔════╝██║     ██╔════╝██╔════╝
+# ██║     ██║██████╔╝██║     ██║     █████╗  ███████╗
+# ██║     ██║██╔══██╗██║     ██║     ██╔══╝  ╚════██║
+# ╚██████╗██║██║  ██║╚██████╗███████╗███████╗███████║
+# ╚═════╝╚═╝╚═╝  ╚═╝ ╚═════╝╚══════╝╚══════╝╚══════╝
 
-# you can also test gulag's rest api using my test server,
-# e.g https://osu.cmyui.xyz/api/get_player_scores?id=3&scope=best
 
 import asyncio
 import io
@@ -47,13 +44,14 @@ __all__ = ()
 if isinstance(sys.stdout, io.TextIOWrapper):
     sys.stdout.reconfigure(encoding='utf-8')
 
-# set cwd to /gulag
+# set cwd to /circles
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 
 try:
     from objects import glob
 except ModuleNotFoundError as exc:
     if exc.name == 'config':
+        
         # config file doesn't exist; create it from the default.
         import shutil
         shutil.copy('ext/config.sample.py', 'config.py')
@@ -65,7 +63,7 @@ except ModuleNotFoundError as exc:
 
 utils.misc.install_excepthook()
 
-# current version of gulag
+# current version of circles
 # NOTE: this is used internally for the updater, it may be
 # worth reading through it's code before playing with it.
 glob.version = cmyui.Version(3, 5, 4)
@@ -134,7 +132,8 @@ async def before_serving() -> None:
     await glob.db.connect(glob.config.mysql)
 
     # run the sql & submodule updater (uses http & db).
-    # TODO: updating cmyui_pkg should run before it's import
+    # TODO: updating cmyui_pkg should run before it's imported.
+    
     updater = Updater(glob.version)
     await updater.run()
     await updater.log_startup()
@@ -154,7 +153,7 @@ async def before_serving() -> None:
                            flush_interval=15)
 
         # wipe any previous stats from the page.
-        glob.datadog.gauge('gulag.online_players', 0)
+        glob.datadog.gauge('circles.online_players', 0)
     else:
         glob.datadog = None
 
@@ -202,16 +201,16 @@ async def after_serving() -> None:
         glob.datadog.flush()
 
 def ensure_supported_platform() -> int:
-    """Ensure we're running on an appropriate platform for gulag."""
+    """Ensure we're running on an appropriate platform for circles."""
     if sys.platform != 'linux':
-        log('gulag currently only supports linux', Ansi.LRED)
+        log('circles currently only supports linux', Ansi.LRED)
         if sys.platform == 'win32':
             log("you could also try wsl(2), i'd recommend ubuntu 18.04 "
-                "(i use it to test gulag)", Ansi.LBLUE)
+                "(i use it to test circles)", Ansi.LBLUE)
         return 1
 
     if sys.version_info < (3, 9):
-        log('gulag uses many modern python features, '
+        log('circles uses many modern python features, '
             'and the minimum python version is 3.9.', Ansi.LRED)
         return 1
 
@@ -258,7 +257,7 @@ def ensure_directory_structure() -> int:
     return 0
 
 def ensure_dependencies_and_requirements() -> int:
-    """Make sure all of gulag's dependencies are ready."""
+    """Make sure all of circles's dependencies are ready."""
     if not OPPAI_PATH.exists():
         log('No oppai-ng submodule found, attempting to clone.', Ansi.LMAGENTA)
         p = subprocess.Popen(args=['git', 'submodule', 'init'],
@@ -300,7 +299,7 @@ def display_startup_dialog() -> None:
     # running on root grants the software potentally dangerous and
     # unnecessary power over the operating system and is not advised.
     if os.geteuid() == 0:
-        log('It is not recommended to run gulag as root, '
+        log('It is not recommended to run circles as root, '
             'especially in production..', Ansi.LYELLOW)
 
         if glob.config.advanced:
@@ -339,7 +338,7 @@ def main() -> int:
     # for us via the transport (tcp/ip) socket interface, and will
     # handle housekeeping (setup, cleanup) for us automatically.
     glob.app = cmyui.Server(
-        name=f'gulag v{glob.version}',
+        name=f'circles v{glob.version}',
         gzip=4, debug=glob.config.debug
     )
 
@@ -365,11 +364,11 @@ if __name__ == '__main__':
     raise SystemExit(main())
 elif __name__ == 'main':
     # check specifically for asgi servers since many related projects
-    # (such as gulag-web) use them, so people may assume we do as well.
+    # (such as circles-web) use them, so people may assume we do as well.
     if utils.misc.running_via_asgi_webserver(sys.argv[0]):
         raise RuntimeError(
-            "gulag does not use an ASGI framework, and uses it's own custom "
+            "circles does not use an ASGI framework, and uses it's own custom "
             "web framework implementation; please run it directly (./main.py)."
         )
     else:
-        raise RuntimeError('gulag should only be run directly (./main.py).')
+        raise RuntimeError('circles should only be run directly (./main.py).')

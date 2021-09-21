@@ -37,7 +37,7 @@ IGNORED_BEATMAP_CHARS = dict.fromkeys(map(ord, r':\/*<>?"|'), None)
 async def osuapiv1_getbeatmaps(**params) -> Optional[dict[str, object]]:
     """Fetch data from the osu!api with a beatmap's md5."""
     if glob.app.debug:
-        log(f'Doing osu!api (getbeatmaps) request {params}', Ansi.LMAGENTA)
+        log(f'[CIRCLES] Doing osu!api (getbeatmaps) request {params}', Ansi.LCYAN)
 
     params['k'] = glob.config.osu_api_key
 
@@ -60,7 +60,8 @@ async def ensure_local_osu_file(
     ):
         # need to get the file from the osu!api
         if glob.app.debug:
-            log(f'Doing osu!api (.osu file) request {bmap_id}', Ansi.LMAGENTA)
+            log(f'[CIRCLES] Doing osu!api (.osu file) request {bmap_id}', Ansi.LCYAN)
+        
 
         url = f'https://old.ppy.sh/osu/{bmap_id}'
         async with glob.http.get(url) as r:
@@ -424,7 +425,7 @@ class Beatmap:
     """ Lower level API """
     # These functions are meant for internal use under
     # all normal circumstances and should only be used
-    # if you're really modifying gulag by adding new
+    # if you're really modifying circles by adding new
     # features, or perhaps optimizing parts of the code.
 
     def _parse_from_osuapi_resp(self, osuapi_resp: dict[str, object]) -> None:
@@ -568,7 +569,7 @@ class BeatmapSet:
             if (
                 bmap.status not in (RankedStatus.Ranked,
                                     RankedStatus.Approved) or
-                bmap.frozen # ranked/approved, but only on gulag
+                bmap.frozen # ranked/approved, but only on circles
             ):
                 return False
         return True
@@ -580,7 +581,7 @@ class BeatmapSet:
         for bmap in self.maps:
             if (
                 bmap.status != RankedStatus.Loved or
-                bmap.frozen # loved, but only on gulag
+                bmap.frozen # loved, but only on circles
             ):
                 return False
         return True
@@ -629,7 +630,7 @@ class BeatmapSet:
 
                     bmap._parse_from_osuapi_resp(api_bmap)
 
-                    # (some gulag-specific stuff not given by api)
+                    # (some circles-specific stuff not given by api)
                     bmap.frozen = False
                     bmap.passes = 0
                     bmap.plays = 0
@@ -732,7 +733,7 @@ class BeatmapSet:
                 async for row in db_cursor:
                     bmap = Beatmap(**row)
 
-                    # XXX: tempfix for gulag <v3.4.1,
+                    # XXX: tempfix for circles <v3.4.1,
                     # where filenames weren't stored.
                     if not bmap.filename:
                         bmap.filename = (
@@ -760,7 +761,7 @@ class BeatmapSet:
             self.maps = []
             self.last_osuapi_check = datetime.now()
 
-            # XXX: pre-mapset gulag support
+            # XXX: pre-mapset circles support
             # select all current beatmaps
             # that're frozen in the db
             res = await glob.db.fetchall(
@@ -787,7 +788,7 @@ class BeatmapSet:
 
                 bmap._parse_from_osuapi_resp(api_bmap)
 
-                # (some gulag-specific stuff not given by api)
+                # (some circles-specific stuff not given by api)
                 bmap.pp_cache = {0: {}, 1: {}, 2: {}, 3: {}}
                 bmap.passes = 0
                 bmap.plays = 0

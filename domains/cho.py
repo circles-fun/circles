@@ -154,7 +154,7 @@ async def bancho_handler(conn: Connection) -> bytes:
 
     if glob.app.debug:
         packets_str = ', '.join(packets_handled) or 'None'
-        log(f'[BANCHO] {player} | {packets_str}.', RGB(0xff68ab))
+        log(f'[CIRCLES] {player} | {packets_str}.', Ansi.LCYAN)
 
     player.last_recv_time = time.time()
     conn.resp_headers['Content-Type'] = 'text/html; charset=UTF-8'
@@ -445,6 +445,7 @@ async def login(
     osu_ver_str = client_info[0]
 
     if not (r_match := regexes.osu_ver.match(osu_ver_str)):
+        log(f'Invalid osu! version login attempted from {ip}.', Ansi.LRED)
         return  # invalid request
 
     # quite a bit faster than using dt.strptime.
@@ -641,7 +642,7 @@ async def login(
             user_info['geoloc'] = await utils.misc.fetch_geoloc_web(ip)
 
         if db_country == 'xx':
-            # bugfix for old gulag versions when
+            # bugfix for old circles versions when
             # country wasn't stored on registration.
             log(f"Fixing {username}'s country.", Ansi.LGREEN)
 
@@ -805,10 +806,10 @@ async def login(
 
     if glob.datadog:
         if not p.restricted:
-            glob.datadog.increment('gulag.online_players')
+            glob.datadog.increment('circles.online_players')
 
         time_taken = time.time() - login_time
-        glob.datadog.histogram('gulag.login_time', time_taken)
+        glob.datadog.histogram('circles.login_time', time_taken)
 
     user_os = 'unix (wine)' if is_wine else 'win32'
     log(f'{p} logged in with {osu_ver_str} on {user_os}.', Ansi.LCYAN)

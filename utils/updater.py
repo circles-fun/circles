@@ -38,18 +38,9 @@ class Updater:
             # first time running the server.
             prev_ver = self.version
 
-            printc('\n'.join([
-                'Welcome to Circles!',
-                'If you have any issues with the server,',
-                'feel free to join our public Discord :)',
-                '',
-                'https://discord.gg/MrqJ3unmTg',
-                'Enjoy the server!'
-            ]), Ansi.LCYAN)
-
         if glob.has_internet:
-            await self._update_cmyui_pkg() # pip install -U cmyui
-        await self._update_sql(prev_ver) # run updates.sql
+            await self._update_cmyui_pkg()  # pip install -U cmyui
+        await self._update_sql(prev_ver)  # run updates.sql
 
     @staticmethod
     async def get_prev_version() -> Optional[Version]:

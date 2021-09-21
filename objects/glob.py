@@ -4,7 +4,7 @@ import config  # export
 from typing import TYPE_CHECKING
 
 # this is used externally, i.e. `glob.config.attr`
-import config # type: ignore
+import config  # type: ignore
 
 # this file contains no actualy definitions
 if TYPE_CHECKING:
@@ -41,6 +41,9 @@ __all__ = (
     'datadog', 'cache', 'loop',
     # 'sketchy_queue'
 )
+
+has_internet = True
+
 
 # server object
 app: 'Server'

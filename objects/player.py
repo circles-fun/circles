@@ -239,7 +239,7 @@ class Player:
         self.login_time = login_time
         self.last_recv_time = login_time
 
-        # XXX: below is mostly gulag-specific & internal stuff
+        # XXX: below is mostly circles-specific & internal stuff
 
         # store most recent score for each gamemode.
         self.recent_scores: dict[GameMode, Optional[Score]] = {
@@ -404,7 +404,7 @@ class Player:
 
         if not self.restricted:
             if glob.datadog:
-                glob.datadog.decrement('gulag.online_players')
+                glob.datadog.decrement('circles.online_players')
 
             glob.players.enqueue(packets.logout(self.id))
 

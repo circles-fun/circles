@@ -1409,9 +1409,9 @@ async def server(ctx: Context) -> str:
     # get system-wide ram usage
     sys_ram = psutil.virtual_memory()
 
-    # output ram usage as `{gulag_used}MB / {sys_used}MB / {sys_total}MB`
-    gulag_ram = proc.memory_info()[0]
-    ram_values = (gulag_ram, sys_ram.used, sys_ram.total)
+    # output ram usage as `{circles_used}MB / {sys_used}MB / {sys_total}MB`
+    circles_ram = proc.memory_info()[0]
+    ram_values = (circles_ram, sys_ram.used, sys_ram.total)
     ram_info = ' / '.join([f'{v // 1024 ** 2}MB' for v in ram_values])
 
     # divide up pkg versions, 3 displayed per line, e.g.

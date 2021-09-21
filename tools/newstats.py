@@ -1,6 +1,6 @@
 #!/usr/bin/env python3.9
 
-# a tool to merge from gulag 3.5.2 stats to 3.5.3 stats
+# a tool to merge from circles 3.5.2 stats to 3.5.3 stats
 # this tool is destructive, don't run it if you don't know what it's doing
 
 import asyncio
@@ -14,7 +14,7 @@ TABLE_COLUMNS = ['tscore', 'rscore', 'pp', 'plays',
 async def main():
     pool = AsyncSQLPool()
     await pool.connect({
-        'db': 'gulag_old',
+        'db': 'circles_old',
         'host': 'localhost',
         'password': 'lol123',
         'user': 'cmyui'

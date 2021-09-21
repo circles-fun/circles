@@ -417,7 +417,7 @@ def install_excepthook() -> None:
                 "ext/config.sample.py for additional info.", Ansi.LCYAN)
             return
 
-        print('\x1b[0;31mgulag ran into an issue '
+        print('\x1b[0;31mcircles ran into an issue '
               'before starting up :(\x1b[0m')
         sys._excepthook(type_, value, traceback)
 

@@ -239,7 +239,7 @@ async def osuGetFriends(p: 'Player', conn: Connection) -> HTTPResponse:
     return '\n'.join(map(str, p.friends)).encode()
 
 
-_gulag_osuapi_status_map = {
+_circles_osuapi_status_map = {
     0: 0,
     2: 1,
     3: 2,
@@ -248,8 +248,8 @@ _gulag_osuapi_status_map = {
 }
 
 
-def gulag_to_osuapi_status(s: int) -> int:
-    return _gulag_osuapi_status_map[s]
+def circles_to_osuapi_status(s: int) -> int:
+    return _circles_osuapi_status_map[s]
 
 
 @domain.route('/web/osu-getbeatmapinfo.php', methods=['POST'])
@@ -282,8 +282,8 @@ async def osuGetBeatmapInfo(
 
         res = await db_cursor.fetchone()
 
-        # convert from gulag -> osu!api status
-        res['status'] = gulag_to_osuapi_status(res['status'])
+        # convert from circles -> osu!api status
+        res['status'] = circles_to_osuapi_status(res['status'])
 
         # try to get the user's grades on the map osu!
         # only allows us to send back one per gamemode,
@@ -413,7 +413,7 @@ async def lastFM(p: 'Player', conn: Connection) -> HTTPResponse:
     """
 
 
-# gulag supports both cheesegull mirrors & chimu.moe.
+# circles supports both cheesegull mirrors & chimu.moe.
 # chimu.moe handles things a bit differently than cheesegull,
 # and has some extra features we'll eventually use more of.
 USING_CHIMU = 'chimu.moe' in glob.config.mirror
@@ -641,11 +641,11 @@ async def osuSubmitModularSelector(
     """ Score submission checks completed; submit the score. """
 
     if glob.datadog:
-        glob.datadog.increment('gulag.submitted_scores')
+        glob.datadog.increment('circles.submitted_scores')
 
     if score.status == SubmissionStatus.BEST:
         if glob.datadog:
-            glob.datadog.increment('gulag.submitted_scores_best')
+            glob.datadog.increment('circles.submitted_scores_best')
 
         if score.bmap.has_leaderboard:
             if (
@@ -1188,7 +1188,7 @@ async def getScores(
     # we've found a beatmap for the request.
 
     if glob.datadog:
-        glob.datadog.increment('gulag.leaderboards_served')
+        glob.datadog.increment('circles.leaderboards_served')
 
     if bmap.status < RankedStatus.Ranked:
         # only show leaderboards for ranked,
@@ -1452,7 +1452,7 @@ async def checkUpdates(conn: Connection) -> HTTPResponse:
     if action not in ('check', 'path', 'error'):
         return (400, b'')  # invalid action
 
-    if stream not in ('cuttingedge', 'stable40', 'beta40', 'stable'):
+    if stream not in ('cuttingedge', 'stable40', 'beta40', 'stable'): # Deny unknown streams
         return (400, b'')  # invalid stream
 
     if action == 'error':
@@ -2501,7 +2501,7 @@ async def register_account(
             )
 
         if glob.datadog:
-            glob.datadog.increment('gulag.registrations')
+            glob.datadog.increment('circles.registrations')
 
         log(f'<{name} ({user_id})> has registered!', Ansi.LGREEN)
 
