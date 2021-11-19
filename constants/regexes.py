@@ -10,9 +10,7 @@ DOMAIN_ESCAPED = glob.config.domain.replace('.', r'\.')
 
 osu_ver = re.compile(
     r'^b(?P<ver>\d{8})(?:\.(?P<subver>\d))?'
-    # only support osu!cuttingedge for now
-    r'(?P<stream>cuttingedge)$',
-    # r'(?P<stream>beta|cuttingedge|dev|tourney)?$'
+    r'(?P<stream>beta|cuttingedge|dev|tourney)?$'
 )
 
 username = re.compile(r'^[\w \[\]-]{2,15}$')

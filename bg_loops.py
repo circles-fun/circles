@@ -28,6 +28,7 @@ __all__ = ('donor_expiry', 'disconnect_ghosts',
            # 'replay_detections',
            'reroll_bot_status')
 
+
 async def donor_expiry(db_cursor: aiomysql.DictCursor) -> list[Coroutine]:
     """Add new donation ranks & enqueue tasks to remove current ones."""
 
@@ -51,7 +52,8 @@ async def donor_expiry(db_cursor: aiomysql.DictCursor) -> list[Coroutine]:
         )
 
         if p.online:
-            p.enqueue(packets.notification('Your supporter status has expired.'))
+            p.enqueue(packets.notification(
+                'Your supporter status has expired.'))
 
         log(f"{p}'s supporter status has expired.", Ansi.LMAGENTA)
 

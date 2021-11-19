@@ -68,13 +68,13 @@ async def bancho_http_handler(conn: Connection) -> bytes:
     """Handle a request from a web browser."""
     packets = glob.bancho_packets['all']
 
-    return b'<!DOCTYPE html>' + '<br>'.join((
-        f'Running circles v{glob.version}',
-        f'Players online: {len(glob.players) - 1}',
-        '<a href="https://github.com/circles-fun/circles">Source code</a>',
-        '',
-        f'<b>Packets handled ({len(packets)})</b>',
-        '<br>'.join([f'{p.name} ({p.value})' for p in packets])
+    return b'<!DOCTYPE html>' + '<html>'.join((
+        f'<p>Running circles v{glob.version}</p>',
+        '<p>Available packets:</p>',
+        '<ul>',
+        '\n'.join(f'<li>{packet.name}</li>' for packet in packets),
+        '</ul>',
+        '</html>',
     )).encode()
 
 
@@ -95,10 +95,7 @@ async def bancho_handler(conn: Connection) -> bytes:
     else:
         ip = ipaddress.ip_address(ip_str)
         glob.cache['ip'][ip_str] = ip
-
-    if ip == '10.0.0.1':
-        ip = '1.1.1.1'
-
+    
     if (
             'User-Agent' not in conn.headers or
             conn.headers['User-Agent'] != 'osu!'
@@ -170,6 +167,7 @@ glob.bancho_packets = {
     'all': {},
     'restricted': {}
 }
+
 
 def register(packet: ClientPackets,
              restricted: bool = False) -> Callable:

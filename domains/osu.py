@@ -45,8 +45,6 @@ from objects.score import Score
 from objects.score import SubmissionStatus
 from utils.misc import escape_enum
 from utils.misc import pymysql_encode
-from utils.misc import update_rank_history
-from utils.misc import run_circleguard
 
 if TYPE_CHECKING:
     from objects.player import Player
@@ -994,8 +992,6 @@ async def osuSubmitModularSelector(
 
     log(f'[{score.mode!r}] {score.player} submitted a score! '
         f'({score.status!r}, {score.pp:,.2f}pp / {stats.pp:,}pp)', Ansi.LGREEN)
-    if score.passed:  # Only run CircleGuard for scores that are passes.
-        await run_circleguard(score, replay_file)
 
     return ret
 

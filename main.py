@@ -51,7 +51,7 @@ try:
     from objects import glob
 except ModuleNotFoundError as exc:
     if exc.name == 'config':
-        
+
         # config file doesn't exist; create it from the default.
         import shutil
         shutil.copy('ext/config.sample.py', 'config.py')
@@ -74,6 +74,7 @@ DEBUG_HOOKS_PATH = Path.cwd() / '_testing/runtime.py'
 DATA_PATH = Path.cwd() / '.data'
 ACHIEVEMENTS_ASSETS_PATH = DATA_PATH / 'assets/medals/client'
 
+
 async def setup_collections(db_cursor: aiomysql.DictCursor) -> None:
     """Setup & cache many global collections."""
     # dynamic (active) sets, only in ram
@@ -89,7 +90,7 @@ async def setup_collections(db_cursor: aiomysql.DictCursor) -> None:
     glob.bot = Player(
         id=1,
         name=await utils.misc.fetch_bot_name(db_cursor),
-        login_time=float(0x7fffffff), # (never auto-dc)
+        login_time=float(0x7fffffff),  # (never auto-dc)
         priv=Privileges.Normal,
         bot_client=True
     )
@@ -117,13 +118,15 @@ async def setup_collections(db_cursor: aiomysql.DictCursor) -> None:
         async for row in db_cursor
     }
 
+
 async def before_serving() -> None:
     """Called before the server begins serving connections."""
     glob.loop = asyncio.get_running_loop()
 
     if glob.has_internet:
         # retrieve a client session to use for http connections.
-        glob.http = aiohttp.ClientSession(json_serialize=orjson.dumps) # type: ignore
+        glob.http = aiohttp.ClientSession(
+            json_serialize=orjson.dumps)  # type: ignore
     else:
         glob.http = None
 
@@ -133,7 +136,7 @@ async def before_serving() -> None:
 
     # run the sql & submodule updater (uses http & db).
     # TODO: updating cmyui_pkg should run before it's imported.
-    
+
     updater = Updater(glob.version)
     await updater.run()
     await updater.log_startup()
@@ -185,6 +188,7 @@ async def before_serving() -> None:
     for coro in new_coros:
         glob.app.add_pending_task(coro)
 
+
 async def after_serving() -> None:
     """Called after the server stops serving connections."""
     if hasattr(glob, 'http') and glob.http is not None:
@@ -199,6 +203,7 @@ async def after_serving() -> None:
     if hasattr(glob, 'datadog') and glob.datadog is not None:
         glob.datadog.stop()
         glob.datadog.flush()
+
 
 def ensure_supported_platform() -> int:
     """Ensure we're running on an appropriate platform for circles."""
@@ -215,6 +220,7 @@ def ensure_supported_platform() -> int:
         return 1
 
     return 0
+
 
 def ensure_local_services_are_running() -> int:
     """Ensure all required services (mysql) are running."""
@@ -237,6 +243,7 @@ def ensure_local_services_are_running() -> int:
 
     return 0
 
+
 def ensure_directory_structure() -> int:
     """Ensure the .data directory and git submodules are ready."""
     # create /.data and its subdirectories.
@@ -255,6 +262,7 @@ def ensure_directory_structure() -> int:
         utils.misc.download_achievement_images(ACHIEVEMENTS_ASSETS_PATH)
 
     return 0
+
 
 def ensure_dependencies_and_requirements() -> int:
     """Make sure all of circles's dependencies are ready."""
@@ -285,11 +293,13 @@ def ensure_dependencies_and_requirements() -> int:
 
     return 0
 
+
 def __install_debugging_hooks() -> None:
     """Change internals to help with debugging & active development."""
     if DEBUG_HOOKS_PATH.exists():
-        from _testing import runtime # type: ignore
+        from _testing import runtime  # type: ignore
         runtime.setup()
+
 
 def display_startup_dialog() -> None:
     """Print any general information or warnings to the console."""
@@ -310,12 +320,13 @@ def display_startup_dialog() -> None:
         log('Running in offline mode, some features '
             'will not be available.', Ansi.LRED)
 
+
 def main() -> int:
     for safety_check in (
-        ensure_supported_platform, # linux only at the moment
-        ensure_local_services_are_running, # mysql (if local)
-        ensure_directory_structure, # .data/ & achievements/ dir structure
-        ensure_dependencies_and_requirements # submodules & oppai-ng built
+        ensure_supported_platform,  # linux only at the moment
+        ensure_local_services_are_running,  # mysql (if local)
+        ensure_directory_structure,  # .data/ & achievements/ dir structure
+        ensure_dependencies_and_requirements  # submodules & oppai-ng built
     ):
         if (exit_code := safety_check()) != 0:
             return exit_code
@@ -343,12 +354,12 @@ def main() -> int:
     )
 
     # add the domains and their respective endpoints to our server object
-    from domains.cho import domain as cho_domain # c[e4-6]?.ppy.sh
-    from domains.osu import domain as osu_domain # osu.ppy.sh
-    from domains.ava import domain as ava_domain # a.ppy.sh
-    from domains.map import domain as map_domain # b.ppy.sh
+    from domains.cho import domain as cho_domain  # c[e4-6]?.ppy.sh
+    from domains.osu import domain as osu_domain  # osu.ppy.sh
+    from domains.ava import domain as ava_domain  # a.ppy.sh
+    from domains.map import domain as map_domain  # b.ppy.sh
     glob.app.add_domains({cho_domain, osu_domain,
-                        ava_domain, map_domain})
+                          ava_domain, map_domain})
 
     # attach housekeeping tasks (setup, cleanup)
     glob.app.before_serving = before_serving
@@ -356,9 +367,10 @@ def main() -> int:
 
     # run the server (this is a blocking call)
     glob.app.run(addr=glob.config.server_addr,
-                 handle_restart=True) # (using SIGUSR1)
+                 handle_restart=True)  # (using SIGUSR1)
 
     return 0
+
 
 if __name__ == '__main__':
     raise SystemExit(main())

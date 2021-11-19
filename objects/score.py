@@ -74,6 +74,7 @@ class Grade(IntEnum):
         if format_spec == 'stats_column':
             return f'{self.name.lower()}_count'
 
+
 @unique
 @pymysql_encode(escape_enum)
 class SubmissionStatus(IntEnum):
@@ -357,7 +358,7 @@ class Score:
                     return (pp, ezpp.get_sr())
                 else:
                     return (0.0, 0.0)
-        elif mode_vn == 2: # catch
+        elif mode_vn == 2:  # catch
             return (0.0, 0.0)
         else:  # mania
             if self.bmap.mode.as_vanilla != 3:
@@ -429,7 +430,7 @@ class Score:
 
             self.acc = 100.0 * ((self.n100 * 0.5) + self.n300) / total
 
-        elif mode_vn == 2: # osu!catch
+        elif mode_vn == 2:  # osu!catch
             total = (self.n300 + self.n100 + self.n50 +
                      self.nkatu + self.nmiss)
 
@@ -439,7 +440,7 @@ class Score:
 
             self.acc = 100.0 * (self.n300 + self.n100 + self.n50) / total
 
-        elif mode_vn == 3: # osu!mania
+        elif mode_vn == 3:  # osu!mania
             total = (self.n300 + self.n100 + self.n50 +
                      self.ngeki + self.nkatu + self.nmiss)
 

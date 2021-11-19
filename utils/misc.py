@@ -13,8 +13,6 @@ import types
 import zipfile
 
 import aiomysql
-import circleguard as circleguard
-import cmyui.discord
 import dill as pickle
 import pymysql
 import requests
@@ -39,7 +37,6 @@ from constants.countries import country_codes
 from objects import glob
 
 __all__ = (
-    'run_circleguard',
     'get_press_times',
     'make_safe_name',
     'fetch_bot_name',
@@ -67,167 +64,6 @@ SCOREID_BORDERS = tuple(
     (((1 << 63) - 1) // 3) * i
     for i in range(1, 4)
 )
-
-
-async def run_circleguard(score, replay):
-    cg = circleguard.Circleguard(config.osu_api_key)
-
-    replay_file = replay.read_bytes()
-    score_id = int(score.id)
-
-    if SCOREID_BORDERS[0] > score_id >= 1:
-        scores_table = 'scores_vn'
-    elif SCOREID_BORDERS[1] > score_id >= SCOREID_BORDERS[0]:
-        scores_table = 'scores_rx'
-    elif SCOREID_BORDERS[2] > score_id >= SCOREID_BORDERS[1]:
-        scores_table = 'scores_ap'
-    else:
-        return log('[CircleGuard] Invalid score id.', Ansi.LRED)
-
-    res = await glob.db.fetch(
-        'SELECT u.name username, m.md5 map_md5, '
-        'm.artist, m.title, m.version, '
-        's.mode, s.n300, s.n100, s.n50, s.ngeki, '
-        's.nkatu, s.nmiss, s.score, s.max_combo, '
-        's.perfect, s.mods, s.play_time '
-        f'FROM {scores_table} s '
-        'INNER JOIN users u ON u.id = s.userid '
-        'INNER JOIN maps m ON m.md5 = s.map_md5 '
-        'WHERE s.id = %s',
-        [score.id]
-    )
-
-    if not res:
-        return log('[CircleGuard] Score not found.', Ansi.LRED)
-
-    replay_md5 = hashlib.md5(
-        '{}p{}o{}o{}t{}a{}r{}e{}y{}o{}u{}{}{}'.format(
-            res['n100'] + res['n300'], res['n50'],
-            res['ngeki'], res['nkatu'], res['nmiss'],
-            res['map_md5'], res['max_combo'],
-            str(res['perfect'] == 1),
-            res['username'], res['score'], 0,
-            res['mods'], 'True'
-        ).encode()
-    ).hexdigest()
-
-    buf = bytearray()
-    buf += struct.pack('<Bi', res['mode'], 20200207)
-    buf += packets.write_string(res['map_md5'])
-    buf += packets.write_string(res['username'])
-    buf += packets.write_string(replay_md5)
-
-    buf += struct.pack(
-        '<hhhhhhihBi',
-        res['n300'], res['n100'], res['n50'],
-        res['ngeki'], res['nkatu'], res['nmiss'],
-        res['score'], res['max_combo'], res['perfect'],
-        res['mods']
-    )
-    buf += b'\x00'
-
-    timestamp = int(res['play_time'].timestamp() * 1e7)
-    buf += struct.pack('<q', timestamp + DATETIME_OFFSET)
-    buf += struct.pack('<i', len(replay_file))
-    buf += replay_file
-    buf += struct.pack('<q', score_id)
-
-    cg_replay = cg.ReplayString(buf)
-
-    a = cg.ur(cg_replay)
-    b = cg.frametime(cg_replay)
-    c = cg.snaps(cg_replay)
-
-    log(f"[CircleGuard] Information for replay {score.id} submitted by {score.player.name}", Ansi.CYAN)
-    log(f"[CircleGuard] UR: {a}", Ansi.CYAN)  # unstable rate
-    log(f"[CircleGuard] Average frame time: {b}", Ansi.CYAN)  # average frame time
-    log(f"[CircleGuard] Snaps {c}", Ansi.CYAN)  # any jerky/suspicious movement
-    if scores_table == "scores_vn":
-        return await save_circleguard(score, a, b, c, "VN")
-
-    elif scores_table == "scores_rx":
-        return await save_circleguard(score, a, b, c, "RX")
-
-    elif scores_table == "scores_ap":
-        return await save_circleguard(score, a, b, c, "AP")
-
-
-async def save_circleguard(score, ur, frame_time, snaps, mods):
-    webhook_url = glob.config.webhooks['circleguard']
-    webhook = cmyui.discord.Webhook(content=f"{score.bmap.creator} - [{score.bmap.diff}*] {score.bmap.title}"
-                                            f"\n**BPM**: {score.bmap.bpm}"
-                                            f"\n**OD**: {score.bmap.od}"
-                                            f"\n**AR**: {score.bmap.ar}"
-                                            f"\n**Link**: https://chimu.moe/en/d/{score.bmap.id}",
-                                    url=webhook_url)
-
-    embed = cmyui.discord.Embed(
-        title=f'[{score.mode!r}] Replay Analysis'
-    )
-
-    embed.set_author(
-        url=score.player.url,
-        name=f"{score.player.name}",
-        icon_url=score.player.avatar_url
-    )
-
-    if mods == "VN":
-        embed.add_field(
-            name=f'UR',
-            value=f'{ur}',
-            inline=False
-        )
-
-        embed.add_field(
-            name=f'Average Frametime',
-            value=f'{frame_time}',
-            inline=False
-        )
-    elif mods == "RX":
-        embed.add_field(
-            name=f'UR',
-            value=f'None (rx)',
-            inline=False
-        )
-
-        embed.add_field(
-            name=f'Average Frametime',
-            value=f'None (rx)',
-            inline=False
-        )
-    elif mods == "AP":
-        embed.add_field(
-            name=f'UR',
-            value=f'{ur}',
-            inline=False
-        )
-
-        embed.add_field(
-            name=f'Average Frametime',
-            value=f'None (ap)',
-            inline=False
-        )
-
-    for snap in snaps:
-        if snap is None:
-            break
-
-        embed.add_field(
-            name='Snaps',
-            value=f'Time: {snap.time}'
-                  f'Angle: {snap.angle}'
-                  f'Distance: {snap.distance}',
-            inline=True
-        )
-    else:
-        embed.add_field(
-            name='Snaps',
-            value=f'None detected',
-            inline=True,
-        )
-
-    webhook.add_embed(embed)
-    return await webhook.post(glob.http)
 
 
 def get_press_times(frames: Sequence[ReplayFrame]) -> dict[int, float]:
@@ -391,8 +227,10 @@ def check_connection(timeout: float = 1.0) -> bool:
     socket.setdefaulttimeout(default_timeout)
     return online
 
+
 def running_via_asgi_webserver(running_proc: str) -> bool:
     return any(map(running_proc.endswith, ('hypercorn', 'uvicorn')))
+
 
 def install_excepthook() -> None:
     """Install a thin wrapper for sys.excepthook to catch circles-related stuff."""
@@ -490,6 +328,7 @@ async def log_strange_occurrence(obj: object) -> None:
 
 IPAddress = Union[ipaddress.IPv4Address, ipaddress.IPv6Address]
 
+
 def fetch_geoloc_db(ip: IPAddress) -> dict[str, Union[str, float]]:
     """Fetch geolocation data based on ip (using local db)."""
     res = glob.geoloc_db.city(ip)
@@ -504,6 +343,7 @@ def fetch_geoloc_db(ip: IPAddress) -> dict[str, Union[str, float]]:
             'numeric': country_codes[acronym]
         }
     }
+
 
 async def fetch_geoloc_web(ip: IPAddress) -> dict[str, Union[str, float]]:
     """Fetch geolocation data based on ip (using ip-api)."""
@@ -548,5 +388,6 @@ def pymysql_encode(conv: Callable) -> Callable:
 
     return wrapper
 
-def escape_enum(val, _ = None) -> str: # used for ^
+
+def escape_enum(val, _=None) -> str:  # used for ^
     return str(int(val))
