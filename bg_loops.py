@@ -9,8 +9,7 @@ from typing import Coroutine
 # from cmyui.discord import Webhook
 # from cmyui.discord import Embed
 import aiomysql
-from cmyui.logging import Ansi
-from cmyui.logging import log
+from cmyui.logging import Ansi, log
 
 import packets
 # import utils.misc

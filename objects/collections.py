@@ -4,24 +4,18 @@
 # in a lot of these classes; needs refactor.
 
 import asyncio
-from typing import Iterator
-from typing import Optional
-from typing import Sequence
-from typing import Union
+from typing import Iterator, Optional, Sequence, Union
 
 import aiomysql
-from cmyui.logging import Ansi
-from cmyui.logging import log
-
+from cmyui.logging import Ansi, log
 from constants.privileges import Privileges
-from objects import glob
-from objects.clan import Clan
-from objects.clan import ClanPrivileges
-from objects.channel import Channel
-from objects.match import MapPool
-from objects.match import Match
-from objects.player import Player
 from utils.misc import make_safe_name
+
+from objects import glob
+from objects.channel import Channel
+from objects.clan import Clan, ClanPrivileges
+from objects.match import MapPool, Match
+from objects.player import Player
 
 __all__ = (
     'Channels',

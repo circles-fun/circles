@@ -5,52 +5,31 @@ import ipaddress
 import re
 import struct
 import time
-from datetime import date
-from datetime import datetime
-from datetime import timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
-from typing import Callable
-from typing import Optional
-from typing import Union
+from typing import Callable, Optional, Union
 
 import aiomysql
 import bcrypt
-from cmyui.logging import Ansi
-from cmyui.logging import RGB
-from cmyui.logging import log
-from cmyui.osu.oppai_ng import OppaiWrapper
-from cmyui.utils import magnitude_fmt_time
-from cmyui.web import Connection
-from cmyui.web import Domain
-from maniera.calculator import Maniera
-
 import packets
 import utils.misc
-from constants import commands
-from constants import regexes
+from cmyui.logging import RGB, Ansi, log
+from cmyui.osu.oppai_ng import OppaiWrapper
+from cmyui.utils import magnitude_fmt_time
+from cmyui.web import Connection, Domain
+from constants import commands, regexes
 from constants.gamemodes import GameMode
-from constants.mods import Mods
-from constants.mods import SPEED_CHANGING_MODS
-from constants.privileges import ClientPrivileges
-from constants.privileges import Privileges
+from constants.mods import SPEED_CHANGING_MODS, Mods
+from constants.privileges import ClientPrivileges, Privileges
+from maniera.calculator import Maniera
 from objects import glob
-from objects.beatmap import ensure_local_osu_file
-from objects.beatmap import Beatmap
+from objects.beatmap import Beatmap, ensure_local_osu_file
 from objects.channel import Channel
 from objects.clan import ClanPrivileges
-from objects.match import MatchTeams
-from objects.match import MatchTeamTypes
-from objects.match import Slot
-from objects.match import SlotStatus
-from objects.menu import Menu
-from objects.menu import MenuCommands
-from objects.menu import MenuFunction
-from objects.player import Action
-from objects.player import Player
-from objects.player import PresenceFilter
-from packets import BanchoPacketReader
-from packets import BasePacket
-from packets import ClientPackets
+from objects.match import MatchTeams, MatchTeamTypes, Slot, SlotStatus
+from objects.menu import Menu, MenuCommands, MenuFunction
+from objects.player import Action, Player, PresenceFilter
+from packets import BanchoPacketReader, BasePacket, ClientPackets
 
 IPAddress = Union[ipaddress.IPv4Address, ipaddress.IPv6Address]
 

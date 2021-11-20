@@ -3,14 +3,15 @@
 #        (https://i.cmyui.xyz/DNnqifKHyBSA9X8NEHg.png)
 #        and run this with `mitmdump -qs tools/proxy.py`
 
-from mitmproxy import http
-from cmyui.logging import RGB
-from typing import Union
-from enum import IntEnum
-from enum import unique
-import sys
-import struct
 import re
+import struct
+import sys
+from enum import IntEnum, unique
+from typing import Union
+
+from cmyui.logging import RGB
+from mitmproxy import http
+
 domain = 'cmyui.xyz'  # XXX: put your domain here
 
 

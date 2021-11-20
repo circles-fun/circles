@@ -1,15 +1,13 @@
 # -*- coding: utf-8 -*-
 
 from datetime import datetime
-from enum import IntEnum
-from enum import unique
+from enum import IntEnum, unique
 from typing import TYPE_CHECKING
 
 import aiomysql
+from utils.misc import escape_enum, pymysql_encode
 
 from objects import glob
-from utils.misc import escape_enum
-from utils.misc import pymysql_encode
 
 if TYPE_CHECKING:
     from objects.player import Player

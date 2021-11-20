@@ -9,42 +9,29 @@ import secrets
 import struct
 import time
 from collections import defaultdict
-from enum import IntEnum
-from enum import unique
+from enum import IntEnum, unique
 from functools import wraps
 from pathlib import Path
-from typing import Callable
-from typing import Optional
-from typing import TYPE_CHECKING
-from typing import Union
+from typing import TYPE_CHECKING, Callable, Optional, Union
 from urllib.parse import unquote
 
 import aiomysql
 import bcrypt
-import orjson
-from cmyui.logging import Ansi
-from cmyui.logging import log
-from cmyui.logging import printc
-from cmyui.web import Connection
-from cmyui.web import Domain
-from cmyui.web import ratelimit
-
 import config
+import orjson
 import packets
 import utils.misc
+from cmyui.logging import Ansi, log, printc
+from cmyui.web import Connection, Domain, ratelimit
 from constants import regexes
 from constants.clientflags import ClientFlags
 from constants.gamemodes import GameMode
 from constants.mods import Mods
 from objects import glob
-from objects.beatmap import Beatmap
-from objects.beatmap import RankedStatus
+from objects.beatmap import Beatmap, RankedStatus
 from objects.player import Privileges
-from objects.score import Grade
-from objects.score import Score
-from objects.score import SubmissionStatus
-from utils.misc import escape_enum
-from utils.misc import pymysql_encode
+from objects.score import Grade, Score, SubmissionStatus
+from utils.misc import escape_enum, pymysql_encode
 
 if TYPE_CHECKING:
     from objects.player import Player

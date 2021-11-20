@@ -5,31 +5,25 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime as datetime
 from datetime import timedelta as timedelta
-from enum import IntEnum
-from enum import unique
-from typing import Optional
-from typing import Sequence
-from typing import TYPE_CHECKING
-from typing import Union
+from enum import IntEnum, unique
+from typing import TYPE_CHECKING, Optional, Sequence, Union
 
 import aiomysql
-from cmyui.logging import Ansi
-from cmyui.logging import log
-
 import packets
+from cmyui.logging import Ansi, log
 from constants import regexes
 from constants.gamemodes import GameMode
 from constants.mods import Mods
+from utils.misc import escape_enum, pymysql_encode
+
 from objects import glob
 from objects.beatmap import Beatmap
-from utils.misc import escape_enum
-from utils.misc import pymysql_encode
 
 if TYPE_CHECKING:
     from asyncio import TimerHandle
 
-    from objects.player import Player
     from objects.channel import Channel
+    from objects.player import Player
 
 __all__ = (
     'SlotStatus',

@@ -5,43 +5,28 @@ import time
 import uuid
 from dataclasses import dataclass
 from datetime import date
-from enum import IntEnum
-from enum import unique
+from enum import IntEnum, unique
 from functools import cached_property
-from typing import Optional
-from typing import TYPE_CHECKING
-from typing import Union
+from typing import TYPE_CHECKING, Optional, Union
 
 import aiomysql
-from cmyui.logging import Ansi
-from cmyui.logging import log
-from cmyui.discord import Webhook
-
 import packets
+from cmyui.discord import Webhook
+from cmyui.logging import Ansi, log
 from constants.gamemodes import GameMode
 from constants.mods import Mods
-from constants.privileges import ClientPrivileges
-from constants.privileges import Privileges
+from constants.privileges import ClientPrivileges, Privileges
+from utils.misc import escape_enum, pymysql_encode
+
 from objects import glob
 from objects.channel import Channel
-from objects.match import Match
-from objects.match import MatchTeams
-from objects.match import MatchTeamTypes
-from objects.match import Slot
-from objects.match import SlotStatus
-from objects.menu import Menu
-from objects.menu import MenuCommands
-from objects.menu import MenuFunction
-from objects.menu import menu_keygen
-from objects.score import Grade
-from objects.score import Score
-from utils.misc import escape_enum
-from utils.misc import pymysql_encode
+from objects.match import Match, MatchTeams, MatchTeamTypes, Slot, SlotStatus
+from objects.menu import Menu, MenuCommands, MenuFunction, menu_keygen
+from objects.score import Grade, Score
 
 if TYPE_CHECKING:
     from objects.achievement import Achievement
-    from objects.clan import Clan
-    from objects.clan import ClanPrivileges
+    from objects.clan import Clan, ClanPrivileges
 
 __all__ = (
     'ModeData',

@@ -4,12 +4,8 @@
 # the concept and is subject to major refactoring
 
 import random
-from enum import unique
-from enum import IntEnum
-from typing import Callable
-from typing import NamedTuple
-from typing import Union
-from typing import TYPE_CHECKING
+from enum import IntEnum, unique
+from typing import TYPE_CHECKING, Callable, NamedTuple, Union
 
 from objects import glob
 

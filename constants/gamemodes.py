@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import functools
-from enum import IntEnum
-from enum import unique
+from enum import IntEnum, unique
+
+from utils.misc import escape_enum, pymysql_encode
 
 from constants.mods import Mods
-from utils.misc import escape_enum
-from utils.misc import pymysql_encode
 
 __all__ = ('GameMode',)
 

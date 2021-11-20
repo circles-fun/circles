@@ -1,12 +1,9 @@
 # -*- coding: utf-8 -*-
 
 import re
-from typing import Optional
-from typing import Union
+from typing import Optional, Union
 
-from cmyui.web import Connection
-from cmyui.web import Domain
-
+from cmyui.web import Connection, Domain
 from objects import glob
 
 HTTPResponse = Optional[Union[bytes, tuple[int, bytes]]]

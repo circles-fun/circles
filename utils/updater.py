@@ -11,13 +11,10 @@ from pathlib import Path
 from typing import Optional
 
 import aiomysql
-from cmyui.logging import Ansi
-from cmyui.logging import log
-from cmyui.logging import printc
+from cmyui.logging import Ansi, log, printc
 from cmyui.version import Version
-from pip._internal.cli.main import main as pip_main
-
 from objects import glob
+from pip._internal.cli.main import main as pip_main
 
 __all__ = ('Updater',)
 

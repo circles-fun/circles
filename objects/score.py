@@ -4,28 +4,21 @@ import functools
 import math
 from base64 import b64decode
 from datetime import datetime
-from enum import IntEnum
-from enum import unique
+from enum import IntEnum, unique
 from pathlib import Path
-from typing import Optional
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
-from cmyui.logging import Ansi
-from cmyui.logging import log
+from cmyui.logging import Ansi, log
 from cmyui.osu.oppai_ng import OppaiWrapper
-from maniera.calculator import Maniera
-from py3rijndael import Pkcs7Padding
-from py3rijndael import RijndaelCbc
-
 from constants.clientflags import ClientFlags
 from constants.gamemodes import GameMode
 from constants.mods import Mods
+from maniera.calculator import Maniera
+from py3rijndael import Pkcs7Padding, RijndaelCbc
+from utils.misc import escape_enum, pymysql_encode
+
 from objects import glob
-from objects.beatmap import ensure_local_osu_file
-from objects.beatmap import Beatmap
-from objects.beatmap import RankedStatus
-from utils.misc import escape_enum
-from utils.misc import pymysql_encode
+from objects.beatmap import Beatmap, RankedStatus, ensure_local_osu_file
 
 if TYPE_CHECKING:
     from objects.player import Player

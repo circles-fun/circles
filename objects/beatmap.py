@@ -4,22 +4,18 @@ import functools
 import hashlib
 from collections import defaultdict
 #from dataclasses import dataclass
-from datetime import timedelta
-from datetime import datetime
-from enum import IntEnum
-from enum import unique
+from datetime import datetime, timedelta
+from enum import IntEnum, unique
 from pathlib import Path
 from typing import Optional
 
 import aiomysql
-from cmyui.logging import Ansi
-from cmyui.logging import log
-
 import utils.misc
+from cmyui.logging import Ansi, log
 from constants.gamemodes import GameMode
+from utils.misc import escape_enum, pymysql_encode
+
 from objects import glob
-from utils.misc import escape_enum
-from utils.misc import pymysql_encode
 
 __all__ = ('ensure_local_osu_file', 'RankedStatus',
            'Beatmap', 'BeatmapSet')

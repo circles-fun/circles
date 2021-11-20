@@ -12,6 +12,7 @@
 import asyncio
 import io
 import os
+import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -20,21 +21,15 @@ import aiohttp
 import aiomysql
 import cmyui
 import datadog
-import orjson
 import geoip2.database
-import subprocess
-from cmyui.logging import Ansi
-from cmyui.logging import log
+import orjson
+from cmyui.logging import Ansi, log
 
 import bg_loops
 import utils.misc
 from constants.privileges import Privileges
 from objects.achievement import Achievement
-from objects.collections import Players
-from objects.collections import Matches
-from objects.collections import Channels
-from objects.collections import Clans
-from objects.collections import MapPools
+from objects.collections import Channels, Clans, MapPools, Matches, Players
 from objects.player import Player
 from utils.updater import Updater
 
@@ -354,10 +349,10 @@ def main() -> int:
     )
 
     # add the domains and their respective endpoints to our server object
-    from domains.cho import domain as cho_domain  # c[e4-6]?.ppy.sh
-    from domains.osu import domain as osu_domain  # osu.ppy.sh
     from domains.ava import domain as ava_domain  # a.ppy.sh
+    from domains.cho import domain as cho_domain  # c[e4-6]?.ppy.sh
     from domains.map import domain as map_domain  # b.ppy.sh
+    from domains.osu import domain as osu_domain  # osu.ppy.sh
     glob.app.add_domains({cho_domain, osu_domain,
                           ava_domain, map_domain})
 

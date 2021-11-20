@@ -2,38 +2,26 @@
 import hashlib
 import inspect
 import io
-import struct
-
 import ipaddress
-import requests
 import secrets
 import socket
+import struct
 import sys
 import types
 import zipfile
+from pathlib import Path
+from typing import Callable, Sequence, Type, Union
 
 import aiomysql
+import config
 import dill as pickle
+import packets
 import pymysql
 import requests
-from geoip2.types import IPAddress
-
-from pathlib import Path
-from typing import Callable
-from typing import Sequence
-from typing import Type
-from typing import Union
-from cmyui.logging import Ansi
-from cmyui.logging import log
-from cmyui.logging import printc
-from cmyui.logging import Rainbow
-from cmyui.osu.replay import Keys
-from cmyui.osu.replay import ReplayFrame
-
-import config
-
-import packets
+from cmyui.logging import Ansi, Rainbow, log, printc
+from cmyui.osu.replay import Keys, ReplayFrame
 from constants.countries import country_codes
+from geoip2.types import IPAddress
 from objects import glob
 
 __all__ = (
